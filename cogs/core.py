@@ -17,7 +17,7 @@ class Core(commands.Cog):
     #Event listeners
     @commands.Cog.listener()
     async def on_ready(self):
-        await self.client.change_presence(status=discord.Status.idle, activity=discord.Game('What is my purpose?'))
+        await self.client.change_presence(status=discord.Status.idle, activity=discord.Game("I'm sorry dave, I can't do that."))
         print(f'{self.client.user.name} has connected to Discord!')
 
     @commands.Cog.listener()
