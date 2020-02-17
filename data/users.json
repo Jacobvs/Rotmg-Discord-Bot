@@ -1,1 +1,19 @@
-{}
+{
+    "228330382926282773": {
+        "status": "verified",
+        "verified_guilds": [
+            "Bot Testing"
+        ],
+        "ign": "FruitLoopz"
+    },
+    "196282885601361920": {
+        "status": "verified",
+        "verified_guilds": [
+            "Bot Testing",
+            "LegitHarmony"
+        ],
+        "ign": "Darkmattr",
+        "verify_id": 678951651012247608,
+        "verify_guild": "LegitHarmony"
+    }
+}

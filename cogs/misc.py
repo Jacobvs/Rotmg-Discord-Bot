@@ -1,7 +1,6 @@
 import asyncio
 import youtube_dl
 import discord
-from discord import Member
 from discord.ext import commands
 from discord.utils import get
 
@@ -68,7 +67,7 @@ async def connect_helper(self, ctx):
 
     return voice
 
-async def disconnect_helper(self, voice):
+def disconnect_helper(self, voice):
     coro = voice.disconnect()
     fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
     try:
@@ -84,6 +83,7 @@ class Misc(commands.Cog):
 
     @commands.command(pass_context=True)
     async def laugh(self, ctx):
+        """Ah-Ha-hA"""
         voice = await connect_helper(self, ctx)
 
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("ahhaha.mp3"))
@@ -95,6 +95,7 @@ class Misc(commands.Cog):
     # TODO: ADD queue of songs & youtube playlist fuctionality
     @commands.command()
     async def play(self, ctx, url):
+        """Joins vc and plays audio from youtube link provided"""
         async with ctx.typing():
             voice = await connect_helper(self, ctx)
             player = await YTDLSource.from_url(url, loop=self.client.loop, stream=True)
@@ -107,6 +108,8 @@ class Misc(commands.Cog):
         """Stops and disconnects the bot from voice"""
 
         await ctx.voice_client.disconnect()
+
+    #TODO: find command
 
 
 def setup(client):

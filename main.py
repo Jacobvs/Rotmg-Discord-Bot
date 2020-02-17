@@ -33,18 +33,21 @@ bot = commands.Bot(command_prefix=get_prefix)
 
 @bot.command()
 async def load(ctx, extension):
+    """Load specified cog"""
     extension = extension.lower()
     bot.load_extension(f'cogs.{extension}')
 
 
 @bot.command()
 async def unload(ctx, extension):
+    """Unload specified cog"""
     extension = extension.lower()
     bot.unload_extension(f'cogs.{extension}')
 
 
 @bot.command()
 async def reload(ctx, extension):
+    """Reload specified cog"""
     extension = extension.lower()
     bot.unload_extension(f'cogs.{extension}')
     bot.load_extension(f'cogs.{extension}')
@@ -55,6 +58,21 @@ for filename in os.listdir('./cogs/'):
     if filename.endswith('.py'):
         bot.load_extension(f'cogs.{filename[:-3]}')
 
+#Error Handlers
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send('Please pass in all the required arguments for this command')
+    if isinstance(error, commands.CommandNotFound):
+        await ctx.send('Invalid command. Use !help to see all of the available commands.')
+
+@bot.event
+async def on_error(event, *args, **kwargs):
+    with open('err.log', 'a') as f:
+        if event == 'on_message':
+            f.write(f'Unhandled message: {args[0]}\n')
+        else:
+            raise
 
 # Checks
 with open('data/variables.json', 'r') as file:

@@ -10,6 +10,7 @@ class Moderation(commands.Cog):
 
     @commands.command()
     async def change_prefix(self, ctx, prefix):
+        """Change the bot's prefix for commands"""
         with open('data/prefixes.json', 'r') as file:
             prefixes = json.load(file)
 
