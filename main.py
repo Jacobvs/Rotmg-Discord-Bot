@@ -4,7 +4,15 @@ import json
 
 import discord
 from discord.ext import commands
+from discord.utils import get
 from dotenv import load_dotenv
+import logging
+
+logger = logging.getLogger('discord')
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -55,17 +63,18 @@ with open('data/variables.json', 'r') as file:
 
 @bot.check
 async def global_perms_check(ctx):
-    if ctx.message.guild is None:
-        if ctx.author.id in variables.get('allowed_user_ids'):
-            return True
-        return False
-    author_roles = [role.id for role in ctx.author.roles]
-
-    if len(set(variables.get('allowed_role_ids')).intersection(author_roles)):
-        return True
-    msg = await ctx.send('{} Does not have the perms to use this command'.format(ctx.author.mention), delete_after=1.5)
-    time.sleep(0.5)
-    await ctx.message.delete()
+    return True
+    # if ctx.message.guild is None:
+    #     if ctx.author.id in variables.get('allowed_user_ids'):
+    #         return True
+    #     return False
+    # author_roles = [role.id for role in ctx.author.roles]
+    #
+    # if len(set(variables.get('allowed_role_ids')).intersection(author_roles)):
+    #     return True
+    # msg = await ctx.send('{} Does not have the perms to use this command'.format(ctx.author.mention), delete_after=1.5)
+    # time.sleep(0.5)
+    # await ctx.message.delete()
 
 
 bot.run(token)

@@ -54,7 +54,8 @@ class Core(commands.Cog):
                 user_db = json.load(file)
 
             if message.author.id in user_db:  # TODO: implement modmail
-
+                    msg = "What server would you like to send this modmail to?"
+                    await message.author.send()
 
 
             else:  # Is verification, pass to method
