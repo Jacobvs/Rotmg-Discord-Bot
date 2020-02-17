@@ -7,10 +7,12 @@ from discord.ext import commands
 
 load_dotenv()
 
-class Main(commands.Cog):
+class Core(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+        with open('data/variables.json', 'r') as file:
+            self.variables = json.load(file)
 
     #Event listeners
     @commands.Cog.listener()
@@ -38,6 +40,27 @@ class Main(commands.Cog):
         with open('data/prefixes.json', 'w') as file:
             json.dump(prefixes, file, indent=4)
 
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        # Is a dm to the bot (A. verification, B. Modmail)
+        if message.guild is None and message.author != self.client.user:
+            # DM is a command
+            if message.content[0] == '!':
+                if message.author.id not in self.variables.get('allowed_user_ids'):
+                    await message.author.send('You do not have the permissions to use this command.')
+                return
+
+            with open('data/users.json', 'r') as file:
+                user_db = json.load(file)
+
+            if message.author.id in user_db:  # TODO: implement modmail
+
+
+
+            else:  # Is verification, pass to method
+                from cogs.verification import Verification
+                await Verification.step_2_verify(Verification(self.client), message.author, message.content)
+
 
     #Error Handlers
     @commands.Cog.listener()
@@ -57,4 +80,4 @@ class Main(commands.Cog):
 
 
 def setup(client):
-    client.add_cog(Main(client))
+    client.add_cog(Core(client))

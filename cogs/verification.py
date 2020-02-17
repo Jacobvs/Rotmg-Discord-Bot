@@ -10,7 +10,12 @@ class Verification(commands.Cog):
     def __init__(self, client):
         self.client = client
         with open('data/variables.json', 'r') as file:
-            self.verify_message_id = json.load(file)['verify_message_id']
+            variables = json.load(file)
+
+        self.verify_message_id = variables.get('verify_message_id')
+        if self.verify_message_id is None:
+            self.verify_message_id = 0
+
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
@@ -29,14 +34,30 @@ class Verification(commands.Cog):
                 embed.add_field(name="Troubleshooting", value="If there are still missing channels, please contact a "
                                                               "moderator+!")
             else:
-                embed.description = "__You are not yet verified. Follow the steps below to gain access to the server.__"
-                embed.add_field(name="\a", value="**Please provide your IGN** as it is spelled in-game.\nOnly send your "
-                                               "IGN, ex: `Darkmattr`\n\nCapitalization does not matter.")
+                with open('data/users.json', 'r') as file:
+                    user_db = json.load(file)
+                if payload.user_id in user_db:
+                    if user_db[payload.user_id]["suspended"]["state"]:
+                        embed.description = "**You are currently suspended from this server.**"
+                else:
+                    embed.description = "__You are not yet verified. Follow the steps below to gain access to the " \
+                                        "server.__ "
+                    embed.add_field(name="\a", value="**Please provide your IGN** as it is spelled in-game.\nOnly "
+                                                     "send your IGN, ex: `Darkmattr`\n\nCapitalization does not "
+                                                     "matter.")
 
             await user.send(embed=embed)
 
 
-    #TODO: add support for multiple servers w/ independent reqs
+    async def step_2_verify(self, user, ign):
+        print("Step 2 verification")
+        print(str(user.id))
+        print("recieved IGN of: {}".format(ign))
+
+        # TODO : implement TIFFIT API to do reverse lookup
+
+
+    # TODO: add support for multiple servers w/ independent reqs
     @commands.command()
     async def add_verify_msg(self, ctx):
         embed = discord.Embed(
@@ -45,13 +66,14 @@ class Verification(commands.Cog):
                         "location\n3. React to the ✅ below\n4. Follow all the directions the bot DM's you.",
             color=discord.Color.green()
         )
-        embed.add_field(name="Troubleshooting", value="If you're having trouble verifying, post in #support!", inline=False)
+        embed.add_field(name="Troubleshooting", value="If you're having trouble verifying, post in #support!",
+                        inline=False)
 
         message = await ctx.send(embed=embed)
         await message.add_reaction("✅")
         await ctx.message.delete()
 
-        #Save verification message id for later to check reacts with
+        # Save verification message id for later to check reacts with
         with open('data/variables.json', 'r') as file:
             variables = json.load(file)
 
@@ -61,8 +83,6 @@ class Verification(commands.Cog):
             json.dump(variables, file, indent=4)
 
         self.verify_message_id = message.id
-
-
 
 
 def setup(client):

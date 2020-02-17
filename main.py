@@ -9,14 +9,19 @@ from dotenv import load_dotenv
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
 
+
 def get_prefix(client, message):
+    if message.guild is None:
+        return "!"
+
     with open('data/prefixes.json', 'r') as file:
         prefixes = json.load(file)
 
     return prefixes[str(message.guild.id)]
 
 
-bot = commands.Bot(command_prefix = get_prefix)
+bot = commands.Bot(command_prefix=get_prefix)
+
 
 @bot.command()
 async def load(ctx, extension):
@@ -43,13 +48,20 @@ for filename in os.listdir('./cogs/'):
         bot.load_extension(f'cogs.{filename[:-3]}')
 
 
-#Checks
-allowed_role_ids = {678543120119365671} #Admin,
+# Checks
+with open('data/variables.json', 'r') as file:
+    variables = json.load(file)
+
 
 @bot.check
 async def global_perms_check(ctx):
+    if ctx.message.guild is None:
+        if ctx.author.id in variables.get('allowed_user_ids'):
+            return True
+        return False
     author_roles = [role.id for role in ctx.author.roles]
-    if len(allowed_role_ids.intersection(author_roles)):
+
+    if len(set(variables.get('allowed_role_ids')).intersection(author_roles)):
         return True
     msg = await ctx.send('{} Does not have the perms to use this command'.format(ctx.author.mention), delete_after=1.5)
     time.sleep(0.5)

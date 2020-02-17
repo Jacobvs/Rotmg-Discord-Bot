@@ -1,3 +1,9 @@
 {
-    "verify_message_id": 678626939661058055
+    "allowed_role_ids": [
+        678543120119365671,
+        0
+    ],
+    "allowed_user_ids": [
+        196282885601361920
+    ]
 }
