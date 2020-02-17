@@ -115,6 +115,7 @@ class Verification(commands.Cog):
                 del user_db[str(user_id)]["verify_guild"]
                 await self.write_user_data(user_db)
             else:
+
                 await member.send("Sorry , you do not meet")  # TODO: implement and appeal
         else:
             embed = discord.Embed(
@@ -148,8 +149,14 @@ class Verification(commands.Cog):
                     color=discord.Color.teal()
                 )
                 if str(payload.user_id) in user_db.keys():
-                    if user_db[str(payload.user_id)]["status"] == "verified":
-                        embed.description = "__You have been verified already!__"
+                    if guild.name in user_db[str(payload.user_id)]["verified_guilds"]:
+                        verified = True
+                        embed.description = "__You are already verified!__"
+                        embed.add_field(name="Troubleshooting",
+                                        value="If there are still missing channels, please contact a "
+                                              "moderator+!")
+                    elif user_db[str(payload.user_id)]["status"] == "verified":
+                        embed.description = "__You have been verified in another server__"
                         embed.add_field(name="Verified Servers:", value='`{}`'.format(user_db[str(payload.user_id)]["verified_guilds"]))
                         embed.add_field(name="\a", value="React with a thumbs up if you would like to verify for this server with the IGN: `{}`.".format(user_db[str(payload.user_id)]["ign"]),inline=False)
                         msg = await user.send(embed=embed)
@@ -158,12 +165,8 @@ class Verification(commands.Cog):
                         await self.write_user_data(user_db)
                         return
 
-                elif discord.utils.get(user.roles, name="Verified") is not None:
-                    verified = True
-                    embed.description = "__You are already verified!__"
-                    embed.add_field(name="Troubleshooting",
-                                    value="If there are still missing channels, please contact a "
-                                          "moderator+!")
+                #elif discord.utils.get(user.roles, name="Verified") is not None:
+
                 else:
                     verified = False
                     embed.description = "__You are not yet verified. Follow the steps below to gain access to the " \
