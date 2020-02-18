@@ -1,7 +1,8 @@
+import asyncio
 import json
 import random
 import string
-from threading import Timer
+import embeds
 
 import requests
 
@@ -30,17 +31,15 @@ class Verification(commands.Cog):
         with open('data/guilds.json', 'w') as file:
             json.dump(data, file, indent=4)
 
+    async def delete_msg_later(self, msg, time):
+        await asyncio.sleep(time)
+        await msg.delete()
+
 
     async def step_1_verify(self, user, ign):
         user_db = await self.load_user_data()
 
-        embed = discord.Embed(
-            title="Verification Status",
-            description="Is `{}` the correct username?".format(ign),
-            color=discord.Color.teal()
-        )
-        embed.add_field(name='https://www.realmeye.com/player/{}'.format(ign),
-                        value="React with the check if so, x to cancel")
+        embed = embeds.verification_step_1(ign)
         msg = await user.send(embed=embed)
         await msg.add_reaction("✅")
         await msg.add_reaction("❌")
@@ -53,15 +52,7 @@ class Verification(commands.Cog):
         key = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
         user_db = await self.load_user_data()
         message = await user.fetch_message(user_db[str(user_id)]['verify_id'])
-        embed = discord.Embed(
-            title="You're almost done!",
-            description="You have chosen `{}` to be your IGN.".format(user_db[str(user_id)]["ign"]),
-            color=discord.Color.teal()
-        )
-        embed.add_field(name="\a",
-                        value="Please paste the code below into any line of your [realmeye](https://www.realmeye.com/player/{}) description."
-                              "\n```{}```\n\nOnce you are done, un-react to the check emoji and re-react to finish!".format(
-                            user_db[str(user_id)]["ign"], key))
+        embed = embeds.verification_step_2(user_db[str(user_id)]["ign"], key)
         await message.edit(embed=embed)
         user_db[str(user_id)].update({"verify_key": key, "status": "stp_3"})
         await self.write_user_data(user_db)
@@ -76,10 +67,7 @@ class Verification(commands.Cog):
         guild = self.client.get_guild(int(guild_db["id"]))
         member = guild.get_member(user_id)
 
-        embed = discord.Embed(
-            title="Retrieving data from Realmeye...",
-            color=discord.Color.green()
-        )
+        embed = embeds.verification_checking_realmeye()
         msg = await member.send(embed=embed)
         data = requests.get('https://nightfirec.at/realmeye-api/?player={}'.format(user_db[str(user_id)]["ign"])).json()
         alive_fame = 0
@@ -92,6 +80,7 @@ class Verification(commands.Cog):
         await msg.delete()
         description = data["desc1"] + data["desc2"] + data["desc3"]
         if reverify or user_db[str(user_id)]["verify_key"] in description:
+            message = await member.fetch_message(user_db[str(user_id)]['verify_id'])
             if (alive_fame >= fame_req or not req_both) and (n_maxed >= n_maxed_req or not req_both) and (alive_fame >= fame_req or n_maxed >= n_maxed_req):
                 role = discord.utils.get(guild.roles, id=int(guild_db["verified_role_id"]))
                 try:
@@ -99,12 +88,8 @@ class Verification(commands.Cog):
                     await member.edit(nick=name)
                 except discord.errors.Forbidden:
                     print("Missing permissions for: {} in guild: {}".format(member.name, guild.name))
-                message = await member.fetch_message(user_db[str(user_id)]['verify_id'])
-                embed = discord.Embed(
-                    title="Success!",
-                    description="You are now a verified member of __{}__!".format(guild.name),
-                    color=discord.Color.green()
-                )
+
+                embed = embeds.verification_success(guild.name)
                 await message.edit(embed=embed)
                 guilds = list(user_db[str(user_id)].get("verified_guilds"))
                 guilds.append(guild.name)
@@ -115,18 +100,12 @@ class Verification(commands.Cog):
                 del user_db[str(user_id)]["verify_guild"]
                 await self.write_user_data(user_db)
             else:
-
-                await member.send("Sorry , you do not meet")  # TODO: implement and appeal
+                embed = embeds.verification_bad_reqs(member.name)
+                await message.edit(embed=embed)
         else:
-            embed = discord.Embed(
-                title="Error!",
-                description="You do not appear to have the code in your description.",
-                color=discord.Color.red()
-            )
-            embed.add_field(name="\a",
-                            value="If you have already placed the code in your description, wait a minute for the servers to catch up and re-react to the check above.")
+            embed = embeds.verification_missing_code()
             msg = await member.send(embed=embed)
-            Timer(10, await msg.delete()).start()
+            asyncio.ensure_future(self.delete_msg_later(msg, 10))
 
 
     @commands.Cog.listener()
@@ -144,24 +123,17 @@ class Verification(commands.Cog):
             if payload.message_id == verify_message_id and str(payload.emoji) == '✅':
                 user = guild.get_member(payload.user_id)
 
-                embed = discord.Embed(
-                    title="Verification Status",
-                    color=discord.Color.teal()
-                )
+
                 if str(payload.user_id) in user_db.keys():
                     if guild.name in user_db[str(payload.user_id)]["verified_guilds"]:
                         verified = True
-                        embed.description = "__You are already verified!__"
-                        embed.add_field(name="Troubleshooting",
-                                        value="If there are still missing channels, please contact a "
-                                              "moderator+!")
+                        embed = embeds.verification_already_verified()
                     elif user_db[str(payload.user_id)]["status"] == "verified":
-                        embed.description = "__You have been verified in another server__"
-                        embed.add_field(name="Verified Servers:", value='`{}`'.format(user_db[str(payload.user_id)]["verified_guilds"]))
-                        embed.add_field(name="\a", value="React with a thumbs up if you would like to verify for this server with the IGN: `{}`.".format(user_db[str(payload.user_id)]["ign"]),inline=False)
+                        embed = embeds.verification_already_verified_complete(user_db[str(payload.user_id)]["verified_guilds"], user_db[str(payload.user_id)]["ign"])
                         msg = await user.send(embed=embed)
                         await msg.add_reaction('👍')
-                        user_db[str(user.id)].update({"verify_id":msg.id, "verify_guild": guild.name})
+                        await msg.add_reaction('❌')  # TODO: test cancel
+                        user_db[str(user.id)].update({"verify_id": msg.id, "verify_guild": guild.name})
                         await self.write_user_data(user_db)
                         return
 
@@ -169,12 +141,7 @@ class Verification(commands.Cog):
 
                 else:
                     verified = False
-                    embed.description = "__You are not yet verified. Follow the steps below to gain access to the " \
-                                            "server.__ "
-                    embed.add_field(name="\a", value="**Please provide your IGN** as it is spelled in-game.\nOnly "
-                                                         "send your IGN, ex: `Darkmattr`\n\nCapitalization does not "
-                                                         "matter.")
-                    embed.set_footer(text="React to the 'X' to cancel verification.")
+                    embed = embeds.verification_dm_start()
 
                 msg = await user.send(embed=embed)
                 if not verified:
@@ -197,11 +164,7 @@ class Verification(commands.Cog):
                         await self.step_3_verify(payload.user_id, reverify=False)
                         return
                 elif str(payload.emoji) == '❌':
-                    embed = discord.Embed(
-                        title="Verification Cancelled.",
-                        description="You have cancelled the verification process.\nIf you would like to restart, re-react to the verification message in the server.",
-                        color=discord.Color.red()
-                    )
+                    embed = embeds.verification_cancelled()
                     user = self.client.get_user(payload.user_id)
                     message = await user.fetch_message(user_db[str(payload.user_id)]['verify_id'])
                     await message.edit(embed=embed)
@@ -220,15 +183,7 @@ class Verification(commands.Cog):
         if ctx.guild is None:
             await ctx.send("This command must be used in a server.")
 
-        embed = discord.Embed(
-            title='Verification Steps',
-            description="1. Enable DM's from server members\n2. Set **everything** to public except last known "
-                        "location\n3. React to the ✅ below\n4. Follow all the directions the bot DM's you.",
-            color=discord.Color.green()
-        )
-        embed.add_field(name="Troubleshooting", value="If you're having trouble verifying, post in #support!",
-                        inline=False)
-
+        embed = embeds.verification_check_msg()
         message = await ctx.send(embed=embed)
         await message.add_reaction("✅")
         await ctx.message.delete()

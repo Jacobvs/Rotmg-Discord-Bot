@@ -5,14 +5,14 @@
         "fame_req": 0,
         "n_maxed": 0,
         "req_both": "no",
-        "verification_id": 678934507813863457
+        "verification_id": 679246577881186314
     },
     "LegitHarmony": {
         "id": 667131263294898200,
         "fame_req": 5000,
-        "n_maxed": 7,
+        "n_maxed": 2,
         "req_both": "yes",
         "verified_role_id": 667847246837973013,
-        "verification_id": 678946962950717441
+        "verification_id": 679198961654825003
     }
 }

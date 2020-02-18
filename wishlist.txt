@@ -1,0 +1,18 @@
+Core:
+
+Verification:
+- fix not meeting reqs
+
+Moderation:
+- Suspend
+- Mute
+- Ban
+- Change logs
+
+Raiding:
+- afk check
+- headcount
+
+Misc:
+- Poll
+- Yt playlist (queue, skip, clear)

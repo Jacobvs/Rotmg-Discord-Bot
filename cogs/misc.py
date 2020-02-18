@@ -1,4 +1,6 @@
 import asyncio
+from threading import Timer
+
 import youtube_dl
 import discord
 from discord.ext import commands
@@ -48,12 +50,12 @@ class YTDLSource(discord.PCMVolumeTransformer):
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
 
+
 async def connect_helper(self, ctx):
     if ctx.message.author.voice is None:
         await ctx.send("Connect to a voice channel to use this command.")
         return None
     if ctx.message.guild is None:
-        print("ree")
         await ctx.message.author.send("This command can only be used in a server when connected to a VC.")
         return None
 
@@ -67,11 +69,12 @@ async def connect_helper(self, ctx):
 
     return voice
 
+
 def disconnect_helper(self, voice):
-    coro = voice.disconnect()
-    fut = asyncio.run_coroutine_threadsafe(coro, self.client.loop)
+    coroutine = voice.disconnect()
+    task = asyncio.run_coroutine_threadsafe(coroutine, self.client.loop)
     try:
-        fut.result()
+        task.result()
     except:
         pass
 
@@ -87,10 +90,10 @@ class Misc(commands.Cog):
         voice = await connect_helper(self, ctx)
 
         source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("ahhaha.mp3"))
-        ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
+        ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
+                                                                                                                voice=voice))
 
         await ctx.send("Ah-Ha-hA")
-
 
     # TODO: ADD queue of songs & youtube playlist fuctionality
     @commands.command()
@@ -99,7 +102,9 @@ class Misc(commands.Cog):
         async with ctx.typing():
             voice = await connect_helper(self, ctx)
             player = await YTDLSource.from_url(url, loop=self.client.loop, stream=True)
-            ctx.voice_client.play(player, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
+            ctx.voice_client.play(player,
+                                  after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
+                                                                                                            voice=voice))
 
         await ctx.send('Now playing: {}'.format(player.title))
 
@@ -109,7 +114,7 @@ class Misc(commands.Cog):
 
         await ctx.voice_client.disconnect()
 
-    #TODO: find command
+    # TODO: find command
 
 
 def setup(client):

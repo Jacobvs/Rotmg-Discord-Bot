@@ -1,18 +1,10 @@
 {
-    "228330382926282773": {
-        "status": "verified",
-        "verified_guilds": [
-            "Bot Testing"
-        ],
-        "ign": "FruitLoopz"
-    },
     "196282885601361920": {
-        "status": "verified",
-        "verified_guilds": [
-            "Bot Testing"
-        ],
+        "status": "stp_3",
+        "verify_guild": "Bot Testing",
+        "verify_id": 679300989668294667,
+        "verified_guilds": [],
         "ign": "Darkmattr",
-        "verify_id": 678954303448416256,
-        "verify_guild": "LegitHarmony"
+        "verify_key": "JJ80Y22"
     }
 }
