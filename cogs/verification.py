@@ -3,6 +3,7 @@ import json
 import random
 import string
 import embeds
+import sqldb
 
 import requests
 
@@ -30,10 +31,6 @@ class Verification(commands.Cog):
     async def write_guild_data(self, data):
         with open('data/guilds.json', 'w') as file:
             json.dump(data, file, indent=4)
-
-    async def delete_msg_later(self, msg, time):
-        await asyncio.sleep(time)
-        await msg.delete()
 
 
     async def step_1_verify(self, user, ign):
@@ -105,7 +102,8 @@ class Verification(commands.Cog):
         else:
             embed = embeds.verification_missing_code()
             msg = await member.send(embed=embed)
-            asyncio.ensure_future(self.delete_msg_later(msg, 10))
+            await asyncio.sleep(10)
+            await msg.delete()
 
 
     @commands.Cog.listener()
