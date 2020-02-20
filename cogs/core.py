@@ -1,11 +1,9 @@
 import json
-
-from dotenv import load_dotenv
-
 import discord
 from discord.ext import commands
 
-load_dotenv()
+import sql
+
 
 class Core(commands.Cog):
 
@@ -22,64 +20,48 @@ class Core(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
+        #
         with open('data/prefixes.json', 'r') as file:
             prefixes = json.load(file)
-
-        with open('data/guilds.json', 'r') as file:
-            guilds = json.load(file)
-
         prefixes.update({guild.id: '!'})
-        guilds.update({guild.name:{"id":guild.id, "fame_req":0, "n_maxed":0,"verified_role_id":0}})
-
         with open('data/prefixes.json', 'w') as file:
             json.dump(prefixes, file, indent=4)
 
-        with open('data/guilds.json', 'w') as file:
-            json.dump(guilds, file, indent=4)
+        sql.add_new_guild(guild.id, guild.name)
 
     @commands.Cog.listener()
     async def on_guild_leave(self, guild):
         with open('data/prefixes.json', 'r') as file:
             prefixes = json.load(file)
-
-        with open('data/guilds.json', 'r') as file:
-            guilds = json.load(file)
-
         prefixes.pop(str(guild.id))
-        guilds.pop(guild.name)
-
         with open('data/prefixes.json', 'w') as file:
             json.dump(prefixes, file, indent=4)
 
-        with open('data/guilds.json', 'w') as file:
-            json.dump(guilds, file, indent=4)
+        # TODO: Remove guilds and user-data from sql
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        # Is a dm to the bot (A. verification, B. Modmail)
+        # Is a dm to the bot (A. verification, B. Mod-mail)
         if message.guild is None and message.author != self.client.user:
             # DM is a command
             if message.content[0] == '!':
+                # TODO: implement proper checks
                 if message.author.id not in self.variables.get('allowed_user_ids'):
                     await message.author.send('You do not have the permissions to use this command.')
                 return
 
-            with open('data/users.json', 'r') as file:
-                user_db = json.load(file)
+            user_data = sql.get_user(message.author.id)
 
-            if str(message.author.id) in user_db:  # TODO: implement modmail & check to ensure not verifying
-                if user_db[str(message.author.id)]['status'] == 'verified':
+            if user_data is not None:  # TODO: implement modmail & check to ensure not verifying
+                if user_data[sql.usr_cols.status] == 'verified':
                     msg = "What server would you like to send this modmail to?"
                     await message.author.send(msg)
                     return
-
-            # Is verification, pass to method
-            if str(message.author.id) in user_db.keys():
-                if user_db[str(message.author.id)]["status"] == "stp_1":
+                elif user_data[sql.usr_cols.status] == 'stp_1':
                     from cogs.verification import Verification
                     await Verification.step_1_verify(Verification(self.client), message.author, message.content)
                 else:
-                    msg = await message.author.send("You are already verifying, react to the check to continue.")
+                    await message.author.send("You are already verifying, react to the check to continue.", delete_after=10)
 
 
 def setup(client):

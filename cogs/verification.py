@@ -16,57 +16,39 @@ class Verification(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    # async def load_user_data(self):
-    #     with open('data/users.json', 'r') as file:
-    #         return json.load(file)
-    #
-    # async def write_user_data(self, data):
-    #     with open('data/users.json', 'w') as file:
-    #         json.dump(data, file, indent=4)
-    #
-    # async def load_guild_data(self):
-    #     with open('data/guilds.json', 'r') as file:
-    #         return json.load(file)
-    #
-    # async def write_guild_data(self, data):
-    #     with open('data/guilds.json', 'w') as file:
-    #         json.dump(data, file, indent=4)
-
-
     async def step_1_verify(self, user, ign):
-        user_db = await self.load_user_data()
-
         embed = embeds.verification_step_1(ign)
         msg = await user.send(embed=embed)
         await msg.add_reaction("✅")
         await msg.add_reaction("❌")
 
-        user_db[str(user.id)].update({"ign": ign, "status": "stp_2", "verify_id": int(msg.id)})
-        await self.write_user_data(user_db)
+        sql.update_user(user.id, "ign", ign)
+        sql.update_user(user.id, "status", "stp_2")
+        sql.update_user(user.id, "verifyid", msg.id)
 
     async def step_2_verify(self, user_id):
         user = self.client.get_user(user_id)
         key = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
-        user_db = await self.load_user_data()
-        message = await user.fetch_message(user_db[str(user_id)]['verify_id'])
-        embed = embeds.verification_step_2(user_db[str(user_id)]["ign"], key)
+        user_data = sql.get_user(user_id)
+        message = await user.fetch_message(user_data[sql.usr_cols.verifyid])
+        embed = embeds.verification_step_2(user_data[sql.usr_cols.ign], key)
         await message.edit(embed=embed)
-        user_db[str(user_id)].update({"verify_key": key, "status": "stp_3"})
-        await self.write_user_data(user_db)
+        sql.update_user(user_id, "verifykey", key)
+        sql.update_user(user_id, "status", "stp_3")
 
     async def step_3_verify(self, user_id, reverify):
-        user_db = await self.load_user_data()
-        guild_db = await self.load_guild_data()
-        guild_db = guild_db[user_db[str(user_id)]["verify_guild"]]
-        fame_req = int(guild_db["fame_req"])
-        n_maxed_req = int(guild_db["n_maxed"])
-        req_both = str(guild_db["req_both"])=="yes"
-        guild = self.client.get_guild(int(guild_db["id"]))
+        user_data = sql.get_user(user_id)
+        guild = self.client.get_guild(user_data[sql.usr_cols.verifyguild])
         member = guild.get_member(user_id)
+        guild_data = sql.get_guild(guild.id)
+
+        fame_req = guild_data[sql.gld_cols.nfame]
+        n_maxed_req = guild_data[sql.gld_cols.nmaxed]
+        req_both = guild_data[sql.gld_cols.reqboth]
 
         embed = embeds.verification_checking_realmeye()
         msg = await member.send(embed=embed)
-        data = requests.get('https://nightfirec.at/realmeye-api/?player={}'.format(user_db[str(user_id)]["ign"])).json()
+        data = requests.get('https://nightfirec.at/realmeye-api/?player={}'.format(user_data[sql.usr_cols.ign])).json()
         alive_fame = 0
         n_maxed = 0
         name = str(data["player"])
@@ -76,10 +58,12 @@ class Verification(commands.Cog):
                 n_maxed += 1
         await msg.delete()
         description = data["desc1"] + data["desc2"] + data["desc3"]
-        if reverify or user_db[str(user_id)]["verify_key"] in description:
-            message = await member.fetch_message(user_db[str(user_id)]['verify_id'])
-            if (alive_fame >= fame_req or not req_both) and (n_maxed >= n_maxed_req or not req_both) and (alive_fame >= fame_req or n_maxed >= n_maxed_req):
-                role = discord.utils.get(guild.roles, id=int(guild_db["verified_role_id"]))
+
+        if reverify or user_data[sql.usr_cols.verifykey] in description:
+            message = await member.fetch_message(user_data[sql.usr_cols.verifyid])
+            if (alive_fame >= fame_req or not req_both) and (n_maxed >= n_maxed_req or not req_both) and (
+                    alive_fame >= fame_req or n_maxed >= n_maxed_req):
+                role = discord.utils.get(guild.roles, id=guild_data[sql.gld_cols.verifiedroleid])
                 try:
                     await member.add_roles(role)
                     await member.edit(nick=name)
@@ -88,83 +72,98 @@ class Verification(commands.Cog):
 
                 embed = embeds.verification_success(guild.name)
                 await message.edit(embed=embed)
-                guilds = list(user_db[str(user_id)].get("verified_guilds"))
+                guilds = user_data[sql.usr_cols.verifiedguilds]
+                if guilds is None:
+                    guilds = []
+                else:
+                    guilds = guilds.split(",")
                 guilds.append(guild.name)
-                user_db[str(user_id)].update({"status":"verified", "verified_guilds": guilds, "ign":name})
+                sql.update_user(user_id, "status", "verified")
+                sql.update_user(user_id, "verifiedguilds", ','.join(guilds))
+                sql.update_user(user_id, "ign", name)
                 if not reverify:
-                    del user_db[str(user_id)]["verify_key"]
-                del user_db[str(user_id)]["verify_id"]
-                del user_db[str(user_id)]["verify_guild"]
-                await self.write_user_data(user_db)
+                    sql.update_user(user_id, "verifykey", None)
+
+                sql.update_user(user_id, "verifyid", None)
+                sql.update_user(user_id, "verifyguild", None)
             else:
-                embed = embeds.verification_bad_reqs(member.name)
+                embed = embeds.verification_bad_reqs(guild_data[sql.gld_cols.reqsmsg])
+                sql.update_user(user_id, "status", "denied")
+                sql.update_user(user_id, "ign", name)
+                sql.update_user(user_id, "verifykey", None)
+
                 await message.edit(embed=embed)
         else:
             embed = embeds.verification_missing_code()
             await member.send(embed=embed, delete_after=10)
-
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         if payload.user_id == self.client.user.id:
             return
 
-        user_db = await self.load_user_data()
+        user_data = sql.get_user(payload.user_id)
 
         if payload.guild_id is not None:
-            guild_db = await self.load_guild_data()
             guild = self.client.get_guild(payload.guild_id)
-            verify_message_id = guild_db[str(guild.name)]["verification_id"]
+            guild_data = sql.get_guild(guild.id)
+            verify_message_id = guild_data[sql.gld_cols.verificationid]
+            verified = False
 
             if payload.message_id == verify_message_id and str(payload.emoji) == '✅':
                 user = guild.get_member(payload.user_id)
+                msg = await self.client.get_channel(payload.channel_id).fetch_message(verify_message_id)
+                await msg.remove_reaction('✅', user)
 
-                if sql.user_exists(payload.user_id):
-                    verified_guilds = sql.get_user(payload.user_id)[sql.usr_cols.verifiedguilds].split(",")
-                    if guild.name in verified_guilds:
-                        verified = True
-                        embed = embeds.verification_already_verified()
-                    elif sql.get_user(payload.user_id)[sql.usr_cols.status] == "verified":
-                        embed = embeds.verification_already_verified_complete(verified_guilds, sql.get_user(payload.user_id)[sql.usr_cols.ign])
-                        msg = await user.send(embed=embed)
-                        await msg.add_reaction('👍')
-                        await msg.add_reaction('❌')  # TODO: test cancel
-                        sql.update_user(user.id, "verifyid", msg.id)
-                        sql.update_user(user.id, "verifyguild", guild.name)
-                        return
-
-                #elif discord.utils.get(user.roles, name="Verified") is not None:
+                if user_data is not None:
+                    verified_guilds = user_data[sql.usr_cols.verifiedguilds]
+                    if verified_guilds is not None:
+                        verified_guilds = verified_guilds.split(",")
+                        if guild.name in verified_guilds:
+                            verified = True
+                            embed = embeds.verification_already_verified()
+                            msg = await user.send(embed=embed)
+                        else:
+                            embed = embeds.verification_already_verified_complete(verified_guilds,
+                                                                                  user_data[sql.usr_cols.ign])
+                            msg = await user.send(embed=embed)
+                            await msg.add_reaction('👍')
+                            await msg.add_reaction('❌')  # TODO: test cancel
+                            sql.update_user(user.id, "verifyid", msg.id)
+                            sql.update_user(user.id, "verifyguild", guild.id)
+                            return
 
                 else:
-                    verified = False
                     embed = embeds.verification_dm_start()
+                    msg = await user.send(embed=embed)
 
-                msg = await user.send(embed=embed)
+                if user_data is None:
+                    sql.add_new_user(payload.user_id, guild.id, msg.id)
+                else:
+                    sql.update_user(payload.user_id, "verifyguild", guild.id)
+                    sql.update_user(payload.user_id, "verifyid", msg.id)
                 if not verified:
-                    sql.add_new_user(payload.user_id, guild.name, msg.id)
                     await msg.add_reaction('❌')
 
-        if str(payload.user_id) in user_db.keys():
-            if payload.message_id == user_db[str(payload.user_id)]['verify_id']:
+        elif user_data is not None:
+            if payload.message_id == user_data[sql.usr_cols.verifyid]:
                 if str(payload.emoji) == '✅':
-                    status = user_db[str(payload.user_id)]["status"]
-                    if status == "stp_2":
+                    status = user_data[sql.usr_cols.status]
+                    if status == 'stp_2':
                         await self.step_2_verify(payload.user_id)
                         return
-                    elif status == "stp_3":
+                    elif status == 'stp_3':
                         await self.step_3_verify(payload.user_id, reverify=False)
                         return
                 elif str(payload.emoji) == '❌':
                     embed = embeds.verification_cancelled()
                     user = self.client.get_user(payload.user_id)
-                    message = await user.fetch_message(user_db[str(payload.user_id)]['verify_id'])
+                    message = await user.fetch_message(user_data[sql.usr_cols.verifyid])
                     await message.edit(embed=embed)
-                    user_db.pop(str(payload.user_id))
-                    await self.write_user_data(user_db)
+                    sql.update_user(payload.user_id, "verifyguild", None)
+                    sql.update_user(payload.user_id, "status", "stp_1")
                 elif str(payload.emoji) == '👍':
                     await self.step_3_verify(payload.user_id, reverify=True)
-
-
 
     # TODO: add support for multiple servers w/ independent reqs
     @commands.command()
@@ -180,11 +179,7 @@ class Verification(commands.Cog):
         await ctx.message.delete()
 
         # Save verification message id for later to check reacts with
-        guilds = await self.load_guild_data()
-
-        guilds[ctx.guild.name].update({"verification_id": message.id})
-
-        await self.write_guild_data(guilds)
+        sql.update_guild(ctx.guild.id, "verificationid", message.id)
 
 
 def setup(client):

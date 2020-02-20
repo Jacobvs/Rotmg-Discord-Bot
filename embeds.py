@@ -112,8 +112,9 @@ def verification_bad_reqs(requirements):
         color=discord.Color.red()
     )
     embed.add_field(name='Requirements:',
-                    value="```{}```\nIf you would like to appeal the verification to a mod, re-react to the check emoji.".format(requirements))
+                    value="```yaml\n{}```\nIf you would like to appeal the verification to a mod, re-react to the check emoji.".format(requirements))
     embed.set_footer(text="React to the 'X' to cancel verification.")
+    return embed
 
 
 def verification_cancelled():
