@@ -95,27 +95,29 @@ class Misc(commands.Cog):
 
         await ctx.send("Ah-Ha-hA")
 
-    # TODO: ADD queue of songs & youtube playlist fuctionality
-    @commands.command()
-    async def play(self, ctx, url):
-        """Joins vc and plays audio from youtube link provided"""
-        async with ctx.typing():
-            voice = await connect_helper(self, ctx)
-            player = await YTDLSource.from_url(url, loop=self.client.loop, stream=True)
-            ctx.voice_client.play(player,
-                                  after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
-                                                                                                            voice=voice))
-
-        await ctx.send('Now playing: {}'.format(player.title))
-
-    @commands.command()
-    async def stop(self, ctx):
-        """Stops and disconnects the bot from voice"""
-
-        await ctx.voice_client.disconnect()
-
-    # TODO: find command
+    # # TODO: ADD queue of songs & youtube playlist fuctionality
+    # @commands.command()
+    # async def play(self, ctx, url):
+    #     """Joins vc and plays audio from youtube link provided"""
+    #     async with ctx.typing():
+    #         voice = await connect_helper(self, ctx)
+    #         player = await YTDLSource.from_url(url, loop=self.client.loop, stream=True)
+    #         ctx.voice_client.play(player,
+    #                               after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
+    #                                                                                                         voice=voice))
+    #
+    #     await ctx.send('Now playing: {}'.format(player.title))
+    #
+    # @commands.command()
+    # async def stop(self, ctx):
+    #     """Stops and disconnects the bot from voice"""
+    #
+    #     await ctx.voice_client.disconnect()
+    #     await ctx.send("Player has been stopped.")
+    #
+    # # TODO: find command
 
 
 def setup(client):
     client.add_cog(Misc(client))
+
