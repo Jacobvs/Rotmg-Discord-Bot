@@ -6,7 +6,8 @@ import discord
 def verification_check_msg(reqs):
     embed = discord.Embed(
         title='Verification Steps',
-        description="__If you meet the requirements of this server, follow these steps to be verified:__\n1. Enable DM's from server members\n2. Set **everything** on Realmeye to public except last known "
+        description="__If you meet the requirements of this server, follow these steps to be verified:__\n1. Enable "
+                    "DM's from server members\n2. Set **everything** on Realmeye to public except last known "
                     "location\n3. React to the ✅ below\n4. Follow all the directions the bot DM's you.",
         color=discord.Color.green()
     )
@@ -48,8 +49,10 @@ def verification_step_2(ign, key):
         color=discord.Color.teal()
     )
     embed.add_field(name="\a",
-                    value="Please paste the code below into any line of your [realmeye](https://www.realmeye.com/player/{}) description."
-                          "\n```{}```\n\nOnce you are done, un-react to the check emoji and re-react to finish!".format(ign, key))
+                    value="Please paste the code below into any line of your [realmeye]("
+                          "https://www.realmeye.com/player/{}) description.\n```{}```\n\nOnce you are done, "
+                          "un-react to the check emoji and re-react to finish!".format(
+                        ign, key))
     return embed
 
 
@@ -83,7 +86,8 @@ def verification_already_verified_complete(verified_servers, ign):
     if verified_servers is not None:
         embed.add_field(name="Verified Servers:", value='`{}`'.format(verified_servers))
     embed.add_field(name="\a",
-                    value="React with a thumbs up if you would like to verify for this server with the IGN: `{}`.".format(ign), inline=False)
+                    value="React with a thumbs up if you would like to verify for this server with the IGN: `{}`.".format(
+                        ign), inline=False)
     return embed
 
 
@@ -94,6 +98,7 @@ def verification_checking_realmeye():
     )
     return embed
 
+
 def verification_manual_verify(ign, uid):
     embed = discord.Embed(
         title="Manual Verification",
@@ -101,6 +106,7 @@ def verification_manual_verify(ign, uid):
         f"to be manually verified.\nTo manually verify them use the following command below: \n```!manual_verify {uid}```"
     )
     return embed
+
 
 # Verification Errors
 
@@ -111,7 +117,20 @@ def verification_missing_code():
         color=discord.Color.red()
     )
     embed.add_field(name="\a",
-                    value="If you have already placed the code in your description, wait a minute for the servers to catch up and re-react to the check above.")
+                    value="If you have already placed the code in your description, wait a minute for the servers to "
+                          "catch up and re-react to the check above.")
+    return embed
+
+
+def verification_public_location():
+    embed = discord.Embed(
+        title="Error!",
+        description="Your location has not been set to private.",
+        color=discord.Color.red()
+    )
+    embed.add_field(name="\a",
+                    value="Once you've set your location to private, wait a minute for the servers to catch up and "
+                          "re-react to the check above.")
     return embed
 
 
@@ -122,7 +141,9 @@ def verification_bad_reqs(requirements):
         color=discord.Color.red()
     )
     embed.add_field(name='Requirements:',
-                    value="```yaml\n{}```\nIf you would like to appeal the verification to a mod, re-react to the check emoji.".format(requirements))
+                    value="```yaml\n{}```\nIf you would like to appeal the verification to a mod, re-react to the "
+                          "check emoji.".format(
+                        requirements))
     embed.set_footer(text="React to the 'X' to cancel verification.")
     return embed
 
@@ -130,7 +151,8 @@ def verification_bad_reqs(requirements):
 def verification_cancelled():
     embed = discord.Embed(
         title="Verification Cancelled.",
-        description="You have cancelled the verification process.\nIf you would like to restart, re-react to the verification message in the server.",
+        description="You have cancelled the verification process.\nIf you would like to restart, re-react to the "
+                    "verification message in the server.",
         color=discord.Color.red()
     )
     return embed

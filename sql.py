@@ -49,8 +49,8 @@ def update_user(id, column, change):
 
 
 def add_new_guild(guild_id, guild_name):
-    sql = "INSERT INTO guilds (id, name, verificationid, nmaxed, nfame, reqboth, privateloc, reqsmsg, verifiedroleid) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
-    data = (guild_id, guild_name, 0, 0, 0, False, True, "", 0)
+    sql = "INSERT INTO guilds (id, name, verificationid, nmaxed, nfame, nstars, reqall, privateloc, reqsmsg, manualverifychannel, verifiedroleid, verifylogchannel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    data = (guild_id, guild_name, 0, 0, 0, 0, False, True, "", 0, 0, 0)
     cursor.execute(sql, data)
     mydb.commit()
 
@@ -63,7 +63,6 @@ def update_guild(id, column, change):
     mydb.commit()
 
 
-
 class usr_cols(enum.IntEnum):
     id = 0  # Int
     ign = 1  # String
@@ -73,14 +72,17 @@ class usr_cols(enum.IntEnum):
     verifyid = 5  # Int
     verifiedguilds = 6  # String (CSV)
 
+
 class gld_cols(enum.IntEnum):
     id = 0  # Int
     name = 1  # String
     verificationid = 2  # Int
     nmaxed = 3  # Int
     nfame = 4  # Int
-    reqboth = 5  # Boolean
-    privateloc = 6  # Boolean
-    reqsmsg = 7  # String (formatted)
-    manualverifychannel = 8  # Int
-    verifiedroleid = 9  # Int
+    nstars = 5  # Int
+    reqall = 6  # Boolean
+    privateloc = 7  # Boolean
+    reqsmsg = 8  # String (formatted)
+    manualverifychannel = 9  # Int
+    verifiedroleid = 10  # Int
+    verifylogchannel = 11  # Int

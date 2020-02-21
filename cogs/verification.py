@@ -42,7 +42,9 @@ class Verification(commands.Cog):
 
         fame_req = guild_data[sql.gld_cols.nfame]
         n_maxed_req = guild_data[sql.gld_cols.nmaxed]
-        req_both = guild_data[sql.gld_cols.reqboth]
+        star_req = guild_data[sql.gld_cols.nstars]
+        req_all = guild_data[sql.gld_cols.reqall]
+        private_loc = guild_data[sql.gld_cols.privateloc]
 
         embed = embeds.verification_checking_realmeye()
         msg = await member.send(embed=embed)
@@ -50,6 +52,8 @@ class Verification(commands.Cog):
         alive_fame = 0
         n_maxed = 0
         name = str(data["player"])
+        n_stars = int(data["rank"])
+        location = data["player_last_seen"]
         for char in data["characters"]:
             alive_fame += int(char["fame"])
             if int(char["stats_maxed"]) == 8:
@@ -57,20 +61,34 @@ class Verification(commands.Cog):
         await msg.delete()
         description = data["desc1"] + data["desc2"] + data["desc3"]
 
+        channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
         if reverify or user_data[sql.usr_cols.verifykey] in description:
-            if (alive_fame >= fame_req or not req_both) and (n_maxed >= n_maxed_req or not req_both) and (
-                    alive_fame >= fame_req or n_maxed >= n_maxed_req):
-                await complete_verification(guild, guild_data, member, user_data, reverify)
+            if not private_loc or location == "hidden":
+                verified = False
+                if req_all:
+                    if alive_fame >= fame_req and n_maxed >= n_maxed_req and n_stars >= star_req:
+                        verified = True
+                else:
+                    if alive_fame >= fame_req or n_maxed >= n_maxed_req or n_stars >= star_req:
+                        verified = True
+                if verified:
+                    await complete_verification(guild, guild_data, member, name, user_data, reverify)
+                    await channel.send(f"{member.mention} has completed verification.")
+                else:
+                    embed = embeds.verification_bad_reqs(guild_data[sql.gld_cols.reqsmsg])
+                    sql.update_user(user_id, "status", "denied")
+                    sql.update_user(user_id, "ign", name)
+                    sql.update_user(user_id, "verifykey", None)
+                    message = await member.fetch_message(user_data[sql.usr_cols.verifyid])
+                    await message.edit(embed=embed)
+                    await channel.send(f"{member.mention} does not meet requirements.")
             else:
-                embed = embeds.verification_bad_reqs(guild_data[sql.gld_cols.reqsmsg])
-                sql.update_user(user_id, "status", "denied")
-                sql.update_user(user_id, "ign", name)
-                sql.update_user(user_id, "verifykey", None)
-                message = await member.fetch_message(user_data[sql.usr_cols.verifyid])
-                await message.edit(embed=embed)
+                embed = embeds.verification_public_location()
+                await member.send(embed=embed, delete_after=10)
         else:
             embed = embeds.verification_missing_code()
             await member.send(embed=embed, delete_after=10)
+            await channel.send(f"{member.mention} is missing their realmeye code (or api is down).")
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
@@ -106,6 +124,8 @@ class Verification(commands.Cog):
                             await msg.add_reaction('❌')  # TODO: test cancel
                             sql.update_user(user.id, "verifyid", msg.id)
                             sql.update_user(user.id, "verifyguild", guild.id)
+                            channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
+                            await channel.send(f"{user.mention} is re-verifying for this guild.")
                             return
                     elif user_data[sql.usr_cols.status] == "denied":
                         embed = embeds.verification_bad_reqs(guild_data[sql.gld_cols.reqsmsg])
@@ -117,6 +137,8 @@ class Verification(commands.Cog):
 
                 else:
                     embed = embeds.verification_dm_start()
+                    channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
+                    await channel.send(f"{user.mention} has started the verification process.")
                     msg = await user.send(embed=embed)
 
                 if user_data is None:
@@ -183,11 +205,11 @@ def setup(client):
     client.add_cog(Verification(client))
 
 
-async def complete_verification(guild, guild_data, member, user_data, reverify):
+async def complete_verification(guild, guild_data, member, name, user_data, reverify):
     role = discord.utils.get(guild.roles, id=guild_data[sql.gld_cols.verifiedroleid])
     try:
         await member.add_roles(role)
-        await member.edit(nick=user_data[sql.usr_cols.ign])
+        await member.edit(nick=name)
     except discord.errors.Forbidden:
         print("Missing permissions for: {} in guild: {}".format(member.name, guild.name))
 
@@ -202,7 +224,7 @@ async def complete_verification(guild, guild_data, member, user_data, reverify):
     sql.update_user(member.id, "status", "verified")
     sql.update_user(member.id, "verifiedguilds", ','.join(guilds))
     if not reverify:
-        sql.update_user(member.id, "ign", user_data[sql.usr_cols.ign])
+        sql.update_user(member.id, "ign", name)
     sql.update_user(member.id, "verifykey", None)
     sql.update_user(member.id, "verifyid", None)
     sql.update_user(member.id, "verifyguild", None)

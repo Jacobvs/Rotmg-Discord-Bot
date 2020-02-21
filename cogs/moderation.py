@@ -26,8 +26,9 @@ class Moderation(commands.Cog):
         guild_data = sql.get_guild(ctx.guild.id)
         member = ctx.guild.get_member(int(uid))
         user_data = sql.get_user(int(uid))
+        name = user_data[sql.usr_cols.ign]
 
-        await verification.complete_verification(ctx.guild, guild_data, member, user_data, True)
+        await verification.complete_verification(ctx.guild, guild_data, member, name, user_data, True)
         channel = self.client.get_channel(guild_data[sql.gld_cols.manualverifychannel])
         message = await channel.fetch_message(user_data[sql.usr_cols.verifyid])
         await message.delete()
