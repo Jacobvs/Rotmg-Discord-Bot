@@ -148,6 +148,15 @@ def verification_bad_reqs(requirements):
     return embed
 
 
+def verification_bad_username():
+    embed = discord.Embed(
+        title="Error!",
+        description="The username you provided is invalid. Please re-submit your username __as it is spelled in-game.__",
+        color=discord.Color.red()
+    )
+    return embed
+
+
 def verification_cancelled():
     embed = discord.Embed(
         title="Verification Cancelled.",

@@ -11,19 +11,18 @@ mydb = mysql.connector.connect(
     user="root",
     passwd=os.getenv("MYSQL_PASSWORD"),
     auth_plugin='mysql_native_password',
-    database="rotmg"
 )
 
 cursor = mydb.cursor()
 
 
 def get_user(uid):
-    cursor.execute("SELECT * from users WHERE id = {}".format(uid))
+    cursor.execute("SELECT * from rotmg.users WHERE id = {}".format(uid))
     return cursor.fetchone()
 
 
 def get_guild(uid):
-    cursor.execute("SELECT * from guilds WHERE id = {}".format(uid))
+    cursor.execute("SELECT * from rotmg.guilds WHERE id = {}".format(uid))
     return cursor.fetchone()
 
 
@@ -34,7 +33,7 @@ def user_exists(uid):
 
 
 def add_new_user(user_id, guild_id, verify_id):
-    sql = "INSERT INTO users (id, status, verifyguild, verifyid) VALUES (%s, 'stp_1', %s, %s)"
+    sql = "INSERT INTO rotmg.users (id, status, verifyguild, verifyid) VALUES (%s, 'stp_1', %s, %s)"
     data = (user_id, guild_id, verify_id)
     cursor.execute(sql, data)
     mydb.commit()
@@ -43,13 +42,13 @@ def add_new_user(user_id, guild_id, verify_id):
 def update_user(id, column, change):
     # if isinstance(change, str):
     #     change = "'{}'".format(change)
-    sql = "UPDATE users SET {} = %s WHERE id = {}".format(column, id)
+    sql = "UPDATE rotmg.users SET {} = %s WHERE id = {}".format(column, id)
     cursor.execute(sql, (change,))
     mydb.commit()
 
 
 def add_new_guild(guild_id, guild_name):
-    sql = "INSERT INTO guilds (id, name, verificationid, nmaxed, nfame, nstars, reqall, privateloc, reqsmsg, manualverifychannel, verifiedroleid, verifylogchannel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    sql = "INSERT INTO rotmg.guilds (id, name, verificationid, nmaxed, nfame, nstars, reqall, privateloc, reqsmsg, manualverifychannel, verifiedroleid, verifylogchannel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
     data = (guild_id, guild_name, 0, 0, 0, 0, False, True, "", 0, 0, 0)
     cursor.execute(sql, data)
     mydb.commit()
@@ -58,7 +57,7 @@ def add_new_guild(guild_id, guild_name):
 def update_guild(id, column, change):
     # if isinstance(change, str):
     #     change = "'{}'".format(change)
-    sql = "UPDATE guilds SET {} = %s WHERE id = {}".format(column, id)
+    sql = "UPDATE rotmg.guilds SET {} = %s WHERE id = {}".format(column, id)
     cursor.execute(sql, (change,))
     mydb.commit()
 

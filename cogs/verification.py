@@ -14,16 +14,6 @@ class Verification(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    async def step_1_verify(self, user, ign):
-        embed = embeds.verification_step_1(ign)
-        msg = await user.send(embed=embed)
-        await msg.add_reaction("✅")
-        await msg.add_reaction("❌")
-
-        sql.update_user(user.id, "ign", ign)
-        sql.update_user(user.id, "status", "stp_2")
-        sql.update_user(user.id, "verifyid", msg.id)
-
     async def step_2_verify(self, user_id):
         user = self.client.get_user(user_id)
         key = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
@@ -49,6 +39,14 @@ class Verification(commands.Cog):
         embed = embeds.verification_checking_realmeye()
         msg = await member.send(embed=embed)
         data = requests.get('https://nightfirec.at/realmeye-api/?player={}'.format(user_data[sql.usr_cols.ign])).json()
+        if 'error' in data.keys():
+            embed = embeds.verification_bad_username()
+            await member.send(embed=embed, delete_after=10)
+            sql.update_user(user_id, "status", "stp_1")
+            embed = embeds.verification_dm_start()
+            message = await member.fetch_message(user_data[sql.usr_cols.verifyid])
+            await message.edit(embed=embed)
+            return
         alive_fame = 0
         n_maxed = 0
         name = str(data["player"])
@@ -132,8 +130,13 @@ class Verification(commands.Cog):
                         msg = await user.send(embed=embed)
                         msg.add_reaction('✅')
                         sql.update_user(payload.user_id, "verifyid", msg.id)
-                    else:
+                    elif user_data[sql.usr_cols.status] == "deny_appeal":
                         await user.send("Your application is being reviewed by staff. Please wait for their decision.")
+                    else:
+                        embed = embeds.verification_dm_start()
+                        channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
+                        await channel.send(f"{user.mention} has started the verification process.")
+                        msg = await user.send(embed=embed)
 
                 else:
                     embed = embeds.verification_dm_start()
@@ -164,6 +167,8 @@ class Verification(commands.Cog):
                         embed = embeds.verification_cancelled()
                         message = await user.fetch_message(user_data[sql.usr_cols.verifyid])
                         await message.edit(embed=embed)
+                        channel = self.client.get_channel(sql.get_guild(user_data[sql.usr_cols.verifyguild])[sql.gld_cols.verifylogchannel])
+                        await channel.send(f"{user.mention} has cancelled the verification process.")
                         sql.update_user(payload.user_id, "verifyguild", None)
                         sql.update_user(payload.user_id, "status", "stp_1")
                     elif str(payload.emoji) == '👍':
@@ -204,6 +209,16 @@ class Verification(commands.Cog):
 def setup(client):
     client.add_cog(Verification(client))
 
+
+async def step_1_verify(user, ign):
+    embed = embeds.verification_step_1(ign)
+    msg = await user.send(embed=embed)
+    await msg.add_reaction("✅")
+    await msg.add_reaction("❌")
+
+    sql.update_user(user.id, "ign", ign)
+    sql.update_user(user.id, "status", "stp_2")
+    sql.update_user(user.id, "verifyid", msg.id)
 
 async def complete_verification(guild, guild_data, member, name, user_data, reverify):
     role = discord.utils.get(guild.roles, id=guild_data[sql.gld_cols.verifiedroleid])

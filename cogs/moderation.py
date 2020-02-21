@@ -2,7 +2,7 @@ import json
 
 import sql
 from discord.ext import commands
-import cogs.verification as verification
+from cogs import verification
 
 
 class Moderation(commands.Cog):

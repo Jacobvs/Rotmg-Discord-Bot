@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 
 import sql
+from cogs import verification
 
 
 class Core(commands.Cog):
@@ -58,8 +59,10 @@ class Core(commands.Cog):
                     await message.author.send(msg)
                     return
                 elif user_data[sql.usr_cols.status] == 'stp_1':
-                    from cogs.verification import Verification
-                    await Verification.step_1_verify(Verification(self.client), message.author, message.content)
+                    if not message.content.isalpha():
+                        await message.author.send("Please provide your username only. No numbers or symbols", delete_after=10)
+                        return
+                    await verification.step_1_verify(message.author, message.content.strip())
                 else:
                     await message.author.send("You are already verifying, react to the check to continue.", delete_after=10)
 
