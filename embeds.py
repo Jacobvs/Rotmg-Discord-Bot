@@ -3,13 +3,14 @@ import discord
 
 # Verification
 
-def verification_check_msg():
+def verification_check_msg(reqs):
     embed = discord.Embed(
         title='Verification Steps',
-        description="1. Enable DM's from server members\n2. Set **everything** to public except last known "
+        description="__If you meet the requirements of this server, follow these steps to be verified:__\n1. Enable DM's from server members\n2. Set **everything** on Realmeye to public except last known "
                     "location\n3. React to the ✅ below\n4. Follow all the directions the bot DM's you.",
         color=discord.Color.green()
     )
+    embed.add_field(name="Server Requirements", value=f"```yaml\n{reqs}```")
     embed.add_field(name="Troubleshooting", value="If you're having trouble verifying, post in #support!",
                     inline=False)
     return embed
@@ -52,10 +53,10 @@ def verification_step_2(ign, key):
     return embed
 
 
-def verification_success(guild_name):
+def verification_success(guild_name, mention):
     embed = discord.Embed(
         title="Success!",
-        description="You are now a verified member of __{}__!".format(guild_name),
+        description="{} is now a verified member of __{}__!".format(mention, guild_name),
         color=discord.Color.green()
     )
     return embed
@@ -79,7 +80,8 @@ def verification_already_verified_complete(verified_servers, ign):
         color=discord.Color.teal()
     )
     embed.description = "__You have been verified in another server__"
-    embed.add_field(name="Verified Servers:", value='`{}`'.format(verified_servers))
+    if verified_servers is not None:
+        embed.add_field(name="Verified Servers:", value='`{}`'.format(verified_servers))
     embed.add_field(name="\a",
                     value="React with a thumbs up if you would like to verify for this server with the IGN: `{}`.".format(ign), inline=False)
     return embed
@@ -89,6 +91,14 @@ def verification_checking_realmeye():
     embed = discord.Embed(
         title="Retrieving data from Realmeye...",
         color=discord.Color.green()
+    )
+    return embed
+
+def verification_manual_verify(ign, uid):
+    embed = discord.Embed(
+        title="Manual Verification",
+        description=f"[{ign}](https://www.realmeye.com/player/{ign}) failed to meet the requirements and would like "
+        f"to be manually verified.\nTo manually verify them use the following command below: \n```!manual_verify {uid}```"
     )
     return embed
 

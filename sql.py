@@ -82,4 +82,5 @@ class gld_cols(enum.IntEnum):
     reqboth = 5  # Boolean
     privateloc = 6  # Boolean
     reqsmsg = 7  # String (formatted)
-    verifiedroleid = 8  # Int
+    manualverifychannel = 8  # Int
+    verifiedroleid = 9  # Int

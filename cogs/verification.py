@@ -1,5 +1,3 @@
-import asyncio
-import json
 import random
 import string
 import embeds
@@ -60,38 +58,15 @@ class Verification(commands.Cog):
         description = data["desc1"] + data["desc2"] + data["desc3"]
 
         if reverify or user_data[sql.usr_cols.verifykey] in description:
-            message = await member.fetch_message(user_data[sql.usr_cols.verifyid])
             if (alive_fame >= fame_req or not req_both) and (n_maxed >= n_maxed_req or not req_both) and (
                     alive_fame >= fame_req or n_maxed >= n_maxed_req):
-                role = discord.utils.get(guild.roles, id=guild_data[sql.gld_cols.verifiedroleid])
-                try:
-                    await member.add_roles(role)
-                    await member.edit(nick=name)
-                except discord.errors.Forbidden:
-                    print("Missing permissions for: {} in guild: {}".format(member.name, guild.name))
-
-                embed = embeds.verification_success(guild.name)
-                await message.edit(embed=embed)
-                guilds = user_data[sql.usr_cols.verifiedguilds]
-                if guilds is None:
-                    guilds = []
-                else:
-                    guilds = guilds.split(",")
-                guilds.append(guild.name)
-                sql.update_user(user_id, "status", "verified")
-                sql.update_user(user_id, "verifiedguilds", ','.join(guilds))
-                sql.update_user(user_id, "ign", name)
-                if not reverify:
-                    sql.update_user(user_id, "verifykey", None)
-
-                sql.update_user(user_id, "verifyid", None)
-                sql.update_user(user_id, "verifyguild", None)
+                await complete_verification(guild, guild_data, member, user_data, reverify)
             else:
                 embed = embeds.verification_bad_reqs(guild_data[sql.gld_cols.reqsmsg])
                 sql.update_user(user_id, "status", "denied")
                 sql.update_user(user_id, "ign", name)
                 sql.update_user(user_id, "verifykey", None)
-
+                message = await member.fetch_message(user_data[sql.usr_cols.verifyid])
                 await message.edit(embed=embed)
         else:
             embed = embeds.verification_missing_code()
@@ -103,6 +78,7 @@ class Verification(commands.Cog):
             return
 
         user_data = sql.get_user(payload.user_id)
+        user = self.client.get_user(payload.user_id)
 
         if payload.guild_id is not None:
             guild = self.client.get_guild(payload.guild_id)
@@ -111,9 +87,8 @@ class Verification(commands.Cog):
             verified = False
 
             if payload.message_id == verify_message_id and str(payload.emoji) == '✅':
-                user = guild.get_member(payload.user_id)
-                msg = await self.client.get_channel(payload.channel_id).fetch_message(verify_message_id)
-                await msg.remove_reaction('✅', user)
+                vfy_msg = await self.client.get_channel(payload.channel_id).fetch_message(verify_message_id)
+                await vfy_msg.remove_reaction('✅', user)
 
                 if user_data is not None:
                     verified_guilds = user_data[sql.usr_cols.verifiedguilds]
@@ -132,6 +107,13 @@ class Verification(commands.Cog):
                             sql.update_user(user.id, "verifyid", msg.id)
                             sql.update_user(user.id, "verifyguild", guild.id)
                             return
+                    elif user_data[sql.usr_cols.status] == "denied":
+                        embed = embeds.verification_bad_reqs(guild_data[sql.gld_cols.reqsmsg])
+                        msg = await user.send(embed=embed)
+                        msg.add_reaction('✅')
+                        sql.update_user(payload.user_id, "verifyid", msg.id)
+                    else:
+                        await user.send("Your application is being reviewed by staff. Please wait for their decision.")
 
                 else:
                     embed = embeds.verification_dm_start()
@@ -147,23 +129,38 @@ class Verification(commands.Cog):
 
         elif user_data is not None:
             if payload.message_id == user_data[sql.usr_cols.verifyid]:
-                if str(payload.emoji) == '✅':
-                    status = user_data[sql.usr_cols.status]
-                    if status == 'stp_2':
-                        await self.step_2_verify(payload.user_id)
-                        return
-                    elif status == 'stp_3':
-                        await self.step_3_verify(payload.user_id, reverify=False)
-                        return
-                elif str(payload.emoji) == '❌':
-                    embed = embeds.verification_cancelled()
-                    user = self.client.get_user(payload.user_id)
-                    message = await user.fetch_message(user_data[sql.usr_cols.verifyid])
-                    await message.edit(embed=embed)
-                    sql.update_user(payload.user_id, "verifyguild", None)
-                    sql.update_user(payload.user_id, "status", "stp_1")
-                elif str(payload.emoji) == '👍':
-                    await self.step_3_verify(payload.user_id, reverify=True)
+                if user_data[sql.usr_cols.status] != "denied":
+                    if str(payload.emoji) == '✅':
+                        status = user_data[sql.usr_cols.status]
+                        if status == 'stp_2':
+                            await self.step_2_verify(payload.user_id)
+                            return
+                        elif status == 'stp_3':
+                            await self.step_3_verify(payload.user_id, reverify=False)
+                            return
+                    elif str(payload.emoji) == '❌':
+                        embed = embeds.verification_cancelled()
+                        message = await user.fetch_message(user_data[sql.usr_cols.verifyid])
+                        await message.edit(embed=embed)
+                        sql.update_user(payload.user_id, "verifyguild", None)
+                        sql.update_user(payload.user_id, "status", "stp_1")
+                    elif str(payload.emoji) == '👍':
+                        await self.step_3_verify(payload.user_id, reverify=True)
+                else:
+                    if str(payload.emoji) == '✅' or str(payload.emoji) == '👍':
+                        guild_data = sql.get_guild(user_data[sql.usr_cols.verifyguild])
+                        guild = self.client.get_guild(guild_data[sql.gld_cols.id])
+                        channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
+                        msg = await channel.send(embed=embeds.verification_manual_verify(user_data[sql.usr_cols.ign], payload.user_id))
+                        sql.update_user(payload.user_id, "status", "deny_appeal")
+                        sql.update_user(payload.user_id, "verifyid", msg.id)
+                        await user.send("Your application is being reviewed by staff. Please wait for their decision.")
+                    elif str(payload.emoji) == '❌':
+                        embed = embeds.verification_cancelled()
+                        await user.send(embed=embed)
+                        sql.update_user(payload.user_id, "verifyguild", None)
+                        sql.update_user(payload.user_id, "verifyid", None)
+                        sql.update_user(payload.user_id, "status", None)
 
     # TODO: add support for multiple servers w/ independent reqs
     @commands.command()
@@ -173,7 +170,7 @@ class Verification(commands.Cog):
         if ctx.guild is None:
             await ctx.send("This command must be used in a server.")
 
-        embed = embeds.verification_check_msg()
+        embed = embeds.verification_check_msg(sql.get_guild(ctx.guild.id)[sql.gld_cols.reqsmsg])
         message = await ctx.send(embed=embed)
         await message.add_reaction("✅")
         await ctx.message.delete()
@@ -184,3 +181,28 @@ class Verification(commands.Cog):
 
 def setup(client):
     client.add_cog(Verification(client))
+
+
+async def complete_verification(guild, guild_data, member, user_data, reverify):
+    role = discord.utils.get(guild.roles, id=guild_data[sql.gld_cols.verifiedroleid])
+    try:
+        await member.add_roles(role)
+        await member.edit(nick=user_data[sql.usr_cols.ign])
+    except discord.errors.Forbidden:
+        print("Missing permissions for: {} in guild: {}".format(member.name, guild.name))
+
+    embed = embeds.verification_success(guild.name, member.mention)
+    await member.send(embed=embed)
+    guilds = user_data[sql.usr_cols.verifiedguilds]
+    if guilds is None:
+        guilds = []
+    else:
+        guilds = guilds.split(",")
+    guilds.append(guild.name)
+    sql.update_user(member.id, "status", "verified")
+    sql.update_user(member.id, "verifiedguilds", ','.join(guilds))
+    if not reverify:
+        sql.update_user(member.id, "ign", user_data[sql.usr_cols.ign])
+    sql.update_user(member.id, "verifykey", None)
+    sql.update_user(member.id, "verifyid", None)
+    sql.update_user(member.id, "verifyguild", None)
