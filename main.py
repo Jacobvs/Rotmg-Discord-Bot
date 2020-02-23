@@ -1,15 +1,12 @@
 import os
-import time
 import json
-
-import discord
+import traceback
 from discord.ext import commands
-from discord.utils import get
 from dotenv import load_dotenv
 import logging
 
 logger = logging.getLogger('discord')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
@@ -29,23 +26,24 @@ def get_prefix(client, message):
 
 
 bot = commands.Bot(command_prefix=get_prefix)
+bot.remove_command('help')
 
 
-@bot.command()
+@bot.command(usage="!load [cog]")
 async def load(ctx, extension):
     """Load specified cog"""
     extension = extension.lower()
-    bot.load_extension(f'cogs.{extension}')
+    bot.load_extension(f'cogs.{extension.capitalize()}')
 
 
-@bot.command()
+@bot.command(usage="!unload [cog]")
 async def unload(ctx, extension):
     """Unload specified cog"""
     extension = extension.lower()
-    bot.unload_extension(f'cogs.{extension}')
+    bot.unload_extension(f'cogs.{extension.capitalize()}')
 
 
-@bot.command()
+@bot.command(usage="!reload [cog]")
 async def reload(ctx, extension):
     """Reload specified cog"""
     extension = extension.lower()
@@ -61,10 +59,32 @@ for filename in os.listdir('./cogs/'):
 #Error Handlers
 @bot.event
 async def on_command_error(ctx, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send('Please pass in all the required arguments for this command')
+    if hasattr(ctx.command, "on_error"):
+        return  # Don't interfere with custom error handlers
+
+    error = getattr(error, "original", error)  # get original error
+
     if isinstance(error, commands.CommandNotFound):
-        await ctx.send('Invalid command. Use !help to see all of the available commands.')
+        await ctx.message.delete()
+        return await ctx.send(f"That command does not exist. Please use `{await bot.get_prefix(ctx.message)}help` for "
+                              f"a list of commands.")
+
+    if isinstance(error, commands.CommandError):
+        return await ctx.send(
+            f"Error executing command `{ctx.command.name}`: {str(error)}")
+
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.message.delete()
+        return await ctx.send('{} Does not have the perms to use this command'.format(ctx.author.mention), delete_after=2)
+
+    if isinstance(error, commands.NoPrivateMessage):
+        return await ctx.send("This command cannot be used in a DM.")
+
+    await ctx.send("An unexpected error occurred while running that command.")
+    logging.warning("Ignoring exception in command {}:".format(ctx.command))
+    logging.warning("\n" + "".join(
+        traceback.format_exception(
+            type(error), error, error.__traceback__)))
 
 @bot.event
 async def on_error(event, *args, **kwargs):
@@ -72,7 +92,7 @@ async def on_error(event, *args, **kwargs):
         if event == 'on_message':
             f.write(f'Unhandled message: {args[0]}\n')
         else:
-            raise
+            f.write(f'Unhandled error: {args[0]}\n')
 
 # Checks
 with open('data/variables.json', 'r') as file:

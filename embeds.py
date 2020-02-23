@@ -38,7 +38,7 @@ def verification_step_1(ign):
         color=discord.Color.teal()
     )
     embed.add_field(name='https://www.realmeye.com/player/{}'.format(ign),
-                    value="React with the check if so, x to cancel")
+                    value="React with the check if so, if you entered the wrong username - click the x to cancel verification then dm the bot your correct username.")
     return embed
 
 

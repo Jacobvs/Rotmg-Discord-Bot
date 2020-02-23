@@ -1,10 +1,10 @@
 import asyncio
-from threading import Timer
-
 import youtube_dl
 import discord
 from discord.ext import commands
 from discord.utils import get
+
+from checks import in_voice_channel
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -23,38 +23,15 @@ ytdl_format_options = {
 }
 
 ffmpeg_options = {
-    'options': '-vn'
+    'options': '-vn',
+    'before_options': ' -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
 
-class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, source, *, data, volume=0.5):
-        super().__init__(source, volume)
-
-        self.data = data
-
-        self.title = data.get('title')
-        self.url = data.get('url')
-
-    @classmethod
-    async def from_url(cls, url, *, loop=None, stream=False):
-        loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
-
-        if 'entries' in data:
-            # take first item from a playlist
-            data = data['entries'][0]
-
-        filename = data['url'] if stream else ytdl.prepare_filename(data)
-        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
-
-
 async def connect_helper(self, ctx):
-    if ctx.message.author.voice is None:
-        await ctx.send("Connect to a voice channel to use this command.")
-        return None
+
     if ctx.message.guild is None:
         await ctx.message.author.send("This command can only be used in a server when connected to a VC.")
         return None
@@ -80,42 +57,35 @@ def disconnect_helper(self, voice):
 
 
 class Misc(commands.Cog):
+    """Miscellaneous Commands"""
 
     def __init__(self, client):
         self.client = client
 
-    @commands.command(pass_context=True)
+    @commands.command(aliases=["ahhaha"], usage="!laugh")
+    @commands.guild_only()
+    @commands.check(in_voice_channel)
     async def laugh(self, ctx):
         """Ah-Ha-hA"""
         voice = await connect_helper(self, ctx)
 
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("ahhaha.mp3"))
+        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("ahhaha.mp3", options=ffmpeg_options['options'], before_options=ffmpeg_options['before_options']))
         ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
                                                                                                                 voice=voice))
 
         await ctx.send("Ah-Ha-hA")
 
-    # # TODO: ADD queue of songs & youtube playlist fuctionality
-    # @commands.command()
-    # async def play(self, ctx, url):
-    #     """Joins vc and plays audio from youtube link provided"""
-    #     async with ctx.typing():
-    #         voice = await connect_helper(self, ctx)
-    #         player = await YTDLSource.from_url(url, loop=self.client.loop, stream=True)
-    #         ctx.voice_client.play(player,
-    #                               after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
-    #                                                                                                         voice=voice))
-    #
-    #     await ctx.send('Now playing: {}'.format(player.title))
-    #
-    # @commands.command()
-    # async def stop(self, ctx):
-    #     """Stops and disconnects the bot from voice"""
-    #
-    #     await ctx.voice_client.disconnect()
-    #     await ctx.send("Player has been stopped.")
-    #
-    # # TODO: find command
+    @commands.command(usage="!purge [num]")
+    @commands.guild_only()
+    async def purge(self, ctx, num=5):
+        """Removes [num] messages from the channel"""
+        num += 1
+        if not isinstance(num, int):
+            await ctx.send("Please pass in a number of messages to delete.")
+            return
+        await ctx.channel.purge(limit=num)
+        await ctx.send(f"Deleted {num} messages.", delete_after=5)
+
 
 
 def setup(client):

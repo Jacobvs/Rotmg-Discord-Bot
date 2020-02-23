@@ -10,6 +10,7 @@ from discord.ext import commands
 
 
 class Verification(commands.Cog):
+    "Verification Commands"
 
     def __init__(self, client):
         self.client = client
@@ -155,24 +156,25 @@ class Verification(commands.Cog):
         elif user_data is not None:
             if payload.message_id == user_data[sql.usr_cols.verifyid]:
                 if user_data[sql.usr_cols.status] != "denied":
-                    if str(payload.emoji) == '✅':
-                        status = user_data[sql.usr_cols.status]
-                        if status == 'stp_2':
-                            await self.step_2_verify(payload.user_id)
-                            return
-                        elif status == 'stp_3':
-                            await self.step_3_verify(payload.user_id, reverify=False)
-                            return
-                    elif str(payload.emoji) == '❌':
-                        embed = embeds.verification_cancelled()
-                        message = await user.fetch_message(user_data[sql.usr_cols.verifyid])
-                        await message.edit(embed=embed)
-                        channel = self.client.get_channel(sql.get_guild(user_data[sql.usr_cols.verifyguild])[sql.gld_cols.verifylogchannel])
-                        await channel.send(f"{user.mention} has cancelled the verification process.")
-                        sql.update_user(payload.user_id, "verifyguild", None)
-                        sql.update_user(payload.user_id, "status", "stp_1")
-                    elif str(payload.emoji) == '👍':
-                        await self.step_3_verify(payload.user_id, reverify=True)
+                    if user_data[sql.usr_cols.status] != "cancelled":
+                        if str(payload.emoji) == '✅':
+                            status = user_data[sql.usr_cols.status]
+                            if status == 'stp_2':
+                                await self.step_2_verify(payload.user_id)
+                                return
+                            elif status == 'stp_3':
+                                await self.step_3_verify(payload.user_id, reverify=False)
+                                return
+                        elif str(payload.emoji) == '❌':
+                            embed = embeds.verification_cancelled()
+                            message = await user.fetch_message(user_data[sql.usr_cols.verifyid])
+                            await message.edit(embed=embed)
+                            channel = self.client.get_channel(sql.get_guild(user_data[sql.usr_cols.verifyguild])[sql.gld_cols.verifylogchannel]) #unknown colum none in where clause
+                            await channel.send(f"{user.mention} has cancelled the verification process.")
+                            sql.update_user(payload.user_id, "verifyguild", None)
+                            sql.update_user(payload.user_id, "status", "cancelled")
+                        elif str(payload.emoji) == '👍':
+                            await self.step_3_verify(payload.user_id, reverify=True)
                 else:
                     if str(payload.emoji) == '✅' or str(payload.emoji) == '👍':
                         guild_data = sql.get_guild(user_data[sql.usr_cols.verifyguild])
@@ -187,15 +189,14 @@ class Verification(commands.Cog):
                         await user.send(embed=embed)
                         sql.update_user(payload.user_id, "verifyguild", None)
                         sql.update_user(payload.user_id, "verifyid", None)
-                        sql.update_user(payload.user_id, "status", None)
+                        sql.update_user(payload.user_id, "status", "cancelled")
 
     # TODO: add support for multiple servers w/ independent reqs
-    @commands.command()
+    @commands.command(usage="!add_verify_msg")
+    @commands.guild_only()
+    @commands.has_permissions(administrator=True)
     async def add_verify_msg(self, ctx):
         """Add the verification message to channel"""
-
-        if ctx.guild is None:
-            await ctx.send("This command must be used in a server.")
 
         embed = embeds.verification_check_msg(sql.get_guild(ctx.guild.id)[sql.gld_cols.reqsmsg])
         message = await ctx.send(embed=embed)
