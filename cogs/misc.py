@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 from discord.utils import get
 
+import embeds
 from checks import in_voice_channel
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -86,6 +87,24 @@ class Misc(commands.Cog):
         await ctx.channel.purge(limit=num)
         await ctx.send(f"Deleted {num} messages.", delete_after=5)
 
+    @commands.command(usage='!poll "[title]" [option 1] [option 2]...')
+    @commands.guild_only()
+    async def poll(self, ctx, title, *options):
+        """Creates a poll with up to 2-10 options"""
+        if len(options) < 2:
+            await ctx.message.delete()
+            await ctx.send("Please specify at least two options for the poll.", delete_after=4)
+            return
+        if len(options) > 10:
+            await ctx.message.delete()
+            await ctx.send("Please specify at most 10 options for the poll.", delete_after=4)
+            return
+        numbers = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+        embed=embeds.poll(title, options)
+        await ctx.message.delete()
+        msg = await ctx.send(embed=embed)
+        for i in range(len(options)):
+            await msg.add_reaction(numbers[i])
 
 
 def setup(client):

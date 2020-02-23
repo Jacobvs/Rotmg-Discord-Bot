@@ -165,3 +165,18 @@ def verification_cancelled():
         color=discord.Color.red()
     )
     return embed
+
+
+# Misc
+def poll(title, options):
+    numbers = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
+    embed=discord.Embed(
+        title=f"🗳️ Poll: {title.capitalize()}",
+        color=discord.Color.dark_red()
+    )
+    desc = ""
+    for i, o in enumerate(options):
+        desc += numbers[i] + ": " + options[i] + "\n"
+    embed.description = desc
+    return embed
+

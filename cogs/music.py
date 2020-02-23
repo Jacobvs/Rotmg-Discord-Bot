@@ -307,8 +307,11 @@ class Music(commands.Cog):
         """Respods to reactions added to the bot's messages, allowing reactions to control playback."""
         message = reaction.message
         if user != self.bot.user and message.author == self.bot.user:
-            if message.guild is not None:  # TODO: fix for polls etc as will remove all shitiit
-                await message.remove_reaction(reaction, user)
+            if message.guild is not None:
+                if reaction.emoji in ["⏯", "⏭", "⏮"]:
+                    await message.remove_reaction(reaction, user)
+                else:
+                    return
             if message.guild and message.guild.voice_client:
                 user_in_channel = user.voice and user.voice.channel and user.voice.channel == message.guild.voice_client.channel
                 permissions = message.channel.permissions_for(user)
