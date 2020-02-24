@@ -5,7 +5,7 @@ from discord.ext import commands
 from discord.utils import get
 
 import embeds
-from checks import in_voice_channel
+from checks import in_voice_channel, is_dj
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -25,7 +25,7 @@ ytdl_format_options = {
 
 ffmpeg_options = {
     'options': '-vn',
-    'before_options': ' -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
@@ -65,12 +65,13 @@ class Misc(commands.Cog):
 
     @commands.command(aliases=["ahhaha"], usage="!laugh")
     @commands.guild_only()
+    @commands.check(is_dj)
     @commands.check(in_voice_channel)
     async def laugh(self, ctx):
         """Ah-Ha-hA"""
         voice = await connect_helper(self, ctx)
 
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("ahhaha.mp3", options=ffmpeg_options['options'], before_options=ffmpeg_options['before_options']))
+        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("ahhaha.mp3", options=ffmpeg_options['options']))
         ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
                                                                                                                 voice=voice))
 
@@ -78,6 +79,7 @@ class Misc(commands.Cog):
 
     @commands.command(usage="!purge [num]")
     @commands.guild_only()
+    @commands.has_permissions(administrator=True)
     async def purge(self, ctx, num=5):
         """Removes [num] messages from the channel"""
         num += 1
@@ -85,10 +87,11 @@ class Misc(commands.Cog):
             await ctx.send("Please pass in a number of messages to delete.")
             return
         await ctx.channel.purge(limit=num)
-        await ctx.send(f"Deleted {num} messages.", delete_after=5)
+        await ctx.send(f"Deleted {num-1} messages.", delete_after=5)
 
     @commands.command(usage='!poll "[title]" [option 1] [option 2]...')
     @commands.guild_only()
+    @commands.has_permissions(administrator=True)
     async def poll(self, ctx, title, *options):
         """Creates a poll with up to 2-10 options"""
         if len(options) < 2:

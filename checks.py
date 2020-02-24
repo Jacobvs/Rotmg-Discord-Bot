@@ -1,3 +1,4 @@
+import discord
 from discord.ext import commands
 
 
@@ -7,6 +8,16 @@ async def in_voice_channel(ctx):
         return False
     return True
 
+
+async def is_dj(ctx):
+    if ctx.message.author.guild_permissions.administrator:
+        return True
+    role = discord.utils.get(ctx.guild.roles, name="DJ")
+    if role in ctx.author.roles:
+        return True
+    await ctx.message.delete()
+    await ctx.say("The 'DJ' Role is required to use this command.", delete_after=4)
+    return False
 
 async def audio_playing(ctx):
     """Checks that audio is currently playing before continuing."""

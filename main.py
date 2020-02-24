@@ -67,18 +67,26 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         await ctx.message.delete()
         return await ctx.send(f"That command does not exist. Please use `{await bot.get_prefix(ctx.message)}help` for "
-                              f"a list of commands.")
+                              f"a list of commands.", delete_after=4)
+
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.message.delete()
+        return await ctx.send(f'{ctx.author.mention} Does not have the perms to use this: `{ctx.command.name}` command.', delete_after=4)
+
+    if isinstance(error, commands.MissingRole):
+        await ctx.message.delete()
+        return await ctx.send(f'{ctx.author.mention}: ' + str(error), delete_after=4)
+
+    if isinstance(error, commands.NoPrivateMessage):
+        return await ctx.send("This command cannot be used in a DM.")
+
+    if isinstance(error, commands.CheckFailure):
+        await ctx.message.delete()
+        return
 
     if isinstance(error, commands.CommandError):
         return await ctx.send(
             f"Error executing command `{ctx.command.name}`: {str(error)}")
-
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.message.delete()
-        return await ctx.send('{} Does not have the perms to use this command'.format(ctx.author.mention), delete_after=2)
-
-    if isinstance(error, commands.NoPrivateMessage):
-        return await ctx.send("This command cannot be used in a DM.")
 
     await ctx.send("An unexpected error occurred while running that command.")
     logging.warning("Ignoring exception in command {}:".format(ctx.command))

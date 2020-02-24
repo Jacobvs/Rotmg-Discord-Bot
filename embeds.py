@@ -172,7 +172,7 @@ def poll(title, options):
     numbers = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
     embed=discord.Embed(
         title=f"🗳️ Poll: {title.capitalize()}",
-        color=discord.Color.dark_red()
+        color=discord.Color.dark_gold()
     )
     desc = ""
     for i, o in enumerate(options):

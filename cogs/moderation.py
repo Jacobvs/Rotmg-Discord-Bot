@@ -11,6 +11,8 @@ class Moderation(commands.Cog):
         self.client = client
 
     @commands.command(usage="!change_prefix [prefix]")
+    @commands.guild_only()
+    @commands.has_permissions(administrator=True)
     async def change_prefix(self, ctx, prefix):
         """Change the bot's prefix for all commands"""
         with open('data/prefixes.json', 'r') as file:
@@ -21,7 +23,11 @@ class Moderation(commands.Cog):
         with open('data/prefixes.json', 'w') as file:
             json.dump(prefixes, file, indent=4)
 
+        await ctx.send(f"The prefix for this server has been changed to '{prefix}'.")
+
     @commands.command(usage="!manual_verify [uid] {optional: ign}")
+    @commands.guild_only()
+    @commands.has_permissions(manage_roles=True)
     async def manual_verify(self, ctx, uid, ign):
         """Manually verifies user with specified uid"""
         guild_data = sql.get_guild(ctx.guild.id)

@@ -15,6 +15,7 @@ class Core(commands.Cog):
             self.variables = json.load(file)
 
     @commands.command(usage="!uptime")
+    @commands.has_permissions(administrator=True)
     async def uptime(self, ctx):
         """Tells how long the bot has been running."""
         uptime_seconds = round(
