@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 mydb = mysql.connector.connect(
-    host="localhost",
+    host=os.getenv("MYSQL_HOST"),
     user="root",
     passwd=os.getenv("MYSQL_PASSWORD"),
     auth_plugin='mysql_native_password',
