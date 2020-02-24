@@ -51,7 +51,7 @@ class Video:
     def get_embed(self):
         """Makes an embed out of this Video's information."""
         embed = discord.Embed(
-            title=self.title, description=self.uploader, url=self.video_url)
+            title="Now Playing:", description="["+self.title+ "](" + self.video_url + ")" + "\n\nChannel: " + self.uploader)
         embed.set_footer(
             text=f"Requested by {self.requested_by.name}",
             icon_url=self.requested_by.avatar_url)
@@ -99,13 +99,18 @@ class Music(commands.Cog):
     async def pause(self, ctx):
         """Pauses any currently playing audio."""
         client = ctx.guild.voice_client
-        self._pause_audio(client)
+        self._pause_audio(client, ctx.guild)
 
-    def _pause_audio(self, client):
+    def _pause_audio(self, client, guild):
+        state = self.get_state(guild)
+        embed = state.now_playing.get_embed()
         if client.is_paused():
+            embed.title = "Now Playing:"
             client.resume()
         else:
+            embed.title = "Paused"
             client.pause()
+        asyncio.run_coroutine_threadsafe(state.message.edit(embed=embed), self.bot.loop)
 
     @commands.command(aliases=["vol", "v"], usage="!volume [0-250]")
     @commands.guild_only()
@@ -177,7 +182,8 @@ class Music(commands.Cog):
     def _play_song(self, client, state, song):
         state.now_playing = song
         state.skip_votes = set()  # clear skip votes
-        asyncio.run_coroutine_threadsafe(state.message.edit(embed=song.get_embed()), self.bot.loop)
+        if state.message is not None:
+            asyncio.run_coroutine_threadsafe(state.message.edit(embed=song.get_embed()), self.bot.loop)
         source = discord.PCMVolumeTransformer(
             discord.FFmpegPCMAudio(song.stream_url, options=ffmpeg_options['options'], before_options=ffmpeg_options['before_options']), volume=state.volume)
 
@@ -274,19 +280,24 @@ class Music(commands.Cog):
                     return
                 state.playlist.append(video)
                 if i == 1:
-                    message = await ctx.send(embed=video.get_embed())
-                    await self._add_reaction_controls(message)
-                    state.message = message
                     if client is None:
                         if ctx.author.voice is not None and ctx.author.voice.channel is not None:
                             channel = ctx.author.voice.channel
                             client = await channel.connect()
                             video = state.playlist.pop(0)
+                            if state.message is None:
+                                state.message = await ctx.send(embed=video.get_embed())
+                                await self._add_reaction_controls(state.message)
                             self._play_song(client, state, video)
                             logging.info(f"Now playing '{video.title}'")
+                    else:
+                        if state.message is not None:
+                            await state.message.delete()
+                        state.message = await ctx.send(embed=state.now_playing.get_embed())
+                        await self._add_reaction_controls(state.message)
+                        await ctx.send(f"**{video.title}** Added to queue.")
                 else:
-                    await ctx.send("**" + video.title + "** "
-                        "Added to queue.", delete_after=5)
+                    await ctx.send(f"**{video.title}** Added to queue.")
         else:
             try:
                 video = Video(url, ctx.author)
@@ -296,18 +307,23 @@ class Music(commands.Cog):
                     "There was an error downloading your video, sorry.")
                 return
             state.playlist.append(video)
-            message = await ctx.send(
-                "Added to queue.", embed=video.get_embed())
-            await self._add_reaction_controls(message)
-            state.message = message
 
             if client is None:
                 if ctx.author.voice is not None and ctx.author.voice.channel is not None:
                     channel = ctx.author.voice.channel
                     client = await channel.connect()
                     video = state.playlist.pop(0)
+                    if state.message is None:
+                        state.message = await ctx.send(embed=video.get_embed())
+                        await self._add_reaction_controls(state.message)
                     self._play_song(client, state, video)
                     logging.info(f"Now playing '{video.title}'")
+            else:
+                if state.message is not None:
+                    await state.message.delete()
+                await ctx.send(f"**{video.title}** Added to queue.", delete_after=5)
+                state.message = await ctx.send(embed=state.now_playing.get_embed())
+                await self._add_reaction_controls(state.message)
 
 
     @commands.Cog.listener()
@@ -329,7 +345,7 @@ class Music(commands.Cog):
                     client = message.guild.voice_client
                     if reaction.emoji == "⏯":
                         # pause audio
-                        self._pause_audio(client)
+                        self._pause_audio(client, message.guild)
                     elif reaction.emoji == "⏭":
                         # skip audio
                         client.stop()

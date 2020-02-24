@@ -28,7 +28,7 @@ class Moderation(commands.Cog):
     @commands.command(usage="!manual_verify [uid] {optional: ign}")
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
-    async def manual_verify(self, ctx, uid, ign):
+    async def manual_verify(self, ctx, uid, ign=None):
         """Manually verifies user with specified uid"""
         guild_data = sql.get_guild(ctx.guild.id)
         member = ctx.guild.get_member(int(uid))
@@ -52,6 +52,7 @@ class Moderation(commands.Cog):
                 await ctx.send("The specified member has already been verified.")
         elif ign is not None:
             sql.add_new_user(int(uid), ctx.guild.id, None)
+            user_data = sql.get_user(int(uid))
             name = ign
         else:
             await ctx.send("Please specify an IGN for this user.")

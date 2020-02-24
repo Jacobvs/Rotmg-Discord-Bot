@@ -14,3 +14,11 @@ Unhandled message: <Message id=681383290275495957 channel=<TextChannel id=679627
 Unhandled message: <Message id=681383559558463500 channel=<TextChannel id=679627953705189383 name='verify-here' position=0 nsfw=False news=False category_id=678528908429361154> type=<MessageType.default: 0> author=<Member id=196282885601361920 name='Darkmatter' discriminator='7321' bot=False nick='Darkmattr' guild=<Guild id=678528908429361152 name='Bot Testing' shard_id=None chunked=True member_count=4>> flags=<MessageFlags value=0>>
 Unhandled message: <Message id=681386224757506091 channel=<TextChannel id=679627953705189383 name='verify-here' position=0 nsfw=False news=False category_id=678528908429361154> type=<MessageType.default: 0> author=<Member id=681042185613082637 name='yikes' discriminator='1640' bot=False nick=None guild=<Guild id=678528908429361152 name='Bot Testing' shard_id=None chunked=True member_count=4>> flags=<MessageFlags value=0>>
 Unhandled message: <Message id=681386235163705356 channel=<TextChannel id=679627953705189383 name='verify-here' position=0 nsfw=False news=False category_id=678528908429361154> type=<MessageType.default: 0> author=<Member id=681042185613082637 name='yikes' discriminator='1640' bot=False nick=None guild=<Guild id=678528908429361152 name='Bot Testing' shard_id=None chunked=True member_count=4>> flags=<MessageFlags value=0>>
+Unhandled message: <Message id=681395431372095545 channel=<TextChannel id=680626010391314474 name='support' position=22 nsfw=False news=False category_id=667874961272340522> type=<MessageType.default: 0> author=<Member id=336945378589016075 name='Mapples' discriminator='9298' bot=False nick=None guild=<Guild id=667131263294898200 name='LegitHarmony' shard_id=None chunked=True member_count=66>> flags=<MessageFlags value=0>>
+Unhandled message: <Message id=681395545062768673 channel=<TextChannel id=667873392149528589 name='bot-commands' position=16 nsfw=False news=False category_id=667131263802540062> type=<MessageType.default: 0> author=<Member id=228330382926282773 name='Footlopz' discriminator='6194' bot=False nick='FruitLoopz' guild=<Guild id=667131263294898200 name='LegitHarmony' shard_id=None chunked=True member_count=66>> flags=<MessageFlags value=0>>
+Unhandled error: ⏯
+Unhandled error: ⏯
+Unhandled error: ⏯
+Unhandled error: ⏯
+Unhandled error: ⏯
+Unhandled error: ⏯
