@@ -1,5 +1,7 @@
 import json
 
+import discord
+
 import sql
 from discord.ext import commands
 from cogs import verification
@@ -25,6 +27,29 @@ class Moderation(commands.Cog):
 
         await ctx.send(f"The prefix for this server has been changed to '{prefix}'.")
 
+    @commands.command(usage="!find [nickname]")
+    @commands.guild_only()
+    @commands.has_permissions(manage_nicknames=True)
+    async def find(self, ctx, name):
+        """Find a user by the specified nickname"""
+        name = name.strip()
+        member = ctx.guild.get_member_named(name)
+        if member is not None:
+            if member.voice is None:
+                vc = '❌'
+            else:
+                vc = "#" + member.voice.channel.name
+            embed = discord.Embed(
+                description=f"Found member with the ign: [{member.nick}]"
+                            f"(https://www.realmeye.com/player/{member.nick}): {member.mention}"
+                            f"\nVoice Channel: {vc}"
+            )
+            await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(description=f"No members found with the nickname: `{name}`\nTip: This command is "
+            f"case sensitive")
+            await ctx.send(embed=embed)
+
     @commands.command(usage="!manual_verify [uid] {optional: ign}")
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
@@ -43,6 +68,8 @@ class Moderation(commands.Cog):
                         channel = self.client.get_channel(guild_data[sql.gld_cols.manualverifychannel])
                         message = await channel.fetch_message(user_data[sql.usr_cols.verifyid])
                         await message.delete()
+                    if ign is not None:
+                        name = ign
                 elif ign is not None:
                     name = ign
                 else:

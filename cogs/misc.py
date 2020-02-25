@@ -1,4 +1,6 @@
 import asyncio
+from random import choice
+
 import youtube_dl
 import discord
 from discord.ext import commands
@@ -62,6 +64,8 @@ class Misc(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+        self.laughs = ["ahhaha.mp3", "jokerlaugh.mp3"]
+        self.numbers = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
 
     @commands.command(aliases=["ahhaha"], usage="!laugh")
     @commands.guild_only()
@@ -71,7 +75,7 @@ class Misc(commands.Cog):
         """Ah-Ha-hA"""
         voice = await connect_helper(self, ctx)
 
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("ahhaha.mp3", options=ffmpeg_options['options']))
+        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(choice(self.laughs), options=ffmpeg_options['options']))
         ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
                                                                                                                 voice=voice))
 
@@ -83,11 +87,13 @@ class Misc(commands.Cog):
     async def purge(self, ctx, num=5):
         """Removes [num] messages from the channel"""
         num += 1
+        if num > 100:
+            num = 100
         if not isinstance(num, int):
             await ctx.send("Please pass in a number of messages to delete.")
             return
-        await ctx.channel.purge(limit=num)
-        await ctx.send(f"Deleted {num-1} messages.", delete_after=5)
+        await ctx.channel.purge(limit=num, bulk=True)
+        await ctx.send(f"Deleted {num-1} messages.")
 
     @commands.command(usage='!poll "[title]" [option 1] [option 2]...')
     @commands.guild_only()
@@ -102,12 +108,12 @@ class Misc(commands.Cog):
             await ctx.message.delete()
             await ctx.send("Please specify at most 10 options for the poll.", delete_after=4)
             return
-        numbers = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+
         embed=embeds.poll(title, options)
         await ctx.message.delete()
         msg = await ctx.send(embed=embed)
         for i in range(len(options)):
-            await msg.add_reaction(numbers[i])
+            await msg.add_reaction(self.numbers[i])
 
 
 def setup(client):

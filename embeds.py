@@ -3,7 +3,7 @@ import discord
 
 # Verification
 
-def verification_check_msg(reqs):
+def verification_check_msg(reqs, support_channel_name):
     embed = discord.Embed(
         title='Verification Steps',
         description="__If you meet the requirements of this server, follow these steps to be verified:__\n1. Enable "
@@ -12,7 +12,7 @@ def verification_check_msg(reqs):
         color=discord.Color.green()
     )
     embed.add_field(name="Server Requirements", value=f"```yaml\n{reqs}```")
-    embed.add_field(name="Troubleshooting", value="If you're having trouble verifying, post in #support!",
+    embed.add_field(name="Troubleshooting", value=f"If you're having trouble verifying, post in #{support_channel_name}!",
                     inline=False)
     return embed
 
@@ -99,11 +99,11 @@ def verification_checking_realmeye():
     return embed
 
 
-def verification_manual_verify(ign, uid):
+def verification_manual_verify(user, ign, uid, code):
     embed = discord.Embed(
         title="Manual Verification",
-        description=f"[{ign}](https://www.realmeye.com/player/{ign}) failed to meet the requirements and would like "
-        f"to be manually verified.\nTo manually verify them use the following command below: \n```!manual_verify {uid}```"
+        description=f"{user} with the ign:[{ign}](https://www.realmeye.com/player/{ign}) failed to meet the requirements and would like "
+        f"to be manually verified.\nThe code they were provided is: `{code}`\nTo manually verify them use the following command below: \n```!manual_verify {uid}```"
     )
     return embed
 

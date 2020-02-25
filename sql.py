@@ -85,3 +85,4 @@ class gld_cols(enum.IntEnum):
     manualverifychannel = 9  # Int
     verifiedroleid = 10  # Int
     verifylogchannel = 11  # Int
+    supportchannelname = 12  # String

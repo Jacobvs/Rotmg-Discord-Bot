@@ -77,7 +77,6 @@ class Verification(commands.Cog):
                     embed = embeds.verification_bad_reqs(guild_data[sql.gld_cols.reqsmsg])
                     sql.update_user(user_id, "status", "denied")
                     sql.update_user(user_id, "ign", name)
-                    sql.update_user(user_id, "verifykey", None)
                     message = await member.fetch_message(user_data[sql.usr_cols.verifyid])
                     await message.edit(embed=embed)
                     await channel.send(f"{member.mention} does not meet requirements.")
@@ -180,7 +179,7 @@ class Verification(commands.Cog):
                         guild_data = sql.get_guild(user_data[sql.usr_cols.verifyguild])
                         guild = self.client.get_guild(guild_data[sql.gld_cols.id])
                         channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
-                        msg = await channel.send(embed=embeds.verification_manual_verify(user_data[sql.usr_cols.ign], payload.user_id))
+                        msg = await channel.send(embed=embeds.verification_manual_verify(user.mention, user_data[sql.usr_cols.ign], payload.user_id, user_data[sql.usr_cols.verifykey]))
                         sql.update_user(payload.user_id, "status", "deny_appeal")
                         sql.update_user(payload.user_id, "verifyid", msg.id)
                         await user.send("Your application is being reviewed by staff. Please wait for their decision.")
@@ -198,7 +197,8 @@ class Verification(commands.Cog):
     async def add_verify_msg(self, ctx):
         """Add the verification message to channel"""
 
-        embed = embeds.verification_check_msg(sql.get_guild(ctx.guild.id)[sql.gld_cols.reqsmsg])
+        guild_db = sql.get_guild(ctx.guild.id)
+        embed = embeds.verification_check_msg(guild_db[sql.gld_cols.reqsmsg], guild_db[sql.gld_cols.supportchannelname])
         message = await ctx.send(embed=embed)
         await message.add_reaction("✅")
         await ctx.message.delete()
