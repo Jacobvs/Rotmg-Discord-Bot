@@ -1,9 +1,9 @@
 import json
 
 import discord
+from discord.ext import commands
 
 import sql
-from discord.ext import commands
 from cogs import verification
 
 

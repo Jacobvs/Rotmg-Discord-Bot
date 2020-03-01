@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import discord
 
 
@@ -12,7 +14,8 @@ def verification_check_msg(reqs, support_channel_name):
         color=discord.Color.green()
     )
     embed.add_field(name="Server Requirements", value=f"```yaml\n{reqs}```")
-    embed.add_field(name="Troubleshooting", value=f"If you're having trouble verifying, post in #{support_channel_name}!",
+    embed.add_field(name="Troubleshooting",
+                    value=f"If you're having trouble verifying, post in #{support_channel_name}!",
                     inline=False)
     return embed
 
@@ -169,8 +172,8 @@ def verification_cancelled():
 
 # Misc
 def poll(title, options):
-    numbers = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
-    embed=discord.Embed(
+    numbers = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+    embed = discord.Embed(
         title=f"🗳️ Poll: {title.capitalize()}",
         color=discord.Color.dark_gold()
     )
@@ -180,3 +183,60 @@ def poll(title, options):
     embed.description = desc
     return embed
 
+
+# Raiding
+
+def headcount_base(run_title, requester, keyed_run, emojis):
+    if keyed_run:
+        desc = (f"React with {emojis[0]} to participate and {emojis[1]} if you have a key and are willing to pop it!\n"
+                "To indicate your class or gear choices, react to the appropriate emoji's below")
+    else:
+        desc = ((f"React with {emojis[0]} to participate in the run!\n"
+                 "To indicate your class or gear choices, react to the appropriate emoji's below"))
+    embed = discord.Embed(
+        title=f"Headcount for {run_title} started by {requester}",
+        description=desc,
+        color=discord.Color.teal()
+    )
+    embed.set_footer(text="Headcount started at ")
+    embed.timestamp = datetime.utcnow()
+    return embed
+
+
+def afk_check_base(run_title, requester, keyed_run, emojis):
+    if keyed_run:
+        desc = (f"To join, **connect to the raiding channel by clicking its name** and react to: {emojis[0]}\n"
+                f"If you have a key, react to {emojis[1]}\n"
+                "To indicate your class or gear choices, react to the appropriate emoji's below\n"
+                f"To end the AFK check as a leader, react to ❌")
+    else:
+        desc = (f"To join, **connect to the raiding channel by clicking its name** and react to: {emojis[0]}\n"
+                "To indicate your class or gear choices, react to the appropriate emoji's below\n"
+                f"To end the AFK check as a leader, react to ❌")
+    embed = discord.Embed(
+        title=f"{run_title} started by {requester}",
+        description=desc,
+        color=discord.Color.teal()
+    )
+    embed.set_footer(text="AFK Check started at ")
+    embed.timestamp = datetime.utcnow()
+    return embed
+
+
+def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run, ):
+    embed = discord.Embed(
+        description=f"**[AFK Check]({msg_url}) control panel for `{run_title}`**",
+        color=discord.Color.teal()
+    )
+    if keyed_run:
+        embed.add_field(name="Current Keys:", value=f"Main {key_emoji}: None\nBackup {key_emoji}: None")
+    if run_title == "Void" or run_title == "Full-Skip Void":
+        embed.add_field(name="Vials:",
+                        value=f"Main <:vial:682205784524062730>: None\nBackup <:vial:682205784524062730>: None",
+                        inline=False)
+
+    embed.add_field(name="Location of run:", value=location, inline=False)
+    embed.add_field(name="Nitro Boosters with location:", value=f"`None`", inline=False)
+    embed.set_footer(text="AFK Check started at ")
+    embed.timestamp = datetime.utcnow()
+    return embed

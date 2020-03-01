@@ -1,8 +1,7 @@
 import asyncio
-from random import choice
 
-import youtube_dl
 import discord
+import youtube_dl
 from discord.ext import commands
 from discord.utils import get
 
@@ -64,26 +63,40 @@ class Misc(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-        self.laughs = ["ahhaha.mp3", "jokerlaugh.mp3"]
+        self.laughs = ["files/ahhaha.mp3", "files/jokerlaugh.mp3"]
         self.numbers = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
 
-    @commands.command(aliases=["ahhaha"], usage="!laugh")
+    @commands.command(aliases=["ahhaha"], usage="!laugh [1 or 2]")
     @commands.guild_only()
     @commands.check(is_dj)
     @commands.check(in_voice_channel)
-    async def laugh(self, ctx):
+    async def laugh(self, ctx, option=1):
         """Ah-Ha-hA"""
         voice = await connect_helper(self, ctx)
+        if option != 1 and option != 2:
+            option = 1
+        client = ctx.guild.voice_client
+        if not client.source:
+            source = discord.PCMVolumeTransformer(
+                discord.FFmpegPCMAudio(self.laughs[option], options=ffmpeg_options['options']))
+            ctx.voice_client.play(source,
+                                  after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
+                                                                                                            voice=voice))
+            await ctx.send("Ah-Ha-hA")
+        else:
+            await ctx.send("Audio is already playing!")
 
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(choice(self.laughs), options=ffmpeg_options['options']))
-        ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
-                                                                                                                voice=voice))
+    @commands.command(usage="!oogabooga")
+    async def oogabooga(self, ctx):
+        await ctx.send(file=discord.File('files/oogabooga.png'))
 
-        await ctx.send("Ah-Ha-hA")
+    @commands.command(usage="!whatthefuck")
+    async def whatthefuck(self, ctx):
+        await ctx.send(file=discord.File('files/whatthefuck.jpg'))
 
     @commands.command(usage="!purge [num]")
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
+    @commands.has_permissions(manage_messages=True)
     async def purge(self, ctx, num=5):
         """Removes [num] messages from the channel"""
         num += 1
@@ -93,11 +106,11 @@ class Misc(commands.Cog):
             await ctx.send("Please pass in a number of messages to delete.")
             return
         await ctx.channel.purge(limit=num, bulk=True)
-        await ctx.send(f"Deleted {num-1} messages.")
+        await ctx.send(f"Deleted {num - 1} messages.", delete_after=5)
 
     @commands.command(usage='!poll "[title]" [option 1] [option 2]...')
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
+    @commands.has_permissions(manage_nicknames=True)
     async def poll(self, ctx, title, *options):
         """Creates a poll with up to 2-10 options"""
         if len(options) < 2:

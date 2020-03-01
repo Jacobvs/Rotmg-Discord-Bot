@@ -1,11 +1,13 @@
-import requests
-from bs4 import BeautifulSoup as bs
-from discord.ext import commands
-import discord
 import asyncio
-import youtube_dl as ytdl
 import logging
 import math
+
+import discord
+import requests
+import youtube_dl as ytdl
+from bs4 import BeautifulSoup as bs
+from discord.ext import commands
+
 from checks import audio_playing, in_same_voice_channel, is_audio_requester, is_dj
 
 YTDL_OPTS = {
@@ -53,7 +55,7 @@ class Video:
         embed = discord.Embed(
             title="Now Playing:", description="["+self.title+ "](" + self.video_url + ")" + "\n\nChannel: " + self.uploader)
         embed.set_footer(
-            text=f"Requested by {self.requested_by.name}",
+            text=f"Requested by {self.requested_by.nick}",
             icon_url=self.requested_by.avatar_url)
         if self.thumbnail:
             embed.set_thumbnail(url=self.thumbnail)
@@ -90,14 +92,14 @@ class Music(commands.Cog):
         else:
             raise commands.CommandError("Not in a voice channel.")
 
-    @commands.command(aliases=["resume"], usage="!pause")
+    @commands.command(aliases=["resume"], usage="!pause/!resume")
     @commands.guild_only()
     @commands.check(is_dj)
     @commands.check(audio_playing)
     @commands.check(in_same_voice_channel)
     @commands.check(is_audio_requester)
     async def pause(self, ctx):
-        """Pauses any currently playing audio."""
+        """Pauses or resumes any currently playing audio."""
         client = ctx.guild.voice_client
         self._pause_audio(client, ctx.guild)
 
@@ -114,7 +116,7 @@ class Music(commands.Cog):
 
     @commands.command(aliases=["vol", "v"], usage="!volume [0-250]")
     @commands.guild_only()
-    @commands.check(is_dj)
+    @commands.has_permissions(manage_nicknames=True)
     @commands.check(in_same_voice_channel)
     async def volume(self, ctx, volume: int):
         """Change the volume of currently playing audio."""
@@ -243,7 +245,7 @@ class Music(commands.Cog):
     @commands.check(is_dj)
     @commands.check(audio_playing)
     async def jumpqueue(self, ctx, song: int, new_index: int):
-        """Moves song at an index to `new_index` in queue."""
+        """Moves song at an index to new_index in queue."""
         state = self.get_state(ctx.guild)  # get state for this guild
         if 1 <= song <= len(state.playlist) and 1 <= new_index:
             song = state.playlist.pop(song - 1)  # take song at index...
@@ -318,12 +320,12 @@ class Music(commands.Cog):
                         await self._add_reaction_controls(state.message)
                     self._play_song(client, state, video)
                     logging.info(f"Now playing '{video.title}'")
-            else:
-                if state.message is not None:
-                    await state.message.delete()
-                await ctx.send(f"**{video.title}** Added to queue.", delete_after=5)
-                state.message = await ctx.send(embed=state.now_playing.get_embed())
-                await self._add_reaction_controls(state.message)
+
+            if state.message is not None:
+                await state.message.delete()
+            await ctx.send(f"**{video.title}** Added to queue.", delete_after=5)
+            state.message = await ctx.send(embed=state.now_playing.get_embed())
+            await self._add_reaction_controls(state.message)
 
 
     @commands.Cog.listener()

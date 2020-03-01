@@ -1,7 +1,7 @@
 import enum
+import os
 
 import mysql.connector
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -48,9 +48,20 @@ def update_user(id, column, change):
 
 
 def add_new_guild(guild_id, guild_name):
-    sql = "INSERT INTO rotmg.guilds (id, name, verificationid, nmaxed, nfame, nstars, reqall, privateloc, reqsmsg, manualverifychannel, verifiedroleid, verifylogchannel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+    sql = ("INSERT INTO rotmg.guilds (id, name, verificationid, nmaxed, nfame,"
+           "nstars, reqall, privateloc, reqsmsg, manualverifychannel, verifiedroleid,"
+           "verifylogchannel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
     data = (guild_id, guild_name, 0, 0, 0, 0, False, True, "", 0, 0, 0)
     cursor.execute(sql, data)
+    sql = (f"create table guild_tables.`{guild_id}_logs` (id int null, runcomplete int default"
+           " 0 null, keypop int default 0 null, runled int default 0 null, eventcomplete int"
+           " default 0 null, eventled int default 0 null, constraint"
+           f" `{guild_id}_logs_pk` primary key (id));")
+    cursor.execute(sql)
+    sql = (f"create table `{guild_id}_punishments`(id int not null, type VARCHAR(255) null,"
+           " expiry DATETIME null, reason VARCHAR(255) null, requester int null, "
+           f"constraint `{guild_id}_punishments_pk` primary key (id));")
+    cursor.execute(sql)
     mydb.commit()
 
 
@@ -86,3 +97,5 @@ class gld_cols(enum.IntEnum):
     verifiedroleid = 10  # Int
     verifylogchannel = 11  # Int
     supportchannelname = 12  # String
+    raidhc = 13  # Int
+    raidvc1 = 14  # Int

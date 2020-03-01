@@ -1,10 +1,15 @@
 import json
 from datetime import datetime, timedelta
+
 import discord
 from discord.ext import commands
-import sql
-from cogs import verification
 
+import sql
+from cogs import verification, raiding
+from cogs.raiding import afk_check_reaction_handler, confirmed_raiding_reacts
+from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification
+
+states = {}
 
 class Core(commands.Cog):
 
@@ -106,7 +111,7 @@ class Core(commands.Cog):
                 await ctx.send('', embed=halp)
             else:
                 if len(cog) > 1:
-                    halp = discord.Embed(title='Error!', description='That is way too many cogs!',
+                    halp = discord.Embed(title='Error!', description="That's too many cogs!",
                                          color=discord.Color.red())
                     await ctx.message.author.send('', embed=halp)
                 else:
@@ -127,6 +132,36 @@ class Core(commands.Cog):
                     await ctx.send('', embed=halp)
         except:
             pass
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        if payload.user_id == self.client.user.id:
+            return
+
+        user_data = sql.get_user(payload.user_id)
+        user = self.client.get_user(payload.user_id)
+
+        # check if reaction is in dm's or in guild
+        if payload.guild_id is not None:
+            guild = self.client.get_guild(payload.guild_id)
+            guild_data = sql.get_guild(guild.id)
+            verify_message_id = guild_data[sql.gld_cols.verificationid]
+
+            if payload.message_id == verify_message_id and str(payload.emoji) == '✅':  # handles verification reacts
+                return await guild_verify_react_handler(Verification(self.client), payload, user_data, guild_data, user,
+                                                        guild, verify_message_id)
+            elif payload.channel_id == guild_data[sql.gld_cols.raidhc]:
+                return await afk_check_reaction_handler(payload, user, guild)
+
+        elif str(payload.emoji) in ['✅', '👍', '❌']:
+            if user_data is not None:
+                if payload.message_id == user_data[sql.usr_cols.verifyid]:
+                    return await dm_verify_react_handler(Verification(self.client), payload, user_data, user)
+        # elif str(payload.emoji) in ['✉️','🚫']:
+        elif payload.emoji.id in raiding.key_ids:
+            return await confirmed_raiding_reacts(payload, user)
+
+
 
 def setup(client):
     client.add_cog(Core(client))

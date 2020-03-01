@@ -1,12 +1,12 @@
 import random
 import string
-import embeds
-import sql
-
-import requests
 
 import discord
+import requests
 from discord.ext import commands
+
+import embeds
+import sql
 
 
 class Verification(commands.Cog):
@@ -88,107 +88,6 @@ class Verification(commands.Cog):
             await member.send(embed=embed, delete_after=10)
             await channel.send(f"{member.mention} is missing their realmeye code (or api is down).")
 
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
-        if payload.user_id == self.client.user.id:
-            return
-
-        user_data = sql.get_user(payload.user_id)
-        user = self.client.get_user(payload.user_id)
-
-        if payload.guild_id is not None:
-            guild = self.client.get_guild(payload.guild_id)
-            guild_data = sql.get_guild(guild.id)
-            verify_message_id = guild_data[sql.gld_cols.verificationid]
-            verified = False
-
-            if payload.message_id == verify_message_id and str(payload.emoji) == '✅':
-                vfy_msg = await self.client.get_channel(payload.channel_id).fetch_message(verify_message_id)
-                await vfy_msg.remove_reaction('✅', user)
-
-                if user_data is not None:
-                    verified_guilds = user_data[sql.usr_cols.verifiedguilds]
-                    if verified_guilds is not None:
-                        verified_guilds = verified_guilds.split(",")
-                        if guild.name in verified_guilds:
-                            verified = True
-                            embed = embeds.verification_already_verified()
-                            msg = await user.send(embed=embed)
-                        else:
-                            embed = embeds.verification_already_verified_complete(verified_guilds,
-                                                                                  user_data[sql.usr_cols.ign])
-                            msg = await user.send(embed=embed)
-                            await msg.add_reaction('👍')
-                            await msg.add_reaction('❌')  # TODO: test cancel
-                            sql.update_user(user.id, "verifyid", msg.id)
-                            sql.update_user(user.id, "verifyguild", guild.id)
-                            channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
-                            await channel.send(f"{user.mention} is re-verifying for this guild.")
-                            return
-                    elif user_data[sql.usr_cols.status] == "denied":
-                        embed = embeds.verification_bad_reqs(guild_data[sql.gld_cols.reqsmsg])
-                        msg = await user.send(embed=embed)
-                        msg.add_reaction('✅')
-                        sql.update_user(payload.user_id, "verifyid", msg.id)
-                    elif user_data[sql.usr_cols.status] == "deny_appeal":
-                        await user.send("Your application is being reviewed by staff. Please wait for their decision.")
-                    else:
-                        embed = embeds.verification_dm_start()
-                        channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
-                        await channel.send(f"{user.mention} has started the verification process.")
-                        msg = await user.send(embed=embed)
-
-                else:
-                    embed = embeds.verification_dm_start()
-                    channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
-                    await channel.send(f"{user.mention} has started the verification process.")
-                    msg = await user.send(embed=embed)
-
-                if user_data is None:
-                    sql.add_new_user(payload.user_id, guild.id, msg.id)
-                else:
-                    sql.update_user(payload.user_id, "verifyguild", guild.id)
-                    sql.update_user(payload.user_id, "verifyid", msg.id)
-                if not verified:
-                    await msg.add_reaction('❌')
-
-        elif user_data is not None:
-            if payload.message_id == user_data[sql.usr_cols.verifyid]:
-                if user_data[sql.usr_cols.status] != "denied":
-                    if user_data[sql.usr_cols.status] != "cancelled":
-                        if str(payload.emoji) == '✅':
-                            status = user_data[sql.usr_cols.status]
-                            if status == 'stp_2':
-                                await self.step_2_verify(payload.user_id)
-                                return
-                            elif status == 'stp_3':
-                                await self.step_3_verify(payload.user_id, reverify=False)
-                                return
-                        elif str(payload.emoji) == '❌':
-                            embed = embeds.verification_cancelled()
-                            message = await user.fetch_message(user_data[sql.usr_cols.verifyid])
-                            await message.edit(embed=embed)
-                            channel = self.client.get_channel(sql.get_guild(user_data[sql.usr_cols.verifyguild])[sql.gld_cols.verifylogchannel]) #unknown colum none in where clause
-                            await channel.send(f"{user.mention} has cancelled the verification process.")
-                            sql.update_user(payload.user_id, "verifyguild", None)
-                            sql.update_user(payload.user_id, "status", "cancelled")
-                        elif str(payload.emoji) == '👍':
-                            await self.step_3_verify(payload.user_id, reverify=True)
-                else:
-                    if str(payload.emoji) == '✅' or str(payload.emoji) == '👍':
-                        guild_data = sql.get_guild(user_data[sql.usr_cols.verifyguild])
-                        guild = self.client.get_guild(guild_data[sql.gld_cols.id])
-                        channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
-                        msg = await channel.send(embed=embeds.verification_manual_verify(user.mention, user_data[sql.usr_cols.ign], payload.user_id, user_data[sql.usr_cols.verifykey]))
-                        sql.update_user(payload.user_id, "status", "deny_appeal")
-                        sql.update_user(payload.user_id, "verifyid", msg.id)
-                        await user.send("Your application is being reviewed by staff. Please wait for their decision.")
-                    elif str(payload.emoji) == '❌':
-                        embed = embeds.verification_cancelled()
-                        await user.send(embed=embed)
-                        sql.update_user(payload.user_id, "verifyguild", None)
-                        sql.update_user(payload.user_id, "verifyid", None)
-                        sql.update_user(payload.user_id, "status", "cancelled")
 
     # TODO: add support for multiple servers w/ independent reqs
     @commands.command(usage="!add_verify_msg")
@@ -221,6 +120,7 @@ async def step_1_verify(user, ign):
     sql.update_user(user.id, "status", "stp_2")
     sql.update_user(user.id, "verifyid", msg.id)
 
+
 async def complete_verification(guild, guild_data, member, name, user_data, reverify):
     role = discord.utils.get(guild.roles, id=guild_data[sql.gld_cols.verifiedroleid])
     try:
@@ -244,3 +144,96 @@ async def complete_verification(guild, guild_data, member, name, user_data, reve
     sql.update_user(member.id, "verifykey", None)
     sql.update_user(member.id, "verifyid", None)
     sql.update_user(member.id, "verifyguild", None)
+
+
+async def guild_verify_react_handler(self, payload, user_data, guild_data, user, guild, verify_msg_id):
+    verified = False
+    vfy_msg = await self.client.get_channel(payload.channel_id).fetch_message(verify_msg_id)
+    await vfy_msg.remove_reaction('✅', user)
+
+    if user_data is not None:
+        verified_guilds = user_data[sql.usr_cols.verifiedguilds]
+        if verified_guilds is not None:
+            verified_guilds = verified_guilds.split(",")
+            if guild.name in verified_guilds:
+                verified = True
+                embed = embeds.verification_already_verified()
+                msg = await user.send(embed=embed)
+            else:
+                embed = embeds.verification_already_verified_complete(verified_guilds,
+                                                                      user_data[sql.usr_cols.ign])
+                msg = await user.send(embed=embed)
+                await msg.add_reaction('👍')
+                await msg.add_reaction('❌')  # TODO: test cancel
+                sql.update_user(user.id, "verifyid", msg.id)
+                sql.update_user(user.id, "verifyguild", guild.id)
+                channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
+                await channel.send(f"{user.mention} is re-verifying for this guild.")
+                return
+        elif user_data[sql.usr_cols.status] == "denied":
+            embed = embeds.verification_bad_reqs(guild_data[sql.gld_cols.reqsmsg])
+            msg = await user.send(embed=embed)
+            msg.add_reaction('✅')
+            sql.update_user(payload.user_id, "verifyid", msg.id)
+        elif user_data[sql.usr_cols.status] == "deny_appeal":
+            await user.send("Your application is being reviewed by staff. Please wait for their decision.")
+        else:
+            embed = embeds.verification_dm_start()
+            channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
+            await channel.send(f"{user.mention} has started the verification process.")
+            msg = await user.send(embed=embed)
+
+    else:
+        embed = embeds.verification_dm_start()
+        channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
+        await channel.send(f"{user.mention} has started the verification process.")
+        msg = await user.send(embed=embed)
+
+    if user_data is None:
+        sql.add_new_user(payload.user_id, guild.id, msg.id)
+    else:
+        sql.update_user(payload.user_id, "verifyguild", guild.id)
+        sql.update_user(payload.user_id, "verifyid", msg.id)
+    if not verified:
+        await msg.add_reaction('❌')
+
+
+async def dm_verify_react_handler(self, payload, user_data, user):
+    if user_data[sql.usr_cols.status] != "denied":
+        if user_data[sql.usr_cols.status] != "cancelled":
+            if str(payload.emoji) == '✅':
+                status = user_data[sql.usr_cols.status]
+                if status == 'stp_2':
+                    await self.step_2_verify(payload.user_id)
+                    return
+                elif status == 'stp_3':
+                    await self.step_3_verify(payload.user_id, reverify=False)
+                    return
+            elif str(payload.emoji) == '❌':
+                embed = embeds.verification_cancelled()
+                message = await user.fetch_message(user_data[sql.usr_cols.verifyid])
+                await message.edit(embed=embed)
+                channel = self.client.get_channel(sql.get_guild(user_data[sql.usr_cols.verifyguild])[
+                                                      sql.gld_cols.verifylogchannel])  # unknown colum none in where clause
+                await channel.send(f"{user.mention} has cancelled the verification process.")
+                sql.update_user(payload.user_id, "verifyguild", None)
+                sql.update_user(payload.user_id, "status", "cancelled")
+            elif str(payload.emoji) == '👍':
+                await self.step_3_verify(payload.user_id, reverify=True)
+    else:
+        if str(payload.emoji) == '✅' or str(payload.emoji) == '👍':
+            guild_data = sql.get_guild(user_data[sql.usr_cols.verifyguild])
+            guild = self.client.get_guild(guild_data[sql.gld_cols.id])
+            channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
+            msg = await channel.send(
+                embed=embeds.verification_manual_verify(user.mention, user_data[sql.usr_cols.ign], payload.user_id,
+                                                        user_data[sql.usr_cols.verifykey]))
+            sql.update_user(payload.user_id, "status", "deny_appeal")
+            sql.update_user(payload.user_id, "verifyid", msg.id)
+            await user.send("Your application is being reviewed by staff. Please wait for their decision.")
+        elif str(payload.emoji) == '❌':
+            embed = embeds.verification_cancelled()
+            await user.send(embed=embed)
+            sql.update_user(payload.user_id, "verifyguild", None)
+            sql.update_user(payload.user_id, "verifyid", None)
+            sql.update_user(payload.user_id, "status", "cancelled")
