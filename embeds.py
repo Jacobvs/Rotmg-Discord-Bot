@@ -203,16 +203,21 @@ def headcount_base(run_title, requester, keyed_run, emojis):
     return embed
 
 
-def afk_check_base(run_title, requester, keyed_run, emojis):
+def afk_check_base(run_title, requester, keyed_run, emojis, location=None):
     if keyed_run:
         desc = (f"To join, **connect to the raiding channel by clicking its name** and react to: {emojis[0]}\n"
                 f"If you have a key, react to {emojis[1]}\n"
                 "To indicate your class or gear choices, react to the appropriate emoji's below\n"
-                f"To end the AFK check as a leader, react to ❌")
+                "To end the AFK check as a leader, react to ❌")
+    elif run_title == "Fame Train":
+        desc = (f"The location of the fame train is `{location}`\n"
+                "To indicate your class or gear choices, react to the appropriate emoji's below\n"
+                "Listen to the conductor for faster fame!\n"
+                "To end the AFK check as a leader, react to ❌")
     else:
         desc = (f"To join, **connect to the raiding channel by clicking its name** and react to: {emojis[0]}\n"
                 "To indicate your class or gear choices, react to the appropriate emoji's below\n"
-                f"To end the AFK check as a leader, react to ❌")
+                "To end the AFK check as a leader, react to ❌")
     embed = discord.Embed(
         title=f"{run_title} started by {requester}",
         description=desc,

@@ -14,12 +14,12 @@ class Raiding(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @commands.command(usage="!afk [type of run] <location>")
+    @commands.command(usage="!afk [type of run] [hc_channel_num] <location>")
     @commands.guild_only()
     @commands.has_permissions(manage_nicknames=True)
     # TODO: ADD Leader check
     # TODO: add check that guild has no running afk up
-    async def afk(self, ctx, type, *location):
+    async def afk(self, ctx, type, hc_channel_num, *location):
         """Starts an AFK check for the type of run specified. Valid run types are: ```realmclear, fametrain, void, fskipvoid, cult```"""
         if len(location) == 0:
             location = "No location specified."
@@ -28,9 +28,21 @@ class Raiding(commands.Cog):
             for s in location:
                 loc += s + " "
             location = loc
+
+        # TODO CHECK IF IS OPTION FOR CHANNEL NUM
         guild_db = sql.get_guild(ctx.guild.id)
-        vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc1])
-        hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc])
+
+        if hc_channel_num == '1':
+            hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc1])
+            vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc1])
+        elif hc_channel_num == '2':
+            hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc2])
+            vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc2])
+        elif hc_channel_num == '3':
+            hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc3])
+            vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc3])
+        else:
+            return await ctx.send("That channel number is not an option, please choose a channel from 1-3")
         role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.verifiedroleid])
 
         # TODO: Create run object for guild -- give lock on command until
@@ -49,26 +61,35 @@ class Raiding(commands.Cog):
         # await vc.edit(name=vc.name + " <-- Join!")
         # await vc.set_permissions(role, connect=True)
         emojis = run_emojis(type)
-        embed = embeds.afk_check_base(title[0], ctx.author.nick, keyed_run, emojis)
+        state = get_state(ctx.guild, core.states)
+        if title[0] == 'Fame Train':
+            embed = embeds.afk_check_base(title[0], ctx.author.nick, keyed_run, emojis, location)
+        else:
+            embed = embeds.afk_check_base(title[0], ctx.author.nick, keyed_run, emojis)
         msg = await hc_channel.send(f"@here `{title[0]}` {emojis[0]} started by {ctx.author.mention} in {vc.name}",
                                     embed=embed)
+        embed = embeds.afk_check_control_panel(msg.jump_url, location, title[0], emojis[1], keyed_run)
+        cpmsg = await ctx.send(embed=embed)
+        start_run(state, title, keyed_run, emojis[1], msg.id, cpmsg, location)
         for e in emojis:
             await msg.add_reaction(e)
         await msg.add_reaction('<:shard:682365548465487965>')
         await msg.add_reaction('❌')
-        embed = embeds.afk_check_control_panel(msg.jump_url, location, title[0], emojis[1], keyed_run)
-        cpmsg = await ctx.send(embed=embed)
-        state = get_state(ctx.guild, core.states)
-        start_run(state, title, keyed_run, emojis[1], msg.id, cpmsg, location)
 
-    @commands.command(usage="!headcount [type of run]", aliases=["hc"])
+    @commands.command(usage="!headcount [type of run] [hc_channel_num]", aliases=["hc"])
     @commands.guild_only()
     @commands.has_permissions(manage_nicknames=True)
-    async def headcount(self, ctx, type):
+    async def headcount(self, ctx, type, hc_channel_num=1):
         """Starts a headcount for the type of run specified. Valid run types are: ```realmclear, fametrain, void, fskipvoid, cult```"""
         guild_db = sql.get_guild(ctx.guild.id)
-        vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc1])
-        hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc])
+        if hc_channel_num == 1:
+            hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc1])
+        elif hc_channel_num == 2:
+            hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc2])
+        elif hc_channel_num == 3:
+            hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc3])
+        else:
+            return await ctx.send("That channel number is not an option, please choose a channel from 1-3")
 
         title = run_title(type)
         if title is None:
@@ -278,7 +299,8 @@ def run_emojis(type):
     return {
         'realmclear': ["<:defaultdungeon:682212333182910503>", "<:trickster:682214467483861023>"],
         'fametrain': ["<:fame:682209281722024044>", "<:sorcerer:682214487490560010>",
-                      "<:necromancer:682214503106215966>"],
+                      "<:necromancer:682214503106215966>", "<:sseal:683815374403141651>",
+                      "<:paladin:682205688033968141>"],
         'void': ["<:void:682205817424183346>", "<:lhkey:682205801728835656>", "<:vial:682205784524062730>",
                  default_emojis[2], default_emojis[3], default_emojis[4], "<:mseal:682205755754938409>",
                  "<:puri:682205769973760001>", "<:planewalker:682212363889279091>"],

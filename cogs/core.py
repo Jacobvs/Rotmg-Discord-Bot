@@ -150,7 +150,8 @@ class Core(commands.Cog):
             if payload.message_id == verify_message_id and str(payload.emoji) == '✅':  # handles verification reacts
                 return await guild_verify_react_handler(Verification(self.client), payload, user_data, guild_data, user,
                                                         guild, verify_message_id)
-            elif payload.channel_id == guild_data[sql.gld_cols.raidhc]:
+            elif payload.channel_id in [guild_data[sql.gld_cols.raidhc1], guild_data[sql.gld_cols.raidhc2],
+                                        guild_data[sql.gld_cols.raidhc3]]:
                 return await afk_check_reaction_handler(payload, user, guild)
 
         elif str(payload.emoji) in ['✅', '👍', '❌']:

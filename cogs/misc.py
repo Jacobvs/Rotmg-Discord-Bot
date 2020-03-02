@@ -78,11 +78,29 @@ class Misc(commands.Cog):
         client = ctx.guild.voice_client
         if not client.source:
             source = discord.PCMVolumeTransformer(
-                discord.FFmpegPCMAudio(self.laughs[option], options=ffmpeg_options['options']))
+                discord.FFmpegPCMAudio(self.laughs[option], options=ffmpeg_options['options']), volume=0.5)
             ctx.voice_client.play(source,
                                   after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
                                                                                                             voice=voice))
             await ctx.send("Ah-Ha-hA")
+        else:
+            await ctx.send("Audio is already playing!")
+
+    @commands.command(usage="!richard")
+    @commands.guild_only()
+    @commands.check(is_dj)
+    @commands.check(in_voice_channel)
+    async def richard(self, ctx):
+        "RICHARD!"
+        voice = await connect_helper(self, ctx)
+        client = ctx.guild.voice_client
+        if not client.source:
+            source = discord.PCMVolumeTransformer(
+                discord.FFmpegPCMAudio("files/richard.mp3", options=ffmpeg_options['options']), volume=0.5)
+            ctx.voice_client.play(source,
+                                  after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
+                                                                                                            voice=voice))
+            await ctx.send("What the fuck, Richard?")
         else:
             await ctx.send("Audio is already playing!")
 

@@ -97,5 +97,9 @@ class gld_cols(enum.IntEnum):
     verifiedroleid = 10  # Int
     verifylogchannel = 11  # Int
     supportchannelname = 12  # String
-    raidhc = 13  # Int
+    raidhc1 = 13  # Int
     raidvc1 = 14  # Int
+    raidhc2 = 15
+    raidhc3 = 16
+    raidvc2 = 17
+    raidvc3 = 18
