@@ -1,9 +1,10 @@
-import os
 import json
+import logging
+import os
 import traceback
+
 from discord.ext import commands
 from dotenv import load_dotenv
-import logging
 
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
@@ -30,6 +31,7 @@ bot.remove_command('help')
 
 
 @bot.command(usage="!load [cog]")
+@commands.has_permissions(administrator=True)
 async def load(ctx, extension):
     """Load specified cog"""
     extension = extension.lower()
@@ -37,6 +39,7 @@ async def load(ctx, extension):
 
 
 @bot.command(usage="!unload [cog]")
+@commands.has_permissions(administrator=True)
 async def unload(ctx, extension):
     """Unload specified cog"""
     extension = extension.lower()
@@ -44,6 +47,7 @@ async def unload(ctx, extension):
 
 
 @bot.command(usage="!reload [cog]")
+@commands.has_permissions(administrator=True)
 async def reload(ctx, extension):
     """Reload specified cog"""
     extension = extension.lower()

@@ -194,10 +194,10 @@ def headcount_base(run_title, requester, keyed_run, emojis):
         desc = ((f"React with {emojis[0]} to participate in the run!\n"
                  "To indicate your class or gear choices, react to the appropriate emoji's below"))
     embed = discord.Embed(
-        title=f"Headcount for {run_title} started by {requester}",
         description=desc,
         color=discord.Color.teal()
     )
+    embed.set_author(name=f"Headcount for {run_title} started by {requester.nick}", icon_url=requester.avatar_url)
     embed.set_footer(text="Headcount started at ")
     embed.timestamp = datetime.utcnow()
     return embed
@@ -219,12 +219,11 @@ def afk_check_base(run_title, requester, keyed_run, emojis, location=None):
                 "To indicate your class or gear choices, react to the appropriate emoji's below\n"
                 "To end the AFK check as a leader, react to ❌")
     embed = discord.Embed(
-        title=f"{run_title} started by {requester}",
         description=desc,
         color=discord.Color.teal()
     )
-    embed.set_footer(text="AFK Check started at ")
-    embed.timestamp = datetime.utcnow()
+    embed.set_author(name=f"{run_title} started by {requester.nick}", icon_url=requester.avatar_url)
+    embed.set_footer(text="Time remaining: 6 Minutes and 0 seconds | Raiders accounted for: 0")
     return embed
 
 

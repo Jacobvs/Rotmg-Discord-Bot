@@ -1,11 +1,13 @@
 from datetime import datetime
 from difflib import get_close_matches
+from math import ceil
 
 import discord
-from discord.ext import commands
+from discord.ext import tasks, commands
 
 import embeds
 import sql
+from checks import is_rl_or_higher_check, is_rl_or_higher
 from cogs import core
 
 
@@ -16,7 +18,7 @@ class Raiding(commands.Cog):
 
     @commands.command(usage="!afk [type of run] [hc_channel_num] <location>")
     @commands.guild_only()
-    @commands.has_permissions(manage_nicknames=True)
+    @commands.check(is_rl_or_higher_check)
     # TODO: ADD Leader check
     # TODO: add check that guild has no running afk up
     async def afk(self, ctx, type, hc_channel_num, *location):
@@ -58,27 +60,45 @@ class Raiding(commands.Cog):
         if title[0] == 'Realm Clearing' or title[0] == 'Fame Train':
             keyed_run = False
 
-        # await vc.edit(name=vc.name + " <-- Join!")
-        # await vc.set_permissions(role, connect=True)
+        if " <-- Join!" not in vc.name:
+            await vc.edit(name=vc.name + " <-- Join!")
+        await vc.set_permissions(target=role, connect=True)
         emojis = run_emojis(type)
         state = get_state(ctx.guild, core.states)
         if title[0] == 'Fame Train':
-            embed = embeds.afk_check_base(title[0], ctx.author.nick, keyed_run, emojis, location)
+            embed = embeds.afk_check_base(title[0], ctx.author, keyed_run, emojis, location)
         else:
-            embed = embeds.afk_check_base(title[0], ctx.author.nick, keyed_run, emojis)
+            embed = embeds.afk_check_base(title[0], ctx.author, keyed_run, emojis)
         msg = await hc_channel.send(f"@here `{title[0]}` {emojis[0]} started by {ctx.author.mention} in {vc.name}",
                                     embed=embed)
         embed = embeds.afk_check_control_panel(msg.jump_url, location, title[0], emojis[1], keyed_run)
         cpmsg = await ctx.send(embed=embed)
-        start_run(state, title, keyed_run, emojis[1], msg.id, cpmsg, location)
+        start_run(state, title, keyed_run, emojis, vc, msg, cpmsg, location, self.update_afk_loop)
         for e in emojis:
             await msg.add_reaction(e)
         await msg.add_reaction('<:shard:682365548465487965>')
         await msg.add_reaction('❌')
 
+        self.update_afk_loop.start(msg, ctx.guild)
+
+    @tasks.loop(seconds=5.0, count=73)  # loop for 6 mins
+    async def update_afk_loop(self, msg, guild):
+        if self.update_afk_loop.current_loop == 6:
+            await end_afk_check(None, guild, True)
+        else:
+            uptime = (self.update_afk_loop.current_loop + 2) * 5
+            minutes = 6 - ceil(uptime / 60)
+            seconds = 60 - uptime % 60
+            state = get_state(guild, core.states)
+            embed = msg.embeds[0]
+            embed.set_footer(
+                text=f"Time Remaining: {minutes} minutes and {seconds} seconds | Raiders accounted for: {len(state.raiders)}")
+            await msg.edit(embed=embed)
+
+
     @commands.command(usage="!headcount [type of run] [hc_channel_num]", aliases=["hc"])
     @commands.guild_only()
-    @commands.has_permissions(manage_nicknames=True)
+    @commands.check(is_rl_or_higher_check)
     async def headcount(self, ctx, type, hc_channel_num=1):
         """Starts a headcount for the type of run specified. Valid run types are: ```realmclear, fametrain, void, fskipvoid, cult```"""
         guild_db = sql.get_guild(ctx.guild.id)
@@ -101,15 +121,15 @@ class Raiding(commands.Cog):
         if title[0] == 'Realm Clearing' or title[0] == 'Fame Train':
             keyed_run = False
         emojis = run_emojis(type)
-        embed = embeds.headcount_base(title[0], ctx.author.nick, keyed_run, emojis)
+        embed = embeds.headcount_base(title[0], ctx.author, keyed_run, emojis)
         msg = await hc_channel.send("@here", embed=embed)
         for e in emojis:
             await msg.add_reaction(e)
         await ctx.send("Your headcount has been started!")
 
     @commands.command(usage="!lock")
-    @commands.has_permissions(manage_nicknames=True)
     @commands.guild_only()
+    @commands.check(is_rl_or_higher_check)
     async def lock(self, ctx):
         """Locks the raiding voice channel"""
         guild_db = sql.get_guild(ctx.guild.id)
@@ -123,8 +143,8 @@ class Raiding(commands.Cog):
         await ctx.send("Raiding 1 Has been Locked!")
 
     @commands.command(usage="!unlock")
-    @commands.has_permissions(manage_nicknames=True)
     @commands.guild_only()
+    @commands.check(is_rl_or_higher_check)
     async def unlock(self, ctx):
         """Unlocks the raiding voice channel"""
         guild_db = sql.get_guild(ctx.guild.id)
@@ -145,8 +165,9 @@ class GuildRaidState:
     def __init__(self):
         self.runtitle = ""
         self.keyedrun = None
-        self.keyemoji = None
-        self.msgid = 0
+        self.emojis = None
+        self.vc = None
+        self.msg = None
         self.cpmessage = None
         self.starttime = None
         self.raiders = []
@@ -158,13 +179,15 @@ class GuildRaidState:
         self.vialreacts = []
         self.location = "No location specified."
         self.nitroboosters = []
+        self.loop = None
 
 
-def start_run(state, title, keyed_run, emoji, msg_id, cpmsg, location):
+def start_run(state, title, keyed_run, emojis, vc, msg, cpmsg, location, loop):
     state.runtitle = title
     state.keyedrun = keyed_run
-    state.keyemoji = emoji
-    state.msgid = msg_id
+    state.emojis = emojis
+    state.vc = vc
+    state.msg = msg
     state.cpmessage = cpmsg
     state.starttime = datetime.utcnow()
     state.raiders = []
@@ -176,6 +199,7 @@ def start_run(state, title, keyed_run, emoji, msg_id, cpmsg, location):
     state.vialreacts = []
     state.location = location
     state.nitroboosters = []
+    state.loop = loop
 
 
 def get_state(guild, st):
@@ -187,33 +211,88 @@ def get_state(guild, st):
         return st[guild.id]
 
 
-async def afk_check_reaction_handler(payload, user, guild):
+async def end_afk_check(member, guild, auto):
+    if auto or await is_rl_or_higher(member, guild):
+        state = get_state(guild, core.states)
+        guild_db = sql.get_guild(guild.id)
+        # Lock VC
+        role = discord.utils.get(guild.roles, id=guild_db[sql.gld_cols.verifiedroleid])
+        state.loop.cancel()
+        vc_name = state.vc.name
+        if " <-- Join!" in vc_name:
+            vc_name = vc_name.split(" <")[0]
+            await state.vc.edit(name=vc_name)
+        await state.vc.set_permissions(role, connect=False, view_channel=True, speak=False)
+        # Edit msg to post afk
+        embed = state.msg.embeds[0]
+        embed.description = (
+            "__**Post Afk move-in!**__\nIf you got disconnected or simply missed the AFK check, **first** join lounge - **then** react with "
+            f"{state.emojis[0]} to get moved in.\n__Time Remaining:__ 30 Seconds.")
+        if auto:
+            embed.set_footer(text=f"The afk check has been ended due to the time running out.")
+        else:
+            embed.set_footer(text=f"The afk check has been ended by {member.nick}")
+        embed.timestamp = datetime.utcnow()
+        await state.msg.edit(content=None, embed=embed)
+        await state.msg.clear_reaction('❌')
+        # Kick members who haven't reacted
+        for m in state.vc.members:
+            if m.id not in state.raiders and not await is_rl_or_higher(m, guild):
+                try:
+                    await m.edit(voice_channel=None)
+                except discord.errors.Forbidden:
+                    print(f"Missing perms to move member out: {m.nick}")
+        post_afk_loop.start(state, guild.id)
+
+
+@tasks.loop(seconds=5.0, count=7)  # 35s
+async def post_afk_loop(state, guild_id):
+    embed = state.msg.embeds[0]
+    if post_afk_loop.current_loop == 6:
+        embed.description = f"The AFK Check has ended.\nWe are currently running a raid with {len(state.raiders)} raiders."
+        await state.msg.edit(embed=embed)
+        # TODO: LOG STATE FOR RUN COMPLETION -- EDIT CP_MSG to reaction for correct log & log_run command
+        core.states.pop(guild_id)
+    else:
+        uptime = (post_afk_loop.current_loop + 2) * 5
+        seconds = 35 - uptime % 60
+        embed.description = embed.description.split("Remaining:__")[0] + f"Remaining:__ {seconds} seconds."
+        await state.msg.edit(embed=embed)
+
+
+async def afk_check_reaction_handler(payload, member, guild):
     emoji_id = payload.emoji.id
     state = get_state(guild, core.states)
-    if payload.message_id == state.msgid:
-        # if emoji_id in main_run_emojis:
-        #     # TODO: if user in vc move to vc 1 and add to verified logs
-        if emoji_id in key_ids:
+    if payload.message_id == state.msg.id:
+        if str(emoji_id) == state.emojis[0].split(":")[2].split(">")[0]:
+            if member.id not in state.raiders:
+                state.raiders.append(member.id)
+            if member.voice:
+                try:
+                    await member.edit(voice_channel=state.vc)
+                except discord.errors.Forbidden:
+                    print(f"Missing perms to move member out: {member.nick}")
+        elif emoji_id in key_ids:
             if emoji_id == 682205784524062730:  # If emoji is vial
-                if user.id not in state.vialreacts:
-                    state.vialreacts.append(user.id)
-                msg = await user.send("Do you have a vial and are willing to pop it? If so, react to the vial.")
+                if member.id not in state.vialreacts:
+                    state.vialreacts.append(member.id)
+                msg = await member.send("Do you have a vial and are willing to pop it? If so, react to the vial.")
                 await msg.add_reaction('<:vial:682205784524062730>')
             else:
-                if user.id not in state.keyreacts:
-                    state.keyreacts.append(user.id)
-                msg = await user.send("Do you have a key and are willing to pop it? If so, react to the key.")
-                await msg.add_reaction(state.keyemoji)
+                if member.id not in state.keyreacts:
+                    state.keyreacts.append(member.id)
+                msg = await member.send("Do you have a key and are willing to pop it? If so, react to the key.")
+                await msg.add_reaction(state.emojis[1])
 
         elif emoji_id == 682365548465487965:  # if react is nitro
-            if payload.member.premium_since is not None or int(payload.member.id) == 196282885601361920:
+            if member.premium_since is not None or await is_rl_or_higher(member, guild):
                 if state.location != "No location specified.":
-                    await user.send(f"The location for this run is: `{state.location}`")
+                    await member.send(f"The location for this run is: __{state.location}__")
                 else:
-                    await user.send(
+                    await member.send(
                         f"The location has not been set yet. Wait for the rl to set the location, then re-react.")
-                if payload.member.nick not in state.nitroboosters:
-                    state.nitroboosters.append(payload.member.nick)
+                if member.nick not in state.nitroboosters:
+                    state.nitroboosters.append(member.nick)
                 if state.cpmessage is not None:
                     embed = state.cpmessage.embeds[0]
                     index = 1
@@ -267,7 +346,7 @@ async def confirmed_raiding_reacts(payload, user):
             return await user.send("There are already enough keys")
 
     if state.location != "No location specified.":
-        await user.send(f"The location for this run is: `{state.location}`")
+        await user.send(f"The location for this run is: __{state.location}__")
     else:
         await user.send(f"The location has not been set yet. Message the RL to get location.")
 

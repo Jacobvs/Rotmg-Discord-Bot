@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 
 import sql
+from checks import is_rl_or_higher_check
 from cogs import verification
 
 
@@ -29,7 +30,7 @@ class Moderation(commands.Cog):
 
     @commands.command(usage="!find [nickname]")
     @commands.guild_only()
-    @commands.has_permissions(manage_nicknames=True)
+    @commands.check(is_rl_or_higher_check)
     async def find(self, ctx, name):
         """Find a user by the specified nickname"""
         name = name.strip()

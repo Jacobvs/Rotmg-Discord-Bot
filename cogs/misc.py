@@ -6,7 +6,7 @@ from discord.ext import commands
 from discord.utils import get
 
 import embeds
-from checks import in_voice_channel, is_dj
+from checks import in_voice_channel, is_dj, is_rl_or_higher_check
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -75,10 +75,11 @@ class Misc(commands.Cog):
         voice = await connect_helper(self, ctx)
         if option != 1 and option != 2:
             option = 1
+        option -= 1
         client = ctx.guild.voice_client
         if not client.source:
             source = discord.PCMVolumeTransformer(
-                discord.FFmpegPCMAudio(self.laughs[option], options=ffmpeg_options['options']), volume=0.5)
+                discord.FFmpegPCMAudio(self.laughs[option], options=ffmpeg_options['options']), volume=0.75)
             ctx.voice_client.play(source,
                                   after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
                                                                                                             voice=voice))
@@ -105,6 +106,7 @@ class Misc(commands.Cog):
             await ctx.send("Audio is already playing!")
 
     @commands.command(usage="!oogabooga")
+    @commands.check(is_rl_or_higher_check)
     async def oogabooga(self, ctx):
         await ctx.send(file=discord.File('files/oogabooga.png'))
 
@@ -128,7 +130,7 @@ class Misc(commands.Cog):
 
     @commands.command(usage='!poll "[title]" [option 1] [option 2]...')
     @commands.guild_only()
-    @commands.has_permissions(manage_nicknames=True)
+    @commands.check(is_rl_or_higher_check)
     async def poll(self, ctx, title, *options):
         """Creates a poll with up to 2-10 options"""
         if len(options) < 2:

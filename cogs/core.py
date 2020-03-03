@@ -6,7 +6,7 @@ from discord.ext import commands
 
 import sql
 from cogs import verification, raiding
-from cogs.raiding import afk_check_reaction_handler, confirmed_raiding_reacts
+from cogs.raiding import afk_check_reaction_handler, confirmed_raiding_reacts, end_afk_check
 from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification
 
 states = {}
@@ -152,7 +152,9 @@ class Core(commands.Cog):
                                                         guild, verify_message_id)
             elif payload.channel_id in [guild_data[sql.gld_cols.raidhc1], guild_data[sql.gld_cols.raidhc2],
                                         guild_data[sql.gld_cols.raidhc3]]:
-                return await afk_check_reaction_handler(payload, user, guild)
+                if str(payload.emoji) == '❌':
+                    return await end_afk_check(guild.get_member(user.id), guild, False)
+                return await afk_check_reaction_handler(payload, guild.get_member(user.id), guild)
 
         elif str(payload.emoji) in ['✅', '👍', '❌']:
             if user_data is not None:

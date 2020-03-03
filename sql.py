@@ -103,3 +103,4 @@ class gld_cols(enum.IntEnum):
     raidhc3 = 16
     raidvc2 = 17
     raidvc3 = 18
+    rlroleid = 19
