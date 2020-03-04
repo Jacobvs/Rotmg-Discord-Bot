@@ -7,7 +7,7 @@ from discord.ext import tasks, commands
 
 import embeds
 import sql
-from checks import is_rl_or_higher_check, is_rl_or_higher
+from checks import is_rl_or_higher_check, is_rl_or_higher, is_vet_rl_or_higher
 from cogs import core
 
 
@@ -16,13 +16,13 @@ class Raiding(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @commands.command(usage="!afk [type of run] [hc_channel_num] <location>")
+    @commands.command(usage="!afk [type of run] [channel] <location>")
     @commands.guild_only()
     @commands.check(is_rl_or_higher_check)
     # TODO: ADD Leader check
     # TODO: add check that guild has no running afk up
-    async def afk(self, ctx, type, hc_channel_num, *location):
-        """Starts an AFK check for the type of run specified. Valid run types are: ```realmclear, fametrain, void, fskipvoid, cult```"""
+    async def afk(self, ctx, type, channel='1', *location):
+        """Starts an AFK check for the type of run specified. \nValid channel types are: ```1, 2, 3, vet/veteran```Valid run types are: ```realmclear, fametrain, void, fskipvoid, cult```"""
         if len(location) == 0:
             location = "No location specified."
         else:
@@ -33,19 +33,27 @@ class Raiding(commands.Cog):
 
         # TODO CHECK IF IS OPTION FOR CHANNEL NUM
         guild_db = sql.get_guild(ctx.guild.id)
-
-        if hc_channel_num == '1':
-            hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc1])
-            vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc1])
-        elif hc_channel_num == '2':
-            hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc2])
-            vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc2])
-        elif hc_channel_num == '3':
-            hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc3])
-            vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc3])
+        if channel == "vet" or channel == "veteran":
+            if await is_vet_rl_or_higher(ctx.author, ctx.guild):
+                hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.vethcid])
+                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.vetvcid])
+                role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.vetroleid])
+            else:
+                return await ctx.send("You have to be a vet rl to use this command.")
         else:
-            return await ctx.send("That channel number is not an option, please choose a channel from 1-3")
-        role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.verifiedroleid])
+            role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.verifiedroleid])
+            if channel == '1':
+                hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc1])
+                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc1])
+            elif channel == '2':
+                hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc2])
+                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc2])
+            elif channel == '3':
+                hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc3])
+                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc3])
+            else:
+                return await ctx.send("That channel number is not an option, please choose a channel from 1-3 or 'vet'/'veteran'")
+
 
         # TODO: Create run object for guild -- give lock on command until
         # TODO: Send control panel embed to ctx channel
@@ -81,9 +89,9 @@ class Raiding(commands.Cog):
 
         self.update_afk_loop.start(msg, ctx.guild)
 
-    @tasks.loop(seconds=5.0, count=73)  # loop for 6 mins
+    @tasks.loop(seconds=5.0, count=72)  # loop for 6 mins
     async def update_afk_loop(self, msg, guild):
-        if self.update_afk_loop.current_loop == 6:
+        if self.update_afk_loop.current_loop == 71:
             await end_afk_check(None, guild, True)
         else:
             uptime = (self.update_afk_loop.current_loop + 2) * 5
@@ -99,17 +107,23 @@ class Raiding(commands.Cog):
     @commands.command(usage="!headcount [type of run] [hc_channel_num]", aliases=["hc"])
     @commands.guild_only()
     @commands.check(is_rl_or_higher_check)
-    async def headcount(self, ctx, type, hc_channel_num=1):
+    async def headcount(self, ctx, type, hc_channel_num='1'):
         """Starts a headcount for the type of run specified. Valid run types are: ```realmclear, fametrain, void, fskipvoid, cult```"""
         guild_db = sql.get_guild(ctx.guild.id)
-        if hc_channel_num == 1:
+        if hc_channel_num == "vet" or hc_channel_num == "veteran":
+            if await is_vet_rl_or_higher(ctx.author, ctx.guild):
+                hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.vethcid])
+            else:
+                return await ctx.send("You have to be a vet rl to use this command.")
+        elif hc_channel_num == '1':
             hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc1])
-        elif hc_channel_num == 2:
+        elif hc_channel_num == '2':
             hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc2])
-        elif hc_channel_num == 3:
+        elif hc_channel_num == '3':
             hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc3])
         else:
-            return await ctx.send("That channel number is not an option, please choose a channel from 1-3")
+            return await ctx.send(
+                "That channel number is not an option, please choose a channel from 1-3 or 'vet'/'veteran'")
 
         title = run_title(type)
         if title is None:
@@ -127,32 +141,61 @@ class Raiding(commands.Cog):
             await msg.add_reaction(e)
         await ctx.send("Your headcount has been started!")
 
-    @commands.command(usage="!lock")
+    @commands.command(usage="!lock [vc_channel]")
     @commands.guild_only()
     @commands.check(is_rl_or_higher_check)
-    async def lock(self, ctx):
+    async def lock(self, ctx, vc_channel):
         """Locks the raiding voice channel"""
         guild_db = sql.get_guild(ctx.guild.id)
-        vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc1])
-        role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.verifiedroleid])
+        if vc_channel == "vet" or vc_channel == "veteran":
+            if await is_vet_rl_or_higher(ctx.author, ctx.guild):
+                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.vetvcid])
+                role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.vetroleid])
+            else:
+                return await ctx.send("You have to be a vet rl to use this command.")
+        else:
+            role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.verifiedroleid])
+            if vc_channel == '1':
+                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc1])
+            elif vc_channel == '2':
+                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc2])
+            elif vc_channel == '3':
+                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc3])
+            else:
+                return await ctx.send("That channel number is not an option, please choose a channel from 1-3 or 'vet'/'veteran'")
         vc_name = vc.name
         if " <-- Join!" in vc_name:
             vc_name = vc_name.split(" <")[0]
             await vc.edit(name=vc_name)
         await vc.set_permissions(role, connect=False, view_channel=True, speak=False)
-        await ctx.send("Raiding 1 Has been Locked!")
+        await ctx.send(f"{vc.name} Has been Locked!")
 
-    @commands.command(usage="!unlock")
+    @commands.command(usage="!unlock [vc_channel]")
     @commands.guild_only()
     @commands.check(is_rl_or_higher_check)
-    async def unlock(self, ctx):
+    async def unlock(self, ctx, vc_channel):
         """Unlocks the raiding voice channel"""
         guild_db = sql.get_guild(ctx.guild.id)
-        vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc1])
-        role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.verifiedroleid])
+        if vc_channel == "vet" or vc_channel == "veteran":
+            if await is_vet_rl_or_higher(ctx.author, ctx.guild):
+                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.vetvcid])
+                role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.vetroleid])
+            else:
+                return await ctx.send("You have to be a vet rl to use this command.")
+        else:
+            role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.verifiedroleid])
+            if vc_channel == '1':
+                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc1])
+            elif vc_channel == '2':
+                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc2])
+            elif vc_channel == '3':
+                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc3])
+            else:
+                return await ctx.send(
+                    "That channel number is not an option, please choose a channel from 1-3 or 'vet'/'veteran'")
         await vc.edit(name=vc.name + " <-- Join!")
         await vc.set_permissions(role, connect=True, view_channel=True, speak=False)
-        await ctx.send("Raiding 1 Has been unlocked!")
+        await ctx.send(f"{vc.name} Has been unlocked!")
 
 
 def setup(client):

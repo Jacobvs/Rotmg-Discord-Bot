@@ -20,6 +20,21 @@ async def is_rl_or_higher(member, guild):
         return False
     return False
 
+async def is_vet_rl_or_higher_check(ctx):
+    return await is_vet_rl_or_higher(ctx.message.author, ctx.message.guild)
+
+async def is_vet_rl_or_higher(member, guild):
+    if member:
+        if member.roles:
+            rl_id = sql.get_guild(guild.id)[sql.gld_cols.vetrlroleid]
+            member_highest_role_id = member.roles[len(member.roles) - 1].id
+            role_ids = list(map(lambda r: r.id, guild.roles))
+            index = role_ids.index(rl_id)
+            if member_highest_role_id in role_ids[index:]:
+                return True
+        return False
+    return False
+
 
 async def in_voice_channel(ctx):
     if ctx.author.voice is None:

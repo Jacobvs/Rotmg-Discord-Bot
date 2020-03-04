@@ -53,6 +53,14 @@ class Verification(commands.Cog):
         name = str(data["player"])
         n_stars = int(data["rank"])
         location = data["player_last_seen"]
+
+        channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
+
+        if data["characters_hidden"]:
+            embed = embeds.verification_private_chars()
+            await member.send(embed=embed, delete_after=10)
+            return await channel.send(f"{member.mention} has private characters")
+
         for char in data["characters"]:
             alive_fame += int(char["fame"])
             if int(char["stats_maxed"]) == 8:
@@ -60,7 +68,7 @@ class Verification(commands.Cog):
         await msg.delete()
         description = data["desc1"] + data["desc2"] + data["desc3"]
 
-        channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
+
         if reverify or user_data[sql.usr_cols.verifykey] in description:
             if not private_loc or location == "hidden":
                 verified = False
@@ -173,7 +181,7 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
         elif user_data[sql.usr_cols.status] == "denied":
             embed = embeds.verification_bad_reqs(guild_data[sql.gld_cols.reqsmsg])
             msg = await user.send(embed=embed)
-            msg.add_reaction('✅')
+            await msg.add_reaction('✅')
             sql.update_user(payload.user_id, "verifyid", msg.id)
         elif user_data[sql.usr_cols.status] == "deny_appeal":
             await user.send("Your application is being reviewed by staff. Please wait for their decision.")

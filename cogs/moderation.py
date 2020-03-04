@@ -31,18 +31,22 @@ class Moderation(commands.Cog):
     @commands.command(usage="!find [nickname]")
     @commands.guild_only()
     @commands.check(is_rl_or_higher_check)
-    async def find(self, ctx, name):
+    async def find(self, ctx, mem: discord.Member):
         """Find a user by the specified nickname"""
-        name = name.strip()
-        member = ctx.guild.get_member_named(name)
+        if isinstance(mem, discord.Member):
+            member = mem
+        else:
+            name = mem.strip()
+            member = ctx.guild.get_member_named(name)
         if member is not None:
             if member.voice is None:
                 vc = '❌'
             else:
                 vc = "#" + member.voice.channel.name
+            name = ''.join([i for i in member.display_name if i.isalpha()])
             embed = discord.Embed(
-                description=f"Found member with the ign: [{member.nick}]"
-                            f"(https://www.realmeye.com/player/{member.nick}): {member.mention}"
+                description=f"Found member with the ign: [{name}]"
+                            f"(https://www.realmeye.com/player/{name}): {member.mention}"
                             f"\nVoice Channel: {vc}"
             )
             await ctx.send(embed=embed)

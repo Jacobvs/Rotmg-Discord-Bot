@@ -111,8 +111,14 @@ class Misc(commands.Cog):
         await ctx.send(file=discord.File('files/oogabooga.png'))
 
     @commands.command(usage="!whatthefuck")
+    @commands.check(is_rl_or_higher_check)
     async def whatthefuck(self, ctx):
         await ctx.send(file=discord.File('files/whatthefuck.jpg'))
+
+    @commands.command(usage="!isitgone")
+    @commands.check(is_rl_or_higher_check)
+    async def isitgone(self, ctx):
+        await ctx.send(file=discord.File('files/isitgone.jpg'))
 
     @commands.command(usage="!purge [num]")
     @commands.guild_only()

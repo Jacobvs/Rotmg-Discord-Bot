@@ -104,3 +104,7 @@ class gld_cols(enum.IntEnum):
     raidvc2 = 17
     raidvc3 = 18
     rlroleid = 19
+    vethcid = 20
+    vetvcid = 21
+    vetroleid = 22
+    vetrlroleid = 23

@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands
 
 import sql
+from checks import is_rl_or_higher
 from cogs import verification, raiding
 from cogs.raiding import afk_check_reaction_handler, confirmed_raiding_reacts, end_afk_check
 from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification
@@ -151,8 +152,8 @@ class Core(commands.Cog):
                 return await guild_verify_react_handler(Verification(self.client), payload, user_data, guild_data, user,
                                                         guild, verify_message_id)
             elif payload.channel_id in [guild_data[sql.gld_cols.raidhc1], guild_data[sql.gld_cols.raidhc2],
-                                        guild_data[sql.gld_cols.raidhc3]]:
-                if str(payload.emoji) == '❌':
+                                        guild_data[sql.gld_cols.raidhc3], guild_data[sql.gld_cols.vethcid]]:
+                if str(payload.emoji) == '❌' and await is_rl_or_higher(guild.get_member(user.id), guild):
                     return await end_afk_check(guild.get_member(user.id), guild, False)
                 return await afk_check_reaction_handler(payload, guild.get_member(user.id), guild)
 

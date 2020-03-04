@@ -136,6 +136,17 @@ def verification_public_location():
                           "re-react to the check above.")
     return embed
 
+def verification_private_chars():
+    embed = discord.Embed(
+        title="Error!",
+        description="Your character list has been set to private.",
+        color=discord.Color.red()
+    )
+    embed.add_field(name="\a",
+                    value="Once you've set your characters to public, wait a minute for the servers to catch up and "
+                          "re-react to the check above.")
+    return embed
+
 
 def verification_bad_reqs(requirements):
     embed = discord.Embed(
