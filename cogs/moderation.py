@@ -31,29 +31,26 @@ class Moderation(commands.Cog):
     @commands.command(usage="!find [nickname]")
     @commands.guild_only()
     @commands.check(is_rl_or_higher_check)
-    async def find(self, ctx, mem: discord.Member):
+    async def find(self, ctx, mem):
         """Find a user by the specified nickname"""
-        if isinstance(mem, discord.Member):
-            member = mem
+        try:
+            converter = discord.ext.commands.MemberConverter()
+            member = await converter.convert(ctx, mem)
+        except discord.ext.commands.BadArgument:
+            embed = discord.Embed(description=f"No members found with the name: `{mem}`")
+            return await ctx.send(embed=embed)
+        if member.voice is None:
+            vc = '❌'
         else:
-            name = mem.strip()
-            member = ctx.guild.get_member_named(name)
-        if member is not None:
-            if member.voice is None:
-                vc = '❌'
-            else:
-                vc = "#" + member.voice.channel.name
-            name = ''.join([i for i in member.display_name if i.isalpha()])
-            embed = discord.Embed(
-                description=f"Found member with the ign: [{name}]"
-                            f"(https://www.realmeye.com/player/{name}): {member.mention}"
-                            f"\nVoice Channel: {vc}"
-            )
-            await ctx.send(embed=embed)
-        else:
-            embed = discord.Embed(description=f"No members found with the nickname: `{name}`\nTip: This command is "
-            f"case sensitive")
-            await ctx.send(embed=embed)
+            vc = "#" + member.voice.channel.name
+        name = ''.join([i for i in member.display_name if i.isalpha()])
+        embed = discord.Embed(
+            description=f"Found member with the ign: [{name}]"
+                        f"(https://www.realmeye.com/player/{name}): {member.mention}"
+                        f"\nVoice Channel: {vc}"
+        )
+        await ctx.send(embed=embed)
+
 
     @commands.command(usage="!manual_verify [uid] {optional: ign}")
     @commands.guild_only()

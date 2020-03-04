@@ -20,6 +20,10 @@ def get_user(uid):
     cursor.execute("SELECT * from rotmg.users WHERE id = {}".format(uid))
     return cursor.fetchone()
 
+def get_num_verified():
+    cursor.execute("SELECT COUNT(*) FROM rotmg.users where status = 'verified'")
+    return cursor.fetchone()
+
 
 def get_guild(uid):
     cursor.execute("SELECT * from rotmg.guilds WHERE id = {}".format(uid))

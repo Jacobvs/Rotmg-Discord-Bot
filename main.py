@@ -28,6 +28,7 @@ def get_prefix(client, message):
 
 bot = commands.Bot(command_prefix=get_prefix)
 bot.remove_command('help')
+bot.owner_id = 196282885601361920
 
 
 @bot.command(usage="!load [cog]")

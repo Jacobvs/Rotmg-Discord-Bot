@@ -1,11 +1,15 @@
 import asyncio
+from os import listdir
+from os.path import isfile, join
 
 import discord
+import psutil
 import youtube_dl
 from discord.ext import commands
 from discord.utils import get
 
 import embeds
+import sql
 from checks import in_voice_channel, is_dj, is_rl_or_higher_check
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -154,7 +158,50 @@ class Misc(commands.Cog):
         for i in range(len(options)):
             await msg.add_reaction(self.numbers[i])
 
+    @commands.command(usage="!status")
+    async def status(self, ctx):
+        """Retrieve the bot's status"""
+        embed = discord.Embed(
+            title="Bot Status",
+            color=discord.Color.dark_gold()
+        )
+        embed.add_field(name="Bot latency:", value=f"**`{round(self.client.latency, 4)}`** Milliseconds.", inline=False)
+        embed.add_field(name="Connected Servers:", value=f"**`{len(self.client.guilds)}`** servers with **`{len(list(self.client.get_all_members()))}`** total members.", inline=False)
+        embed.add_field(name="Verified Raiders:", value=f"**`{sql.get_num_verified()[0]}`** verified raiders.", inline=False)
+        embed.add_field(name="Lines of Code:", value=(f"**`{line_count('/home/ec2-user/git/Cerberus/')+line_count('/home/ec2-user/git/Cerberus/cogs')}"
+                                                      "`** lines of code."), inline=False)
+        embed.add_field(name="Server Status:", value=(f"```yaml\nServer: AWS EC2 Compute (N. Virginia)\nCPU: {psutil.cpu_percent()}% utilization."
+                                                      f"\nMemory: {psutil.virtual_memory().percent}% utilization."
+                                                      f"\nDisk: {psutil.disk_usage('/').percent}% utilization."
+                                                      f"\nNetwork: {round(psutil.net_io_counters().bytes_recv*0.000001)} MB in "
+                                                      f"/ {round(psutil.net_io_counters().bytes_sent*0.000001)} MB out.```"))
+        if ctx.guild:
+            appinfo = await self.client.application_info()
+            embed.add_field(name=f"Bot author:",
+                            value=f"{appinfo.owner.mention} - DM me if something's broken or to request a feature!",
+                            inline=False)
+        else:
+            embed.add_field(name=f"Bot author:", value="__Darkmatter#7321__ - DM me if something's broken or to request a feature!", inline=False)
+        await ctx.send(embed=embed)
 
 def setup(client):
     client.add_cog(Misc(client))
+
+
+def line_count(path):
+    file_list = [join(path, file_p) for file_p in listdir(path) if isfile(join(path, file_p))]
+
+    total = 0
+    for file_path in file_list:
+        try:
+            count = 0
+            with open(file_path, encoding="ascii", errors="surrogateescape") as current_file:
+                for line in current_file:
+                    count += 1
+        except IOError:
+            return -1
+        if count >= 0:
+            total += count
+    return total
+
 
