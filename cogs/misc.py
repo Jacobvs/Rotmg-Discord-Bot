@@ -101,7 +101,7 @@ class Misc(commands.Cog):
         client = ctx.guild.voice_client
         if not client.source:
             source = discord.PCMVolumeTransformer(
-                discord.FFmpegPCMAudio("files/richard.mp3", options=ffmpeg_options['options']), volume=0.5)
+                discord.FFmpegPCMAudio("files/richard.mp3", options=ffmpeg_options['options'], executable="/home/ec2-user/.local/lib/python3.7/site-packages"), volume=0.5)
             ctx.voice_client.play(source,
                                   after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
                                                                                                             voice=voice))
@@ -123,20 +123,6 @@ class Misc(commands.Cog):
     @commands.check(is_rl_or_higher_check)
     async def isitgone(self, ctx):
         await ctx.send(file=discord.File('files/isitgone.jpg'))
-
-    @commands.command(usage="!purge [num]")
-    @commands.guild_only()
-    @commands.has_permissions(manage_messages=True)
-    async def purge(self, ctx, num=5):
-        """Removes [num] messages from the channel"""
-        num += 1
-        if num > 100:
-            num = 100
-        if not isinstance(num, int):
-            await ctx.send("Please pass in a number of messages to delete.")
-            return
-        await ctx.channel.purge(limit=num, bulk=True)
-        await ctx.send(f"Deleted {num - 1} messages.", delete_after=5)
 
     @commands.command(usage='!poll "[title]" [option 1] [option 2]...')
     @commands.guild_only()
@@ -165,12 +151,12 @@ class Misc(commands.Cog):
             title="Bot Status",
             color=discord.Color.dark_gold()
         )
-        embed.add_field(name="Bot latency:", value=f"**`{round(self.client.latency, 4)}`** Milliseconds.", inline=False)
+        embed.add_field(name="Bot latency:", value=f"**`{round(self.client.latency*1000, 2)}`** Milliseconds.", inline=False)
         embed.add_field(name="Connected Servers:", value=f"**`{len(self.client.guilds)}`** servers with **`{len(list(self.client.get_all_members()))}`** total members.", inline=False)
         embed.add_field(name="Verified Raiders:", value=f"**`{sql.get_num_verified()[0]}`** verified raiders.", inline=False)
-        embed.add_field(name="Lines of Code:", value=(f"**`{line_count('/home/ec2-user/git/Cerberus/')+line_count('/home/ec2-user/git/Cerberus/cogs')}"
+        embed.add_field(name="Lines of Code:", value=(f"**`{line_count('/home/jacobvs2/Rotmg-Bot/')+line_count('/home/jacobvs2/Rotmg-Bot/cogs')}"
                                                       "`** lines of code."), inline=False)
-        embed.add_field(name="Server Status:", value=(f"```yaml\nServer: AWS EC2 Compute (N. Virginia)\nCPU: {psutil.cpu_percent()}% utilization."
+        embed.add_field(name="Server Status:", value=(f"```yaml\nServer: Google Cloud Compute (US East)\nCPU: {psutil.cpu_percent()}% utilization."
                                                       f"\nMemory: {psutil.virtual_memory().percent}% utilization."
                                                       f"\nDisk: {psutil.disk_usage('/').percent}% utilization."
                                                       f"\nNetwork: {round(psutil.net_io_counters().bytes_recv*0.000001)} MB in "

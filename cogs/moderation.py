@@ -33,24 +33,71 @@ class Moderation(commands.Cog):
     @commands.check(is_rl_or_higher_check)
     async def find(self, ctx, mem):
         """Find a user by the specified nickname"""
+        converter = discord.ext.commands.MemberConverter()
         try:
-            converter = discord.ext.commands.MemberConverter()
             member = await converter.convert(ctx, mem)
         except discord.ext.commands.BadArgument:
-            embed = discord.Embed(description=f"No members found with the name: `{mem}`")
-            return await ctx.send(embed=embed)
+            if isinstance(mem, str):
+                try:
+                    member = await converter.convert(ctx, mem.capitalize())
+                except discord.ext.commands.BadArgument:
+                    embed = discord.Embed(
+                        description=f"No members found with the name: `{mem}`\nTip: This command is case-sensitive.",
+                        color=discord.Color.red())
+                    return await ctx.send(embed=embed)
+            else:
+                embed = discord.Embed(description=f"No members found with the name: `{mem}`\nTip: This command is case-sensitive.", color=discord.Color.red())
+                return await ctx.send(embed=embed)
         if member.voice is None:
             vc = '❌'
         else:
             vc = "#" + member.voice.channel.name
-        name = ''.join([i for i in member.display_name if i.isalpha()])
+
+        if member.nick and " | " in member.nick:
+            names = member.nick.split(" | ")
+            desc = f"Found {member.mention} with the ign's: "
+            desc += " | ".join(['['+''.join([n for n in name if n.isalpha()])+'](https://www.realmeye.com/player/'+''.join([n for n in name if n.isalpha()])+")" for name in names])
+            desc += f"\nVoice Channel: {vc}"
+        else:
+            name = ''.join([i for i in member.display_name if i.isalpha()])
+            desc = f"Found {member.mention} with the ign: [{name}](https://www.realmeye.com/player/{name})\nVoice Channel: {vc}"
         embed = discord.Embed(
-            description=f"Found member with the ign: [{name}]"
-                        f"(https://www.realmeye.com/player/{name}): {member.mention}"
-                        f"\nVoice Channel: {vc}"
+            description=desc,
+            color=discord.Color.green()
         )
         await ctx.send(embed=embed)
 
+    @commands.command(usage="!purge [num] [ignore_pinned]")
+    @commands.guild_only()
+    @commands.has_permissions(manage_messages=True)
+    async def purge(self, ctx, num=5, ignore_pinned=0):
+        """Removes [num] messages from the channel, ignore_pinned = 0 to ignore, 1 to delete pinned"""
+        if not isinstance(num, int):
+            await ctx.send("Please pass in a number of messages to delete.")
+            return
+        try:
+            if ignore_pinned == 0:
+                await ctx.channel.purge(limit=num, check=is_not_pinned, bulk=True)
+            else:
+                await ctx.channel.purge(limit=num, bulk=True)
+        except discord.errors.NotFound:
+            return await ctx.send("You are trying to delete messages that are older than 15 days. Discord API doesn't "
+                                  "allow bots to do this!\nYou can use the nuke command to completely clean a "
+                                  "channel.")
+        await ctx.send(f"Deleted {num - 1} messages.", delete_after=5)
+
+    @commands.command(usage='!nuke "I confirm this action."')
+    @commands.guild_only()
+    @commands.has_permissions(administrator=True)
+    async def nuke(self, ctx, confirmation=""):
+        """Deletes all the messages in a channel"""
+        if confirmation == "I confirm this action.":
+            newc = await ctx.channel.clone()
+            await newc.edit(position=ctx.channel.position)
+            await ctx.channel.delete()
+        else:
+            return await ctx.send('Please confirm you would like to do this by running: `!nuke "I confirm this '
+                                  'action."`\n**__THIS WILL DELETE ALL MESSAGES IN THE CHANNEL!__**')
 
     @commands.command(usage="!manual_verify [uid] {optional: ign}")
     @commands.guild_only()
@@ -94,3 +141,6 @@ class Moderation(commands.Cog):
 
 def setup(client):
     client.add_cog(Moderation(client))
+
+def is_not_pinned(msg):
+    return False if msg.pinned else True

@@ -1,9 +1,9 @@
 from datetime import datetime
 from difflib import get_close_matches
-from math import ceil
 
 import discord
 from discord.ext import tasks, commands
+from math import ceil
 
 import embeds
 import sql
@@ -26,10 +26,7 @@ class Raiding(commands.Cog):
         if len(location) == 0:
             location = "No location specified."
         else:
-            loc = ""
-            for s in location:
-                loc += s + " "
-            location = loc
+            location = " ".join(location)
 
         # TODO CHECK IF IS OPTION FOR CHANNEL NUM
         guild_db = sql.get_guild(ctx.guild.id)
@@ -87,6 +84,7 @@ class Raiding(commands.Cog):
         await msg.add_reaction('<:shard:682365548465487965>')
         await msg.add_reaction('❌')
 
+        # TODO keep track of running tasks and don't allow if running
         self.update_afk_loop.start(msg, ctx.guild)
 
     @tasks.loop(seconds=5.0, count=72)  # loop for 6 mins
