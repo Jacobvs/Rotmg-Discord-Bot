@@ -134,6 +134,8 @@ class Core(commands.Cog):
         except:
             pass
 
+
+
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         if payload.user_id == self.client.user.id:

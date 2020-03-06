@@ -1,3 +1,4 @@
+import datetime
 import json
 
 import discord
@@ -72,19 +73,21 @@ class Moderation(commands.Cog):
     @commands.has_permissions(manage_messages=True)
     async def purge(self, ctx, num=5, ignore_pinned=0):
         """Removes [num] messages from the channel, ignore_pinned = 0 to ignore, 1 to delete pinned"""
+        num += 1
         if not isinstance(num, int):
             await ctx.send("Please pass in a number of messages to delete.")
             return
-        try:
-            if ignore_pinned == 0:
-                await ctx.channel.purge(limit=num, check=is_not_pinned, bulk=True)
-            else:
-                await ctx.channel.purge(limit=num, bulk=True)
-        except discord.errors.NotFound:
+
+        no_older_than = datetime.datetime.utcnow()-datetime.timedelta(days=14)+datetime.timedelta(seconds=1)
+        if ignore_pinned == 0:
+            n = len(await ctx.channel.purge(limit=num, check=is_not_pinned, after=no_older_than, bulk=True))
+        else:
+            n = len(await ctx.channel.purge(limit=num, after=no_older_than, bulk=True))
+        if n < num:
             return await ctx.send("You are trying to delete messages that are older than 15 days. Discord API doesn't "
                                   "allow bots to do this!\nYou can use the nuke command to completely clean a "
-                                  "channel.")
-        await ctx.send(f"Deleted {num - 1} messages.", delete_after=5)
+                                  "channel.", delete_after=10)
+        await ctx.send(f"Deleted {n-1} messages.", delete_after=5)
 
     @commands.command(usage='!nuke "I confirm this action."')
     @commands.guild_only()

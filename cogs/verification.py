@@ -233,9 +233,12 @@ async def dm_verify_react_handler(self, payload, user_data, user):
             guild_data = sql.get_guild(user_data[sql.usr_cols.verifyguild])
             guild = self.client.get_guild(guild_data[sql.gld_cols.id])
             channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
+            key = user_data[sql.usr_cols.verifykey]
+            if not key:
+                key = "`N/A: Re-verification`"
             msg = await channel.send(
                 embed=embeds.verification_manual_verify(user.mention, user_data[sql.usr_cols.ign], payload.user_id,
-                                                        user_data[sql.usr_cols.verifykey]))
+                                                        key))
             sql.update_user(payload.user_id, "status", "deny_appeal")
             sql.update_user(payload.user_id, "verifyid", msg.id)
             await user.send("Your application is being reviewed by staff. Please wait for their decision.")

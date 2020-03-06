@@ -101,7 +101,7 @@ class Misc(commands.Cog):
         client = ctx.guild.voice_client
         if not client.source:
             source = discord.PCMVolumeTransformer(
-                discord.FFmpegPCMAudio("files/richard.mp3", options=ffmpeg_options['options'], executable="/home/ec2-user/.local/lib/python3.7/site-packages"), volume=0.5)
+                discord.FFmpegPCMAudio("files/richard.mp3", options=ffmpeg_options['options']), volume=0.5)
             ctx.voice_client.play(source,
                                   after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self,
                                                                                                             voice=voice))

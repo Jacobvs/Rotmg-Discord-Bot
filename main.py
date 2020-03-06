@@ -32,7 +32,7 @@ bot.owner_id = 196282885601361920
 
 
 @bot.command(usage="!load [cog]")
-@commands.has_permissions(administrator=True)
+@commands.is_owner()
 async def load(ctx, extension):
     """Load specified cog"""
     extension = extension.lower()
@@ -40,7 +40,7 @@ async def load(ctx, extension):
 
 
 @bot.command(usage="!unload [cog]")
-@commands.has_permissions(administrator=True)
+@commands.is_owner()
 async def unload(ctx, extension):
     """Unload specified cog"""
     extension = extension.lower()
@@ -48,7 +48,7 @@ async def unload(ctx, extension):
 
 
 @bot.command(usage="!reload [cog]")
-@commands.has_permissions(administrator=True)
+@commands.is_owner()
 async def reload(ctx, extension):
     """Reload specified cog"""
     extension = extension.lower()
@@ -61,7 +61,8 @@ for filename in os.listdir('./cogs/'):
     if filename.endswith('.py'):
         bot.load_extension(f'cogs.{filename[:-3]}')
 
-#Error Handlers
+
+# Error Handlers
 @bot.event
 async def on_command_error(ctx, error):
     if hasattr(ctx.command, "on_error"):
@@ -99,6 +100,7 @@ async def on_command_error(ctx, error):
         traceback.format_exception(
             type(error), error, error.__traceback__)))
 
+
 @bot.event
 async def on_error(event, *args, **kwargs):
     with open('err.log', 'a') as f:
@@ -114,18 +116,11 @@ with open('data/variables.json', 'r') as file:
 
 @bot.check
 async def global_perms_check(ctx):
-    return True
-    # if ctx.message.guild is None:
-    #     if ctx.author.id in variables.get('allowed_user_ids'):
-    #         return True
+    # if await bot.is_owner(ctx.author):
+    #     print(ctx.__dict__)
+    #     await ctx.invoke(ctx.command)
     #     return False
-    # author_roles = [role.id for role in ctx.author.roles]
-    #
-    # if len(set(variables.get('allowed_role_ids')).intersection(author_roles)):
-    #     return True
-    # msg = await ctx.send('{} Does not have the perms to use this command'.format(ctx.author.mention), delete_after=1.5)
-    # time.sleep(0.5)
-    # await ctx.message.delete()
+    return True
 
 
 bot.run(token)
