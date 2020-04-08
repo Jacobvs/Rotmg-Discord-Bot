@@ -4,6 +4,7 @@ import json
 import discord
 from discord.ext import commands
 
+import embeds
 import sql
 from checks import is_rl_or_higher_check
 from cogs import verification
@@ -106,44 +107,113 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def manual_verify(self, ctx, uid, ign=None):
-        """Manually verifies user with specified uid"""
-        guild_data = sql.get_guild(ctx.guild.id)
-        member = ctx.guild.get_member(int(uid))
-        user_data = sql.get_user(int(uid))
-
-        if user_data is not None:
-            name = user_data[sql.usr_cols.ign]
-            status = user_data[sql.usr_cols.status]
-            if status != 'verified':
-                if status != "stp_1" and status != "stp_2":
-                    if status == 'deny_appeal':
-                        channel = self.client.get_channel(guild_data[sql.gld_cols.manualverifychannel])
-                        message = await channel.fetch_message(user_data[sql.usr_cols.verifyid])
-                        await message.delete()
-                    if ign is not None:
-                        name = ign
-                elif ign is not None:
-                    name = ign
-                else:
-                    await ctx.send("Please specify an IGN for this user.")
-                    return
-            else:
-                await ctx.send("The specified member has already been verified.")
-        elif ign is not None:
-            sql.add_new_user(int(uid), ctx.guild.id, None)
-            user_data = sql.get_user(int(uid))
-            name = ign
-        else:
-            await ctx.send("Please specify an IGN for this user.")
-            return
-
-        await verification.complete_verification(ctx.guild, guild_data, member, name, user_data, True)
         await ctx.message.delete()
-        await ctx.send(f"{member.mention} has been manually verified.")
+        return await manual_verify_ext(ctx.guild, uid, ctx.author, ign)
+
+    @commands.command(usage="!manual_verify_deny [uid]")
+    @commands.guild_only()
+    @commands.has_permissions(manage_roles=True)
+    async def manual_verify_deny(self, ctx, uid, ign=None):
+        await ctx.message.delete()
+        return await manual_verify_deny_ext(ctx.guild, uid, ctx.author, ign)
 
 
 def setup(client):
     client.add_cog(Moderation(client))
+
+async def manual_verify_ext(guild, uid, requester, msg=None, ign=None):
+    """Manually verifies user with specified uid"""
+    print(1)
+    guild_data = sql.get_guild(guild.id)
+    channel = guild_data[sql.gld_cols.manualverifychannel]
+    member = guild.get_member(int(uid))
+    user_data = sql.get_user(int(uid))
+
+    if user_data is not None:
+        print(2)
+        name = user_data[sql.usr_cols.ign]
+        status = user_data[sql.usr_cols.status]
+        print(2.1)
+        if status != 'verified':
+            if status != "stp_1" and status != "stp_2":
+                print(2.2)
+                if status == 'deny_appeal':
+                    print(2.3)
+                    channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
+                    print(2.4)
+                    message = await channel.fetch_message(user_data[sql.usr_cols.verifyid])
+                    print(2.5)
+                    await message.delete()
+                    print(2.6)
+                if ign is not None:
+                    name = ign
+            elif ign is not None:
+                name = ign
+            else:
+                await channel.send("Please specify an IGN for this user.")
+                return
+        else:
+            await channel.send("The specified member has already been verified.")
+    elif ign is not None:
+        print(3)
+        sql.add_new_user(int(uid), guild.id, None)
+        user_data = sql.get_user(int(uid))
+        name = ign
+    else:
+        print(4)
+        await channel.send("Please specify an IGN for this user.")
+        return
+
+    await verification.complete_verification(guild, guild_data, member, name, user_data, True)
+    print(5)
+    if msg:
+        print(6)
+        await msg.delete()
+    embed = discord.Embed(
+        description=f"✅ {member.mention} ***has been manually verified by*** {requester.mention}***.***",
+        color=discord.Color.green())
+    print(7)
+    await channel.send(embed=embed)
+    print(8)
+
+async def manual_verify_deny_ext(guild, uid, requester, msg=None):
+    """Manually verifies user with specified uid"""
+    guild_data = sql.get_guild(guild.id)
+    channel = guild_data[sql.gld_cols.manualverifychannel]
+    member = guild.get_member(int(uid))
+    user_data = sql.get_user(int(uid))
+
+    if user_data is not None:
+        status = user_data[sql.usr_cols.status]
+        if status != 'verified':
+            if status == 'deny_appeal':
+                channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
+                message = await channel.fetch_message(user_data[sql.usr_cols.verifyid])
+                await message.delete()
+        else:
+            await channel.send("The specified member has already been verified.")
+
+    sql.update_user(member.id, "status", "appeal_denied")
+    guilds = user_data[sql.usr_cols.verifiedguilds]
+    if guilds is None:
+        guilds = []
+    else:
+        guilds = guilds.split(",")
+    guilds.append(guild.name)
+    sql.update_user(member.id, "verifiedguilds", ','.join(guilds))
+    sql.update_user(member.id, "verifyguild", None)
+    sql.update_user(member.id, "verifykey", None)
+    sql.update_user(member.id, "verifyid", None)
+    embed = embeds.verification_denied(member.mention, requester.mention)
+    await member.send(embed=embed)
+
+    if msg:
+        await msg.delete()
+    embed = discord.Embed(
+        description=f"❌ {member.mention} ***has been denied verification by*** {requester.mention}***.***",
+        color=discord.Color.red())
+    await channel.send(embed=embed)
+
 
 def is_not_pinned(msg):
     return False if msg.pinned else True

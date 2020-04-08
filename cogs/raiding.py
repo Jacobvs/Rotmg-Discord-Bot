@@ -67,7 +67,7 @@ class Raiding(commands.Cog):
 
         if " <-- Join!" not in vc.name:
             await vc.edit(name=vc.name + " <-- Join!")
-        await vc.set_permissions(target=role, connect=True)
+        await vc.set_permissions(target=role, connect=True, view_channel=True, speak=False)
         emojis = run_emojis(type)
         state = get_state(ctx.guild, core.states)
         if title[0] == 'Fame Train':

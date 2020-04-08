@@ -294,7 +294,10 @@ class Music(commands.Cog):
                             logging.info(f"Now playing '{video.title}'")
                     else:
                         if state.message is not None:
-                            await state.message.delete()
+                            try:
+                                await state.message.delete()
+                            except discord.errors.NotFound:
+                                print("Message not found")
                         state.message = await ctx.send(embed=state.now_playing.get_embed())
                         await self._add_reaction_controls(state.message)
                         await ctx.send(f"**{video.title}** Added to queue.")
@@ -322,7 +325,10 @@ class Music(commands.Cog):
                     logging.info(f"Now playing '{video.title}'")
 
             if state.message is not None:
-                await state.message.delete()
+                try:
+                    await state.message.delete()
+                except discord.errors.NotFound:
+                    print("Message not found")
             await ctx.send(f"**{video.title}** Added to queue.", delete_after=5)
             state.message = await ctx.send(embed=state.now_playing.get_embed())
             await self._add_reaction_controls(state.message)

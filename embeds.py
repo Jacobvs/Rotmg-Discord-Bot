@@ -67,6 +67,14 @@ def verification_success(guild_name, mention):
     )
     return embed
 
+def verification_denied(mention, denier_mention):
+    embed = discord.Embed(
+        title="Verification Denied",
+        description=f"{mention} - Your verification appeal has been denied by: {denier_mention}\n If you truly think this is an error please contact a moderator+.",
+        color=discord.Color.red()
+    )
+    return embed
+
 
 def verification_already_verified():
     embed = discord.Embed(
@@ -102,25 +110,32 @@ def verification_checking_realmeye():
     return embed
 
 
-def verification_manual_verify(user, ign, uid, code):
+def verification_manual_verify(user, ign, uid, code, prefix, fame, maxed, stars, months, private):
     embed = discord.Embed(
         title="Manual Verification",
-        description=f"{user} with the ign:[{ign}](https://www.realmeye.com/player/{ign}) failed to meet the requirements and would like "
-        f"to be manually verified.\nThe code they were provided is: `{code}`\nTo manually verify them use the following command below: \n```!manual_verify {uid}```"
+        description=f"{user} with the ign: {ign} - ([Realmeye Link](https://www.realmeye.com/player/{ign})) failed to meet the requirements and would like "
+        f"to be manually verified.\nThe code they were provided is: `{code}`"
     )
+    embed.add_field(name="Fame", value=bool_to_emoji(fame), inline=True)
+    embed.add_field(name="Maxed Characters", value=bool_to_emoji(maxed), inline=True)
+    embed.add_field(name="Stars", value=bool_to_emoji(stars), inline=True)
+    embed.add_field(name="Account Creation Date", value=bool_to_emoji(months), inline=True)
+    embed.add_field(name="Private Location", value=bool_to_emoji(private), inline=True)
+    embed.add_field(name='\a', value='\a', inline=True)
+    embed.add_field(name='Command:', value=f'To manually verify them use the following command below: \n```{prefix}manual_verify {uid}```', inline=False)
     return embed
 
 
 # Verification Errors
 
-def verification_missing_code():
+def verification_missing_code(key):
     embed = discord.Embed(
         title="Error!",
         description="You do not appear to have the code in your description.",
         color=discord.Color.red()
     )
     embed.add_field(name="\a",
-                    value="If you have already placed the code in your description, wait a minute for the servers to "
+                    value=f"The code you were provided is: `{key}`\nIf you have already placed the code in your description, wait a minute for the servers to "
                           "catch up and re-react to the check above.")
     return embed
 
@@ -147,25 +162,46 @@ def verification_private_chars():
                           "re-react to the check above.")
     return embed
 
+def verification_private_time():
+    embed = discord.Embed(
+        title="Error!",
+        description="Your profile creation date has been set to private.",
+        color=discord.Color.red()
+    )
+    embed.add_field(name="\a",
+                    value="Once you've set your creation date to public, wait a minute for the servers to catch up and "
+                          "re-react to the check above.")
+    return embed
 
-def verification_bad_reqs(requirements):
+
+def bool_to_emoji(bool):
+    if bool:
+        return '✅'
+    return '❌'
+
+def verification_bad_reqs(requirements, fame, maxed, stars, months, private):
     embed = discord.Embed(
         title="Error!",
         description="You do not meet the requirements for this server!",
         color=discord.Color.red()
     )
     embed.add_field(name='Requirements:',
-                    value="```yaml\n{}```\nIf you would like to appeal the verification to a mod, re-react to the "
-                          "check emoji.".format(
-                        requirements))
-    embed.set_footer(text="React to the 'X' to cancel verification.")
+                    value="```yaml\n{}```".format(requirements), inline=False)
+    embed.add_field(name="Fame", value=bool_to_emoji(fame), inline=True)
+    embed.add_field(name="Maxed Characters", value=bool_to_emoji(maxed), inline=True)
+    embed.add_field(name="Stars", value=bool_to_emoji(stars), inline=True)
+    embed.add_field(name="Account Creation Date", value=bool_to_emoji(months), inline=True)
+    embed.add_field(name="Private Location", value=bool_to_emoji(private), inline=True)
+    embed.add_field(name='\a', value='\a', inline=True)
+    embed.add_field(name="\a", value="If you would like to appeal the verification to a mod, re-react to the ""check emoji.", inline=False)
+    embed.set_footer(text="React to the 'X' to cancel verification (if you would like to retry - cancel then react to the message in the server again.")
     return embed
 
 
 def verification_bad_username():
     embed = discord.Embed(
         title="Error!",
-        description="The username you provided is invalid. Please re-submit your username __as it is spelled in-game.__",
+        description="The username you provided is invalid or has been taken. Please re-submit your username __as it is spelled in-game.__",
         color=discord.Color.red()
     )
     return embed
@@ -209,7 +245,7 @@ def headcount_base(run_title, requester, keyed_run, emojis):
         color=discord.Color.teal()
     )
     embed.set_author(name=f"Headcount for {run_title} started by {requester.nick}", icon_url=requester.avatar_url)
-    embed.set_footer(text="Headcount started at ")
+    embed.set_footer(text="Headcount started ")
     embed.timestamp = datetime.utcnow()
     return embed
 
@@ -252,6 +288,6 @@ def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run, 
 
     embed.add_field(name="Location of run:", value=location, inline=False)
     embed.add_field(name="Nitro Boosters with location:", value=f"`None`", inline=False)
-    embed.set_footer(text="AFK Check started at ")
+    embed.set_footer(text="AFK Check started ")
     embed.timestamp = datetime.utcnow()
     return embed

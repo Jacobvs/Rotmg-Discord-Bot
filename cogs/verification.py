@@ -1,3 +1,4 @@
+import json
 import random
 import string
 
@@ -23,6 +24,9 @@ class Verification(commands.Cog):
         embed = embeds.verification_step_2(user_data[sql.usr_cols.ign], key)
         await message.edit(embed=embed)
         sql.update_user(user_id, "verifykey", key)
+        guild_data = sql.get_guild(user_data[sql.usr_cols.verifyguild])
+        channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
+        await channel.send(f"{user.mention} is on step 3 of verification.")
         sql.update_user(user_id, "status", "stp_3")
 
     async def step_3_verify(self, user_id, reverify):
@@ -31,16 +35,34 @@ class Verification(commands.Cog):
         member = guild.get_member(user_id)
         guild_data = sql.get_guild(guild.id)
 
+        channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
+
         fame_req = guild_data[sql.gld_cols.nfame]
         n_maxed_req = guild_data[sql.gld_cols.nmaxed]
         star_req = guild_data[sql.gld_cols.nstars]
+        months_req = guild_data[sql.gld_cols.creationmonths]
         req_all = guild_data[sql.gld_cols.reqall]
         private_loc = guild_data[sql.gld_cols.privateloc]
 
         embed = embeds.verification_checking_realmeye()
         msg = await member.send(embed=embed)
-        data = requests.get('https://nightfirec.at/realmeye-api/?player={}'.format(user_data[sql.usr_cols.ign])).json()
-        if 'error' in data.keys():
+        try:
+            data = requests.get('https://localhost/?player={}'.format(user_data[sql.usr_cols.ign]), verify=False).json()
+        except requests.exceptions.HTTPError:
+            print("THIS IS BAD")
+            sql.update_user(user_id, "status", "stp_1")
+            embed = embeds.verification_dm_start()
+            await member.send("There has been an issue with retrieving data from realmeye. Ensure your profile is public. If this problem persists contact the developer.")
+            return await member.send(embed=embed)
+
+        if not data:
+            sql.update_user(user_id, "status", "stp_1")
+            embed = embeds.verification_dm_start()
+            await member.send(
+                "There has been an issue with retrieving data from realmeye. Ensure your profile is public. If this problem persists contact the developer.")
+            return await member.send(embed=embed)
+
+        if 'error' in data.keys() or sql.ign_exists(user_data[sql.usr_cols.ign]):
             embed = embeds.verification_bad_username()
             await member.send(embed=embed, delete_after=10)
             sql.update_user(user_id, "status", "stp_1")
@@ -48,15 +70,15 @@ class Verification(commands.Cog):
             message = await member.fetch_message(user_data[sql.usr_cols.verifyid])
             await message.edit(embed=embed)
             return
+
         alive_fame = 0
         n_maxed = 0
         name = str(data["player"])
         n_stars = int(data["rank"])
         location = data["player_last_seen"]
 
-        channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
-
         if data["characters_hidden"]:
+            print(4.5)
             embed = embeds.verification_private_chars()
             await member.send(embed=embed, delete_after=10)
             return await channel.send(f"{member.mention} has private characters")
@@ -65,34 +87,69 @@ class Verification(commands.Cog):
             alive_fame += int(char["fame"])
             if int(char["stats_maxed"]) == 8:
                 n_maxed += 1
-        await msg.delete()
+
         description = data["desc1"] + data["desc2"] + data["desc3"]
+
+        time = ""
+        if "created" in data:
+            time = data["created"]
+        elif "player_first_seen" in data:
+            time = data["player_first_seen"]
+
+        if time and time != "hidden":
+            days = 0
+            if "years" in time or "year" in time:
+                if "years" in time:
+                    days += int(time.split(" years")[0].split("~")[1])*365
+                else:
+                    days += 365
+                if "days" in time:
+                    days += int(time.split("and ")[1].split(" days")[0])
+            elif "days" in time:
+                days += int(time.split(" days")[0].split("~")[1])
+            months = int(days/30)
+        else:
+            embed = embeds.verification_private_time()
+            await member.send(embed=embed, delete_after=10)
+            return await channel.send(f"{member.mention} has hidden their account creation date.")
+
+        fame_passed = alive_fame >= fame_req
+        maxed_passed = n_maxed >= n_maxed_req
+        stars_passed = n_stars >= star_req
+        months_passed = months >= months_req
+        private_passed = not private_loc or location == "hidden"
+
+        try:
+            await msg.delete()
+        except discord.errors.DiscordException:
+            print("Unable to delete checking realmeye message")
 
 
         if reverify or user_data[sql.usr_cols.verifykey] in description:
-            if not private_loc or location == "hidden":
+            if private_passed:
                 verified = False
                 if req_all:
-                    if alive_fame >= fame_req and n_maxed >= n_maxed_req and n_stars >= star_req:
+                    if fame_passed and maxed_passed and stars_passed and months_passed:
                         verified = True
                 else:
-                    if alive_fame >= fame_req or n_maxed >= n_maxed_req or n_stars >= star_req:
+                    if fame_passed or maxed_passed or stars_passed or months_passed:
                         verified = True
                 if verified:
                     await complete_verification(guild, guild_data, member, name, user_data, reverify)
                     await channel.send(f"{member.mention} has completed verification.")
                 else:
-                    embed = embeds.verification_bad_reqs(guild_data[sql.gld_cols.reqsmsg])
+                    embed = embeds.verification_bad_reqs(guild_data[sql.gld_cols.reqsmsg], fame_passed, maxed_passed, stars_passed, months_passed, private_passed)
                     sql.update_user(user_id, "status", "denied")
                     sql.update_user(user_id, "ign", name)
                     message = await member.fetch_message(user_data[sql.usr_cols.verifyid])
                     await message.edit(embed=embed)
                     await channel.send(f"{member.mention} does not meet requirements.")
+
             else:
                 embed = embeds.verification_public_location()
                 await member.send(embed=embed, delete_after=10)
         else:
-            embed = embeds.verification_missing_code()
+            embed = embeds.verification_missing_code(user_data[sql.usr_cols.verifykey])
             await member.send(embed=embed, delete_after=10)
             await channel.send(f"{member.mention} is missing their realmeye code (or api is down).")
 
@@ -100,7 +157,7 @@ class Verification(commands.Cog):
     # TODO: add support for multiple servers w/ independent reqs
     @commands.command(usage="!add_verify_msg")
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
+    @commands.has_permissions(manage_guild=True)
     async def add_verify_msg(self, ctx):
         """Add the verification message to channel"""
 
@@ -131,9 +188,13 @@ async def step_1_verify(user, ign):
 
 async def complete_verification(guild, guild_data, member, name, user_data, reverify):
     role = discord.utils.get(guild.roles, id=guild_data[sql.gld_cols.verifiedroleid])
+    tag = member.name
     try:
         await member.add_roles(role)
-        await member.edit(nick=name)
+        if tag.lower() == name.lower():
+            await member.edit(nick=f"{name} .")
+        else:
+            await member.edit(nick=name)
     except discord.errors.Forbidden:
         print("Missing permissions for: {} in guild: {}".format(member.name, guild.name))
 
@@ -161,11 +222,23 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
 
     if user_data is not None:
         verified_guilds = user_data[sql.usr_cols.verifiedguilds]
+        status = user_data[sql.usr_cols.status]
         if verified_guilds is not None:
             verified_guilds = verified_guilds.split(",")
             if guild.name in verified_guilds:
+                if status == "appeal_denied":
+                    return await user.send("You have been denied from verifying in this server. Contact a moderator+ if you think this is a mistake.")
+                elif user_data[sql.usr_cols.status] == "deny_appeal":
+                    return await user.send(
+                        "You do not meet the requirements of this server, appeal with the check above or contact a moderator+ if you think this is a mistake.")
                 verified = True
                 embed = embeds.verification_already_verified()
+                msg = await user.send(embed=embed)
+            elif status == "cancelled":
+                sql.update_user(user.id, "status", "stp_1")
+                embed = embeds.verification_dm_start()
+                channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
+                await channel.send(f"{user.mention} is re-verifying after cancelling.")
                 msg = await user.send(embed=embed)
             else:
                 embed = embeds.verification_already_verified_complete(verified_guilds,
@@ -178,14 +251,14 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
                 channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
                 await channel.send(f"{user.mention} is re-verifying for this guild.")
                 return
-        elif user_data[sql.usr_cols.status] == "denied":
+        elif status == "denied":
             embed = embeds.verification_bad_reqs(guild_data[sql.gld_cols.reqsmsg])
             msg = await user.send(embed=embed)
             await msg.add_reaction('✅')
             sql.update_user(payload.user_id, "verifyid", msg.id)
-        elif user_data[sql.usr_cols.status] == "deny_appeal":
+        elif status == "deny_appeal":
             await user.send("Your application is being reviewed by staff. Please wait for their decision.")
-        else:
+        elif status != "stp_1" and status != "stp_2" and status != "stp_3":
             embed = embeds.verification_dm_start()
             channel = self.client.get_channel(guild_data[sql.gld_cols.verifylogchannel])
             await channel.send(f"{user.mention} has started the verification process.")
@@ -228,6 +301,8 @@ async def dm_verify_react_handler(self, payload, user_data, user):
                 sql.update_user(payload.user_id, "status", "cancelled")
             elif str(payload.emoji) == '👍':
                 await self.step_3_verify(payload.user_id, reverify=True)
+        if str(payload.emoji) == '👍':
+            step_1_verify()
     else:
         if str(payload.emoji) == '✅' or str(payload.emoji) == '👍':
             guild_data = sql.get_guild(user_data[sql.usr_cols.verifyguild])
@@ -236,12 +311,61 @@ async def dm_verify_react_handler(self, payload, user_data, user):
             key = user_data[sql.usr_cols.verifykey]
             if not key:
                 key = "`N/A: Re-verification`"
-            msg = await channel.send(
+
+            with open('data/prefixes.json', 'r') as file:
+                prefixes = json.load(file)
+
+            fame_req = guild_data[sql.gld_cols.nfame]
+            n_maxed_req = guild_data[sql.gld_cols.nmaxed]
+            star_req = guild_data[sql.gld_cols.nstars]
+            months_req = guild_data[sql.gld_cols.creationmonths]
+            req_all = guild_data[sql.gld_cols.reqall]
+            private_loc = guild_data[sql.gld_cols.privateloc]
+
+            data = requests.get('https://localhost/?player={}'.format(user_data[sql.usr_cols.ign]), verify=False).json()
+
+            alive_fame = 0
+            n_maxed = 0
+            name = str(data["player"])
+            n_stars = int(data["rank"])
+            location = data["player_last_seen"]
+
+            for char in data["characters"]:
+                alive_fame += int(char["fame"])
+                if int(char["stats_maxed"]) == 8:
+                    n_maxed += 1
+
+            time = ""
+            if "created" in data:
+                time = data["created"]
+            elif "player_first_seen" in data:
+                time = data["player_first_seen"]
+
+            months = 0
+            if time and time != "hidden":
+                days = 0
+                if "years" in time:
+                    days += int(time.split(" years")[0].split("~")[1]) * 365
+                    if "days" in time:
+                        days += int(time.split("and ")[1].split(" days")[0])
+                elif "days" in time:
+                    days += int(time.split(" days")[0].split("~")[1])
+                months = days / 30
+
+            fame_passed = alive_fame >= fame_req
+            maxed_passed = n_maxed >= n_maxed_req
+            stars_passed = n_stars >= star_req
+            months_passed = months >= months_req
+            private_passed = not private_loc or location == "hidden"
+
+            msg = await channel.send(f"Manual verify UID: {payload.user_id}",
                 embed=embeds.verification_manual_verify(user.mention, user_data[sql.usr_cols.ign], payload.user_id,
-                                                        key))
+                                                        key, prefixes[str(guild.id)], fame_passed, maxed_passed, stars_passed, months_passed, private_passed))
             sql.update_user(payload.user_id, "status", "deny_appeal")
             sql.update_user(payload.user_id, "verifyid", msg.id)
             await user.send("Your application is being reviewed by staff. Please wait for their decision.")
+            await msg.add_reaction('✅')
+            await msg.add_reaction('❌')
         elif str(payload.emoji) == '❌':
             embed = embeds.verification_cancelled()
             await user.send(embed=embed)
