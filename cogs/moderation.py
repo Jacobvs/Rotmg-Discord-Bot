@@ -121,30 +121,22 @@ class Moderation(commands.Cog):
 def setup(client):
     client.add_cog(Moderation(client))
 
-async def manual_verify_ext(guild, uid, requester, msg=None, ign=None):
+async def manual_verify_ext(guild, uid, requester, ign=None):
     """Manually verifies user with specified uid"""
-    print(1)
     guild_data = sql.get_guild(guild.id)
-    channel = guild_data[sql.gld_cols.manualverifychannel]
+    channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
     member = guild.get_member(int(uid))
     user_data = sql.get_user(int(uid))
 
     if user_data is not None:
-        print(2)
         name = user_data[sql.usr_cols.ign]
         status = user_data[sql.usr_cols.status]
-        print(2.1)
         if status != 'verified':
             if status != "stp_1" and status != "stp_2":
-                print(2.2)
                 if status == 'deny_appeal':
-                    print(2.3)
                     channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
-                    print(2.4)
                     message = await channel.fetch_message(user_data[sql.usr_cols.verifyid])
-                    print(2.5)
                     await message.delete()
-                    print(2.6)
                 if ign is not None:
                     name = ign
             elif ign is not None:
@@ -155,31 +147,22 @@ async def manual_verify_ext(guild, uid, requester, msg=None, ign=None):
         else:
             await channel.send("The specified member has already been verified.")
     elif ign is not None:
-        print(3)
         sql.add_new_user(int(uid), guild.id, None)
         user_data = sql.get_user(int(uid))
         name = ign
     else:
-        print(4)
-        await channel.send("Please specify an IGN for this user.")
-        return
+        return await channel.send("Please specify an IGN for this user.")
 
     await verification.complete_verification(guild, guild_data, member, name, user_data, True)
-    print(5)
-    if msg:
-        print(6)
-        await msg.delete()
     embed = discord.Embed(
         description=f"✅ {member.mention} ***has been manually verified by*** {requester.mention}***.***",
         color=discord.Color.green())
-    print(7)
     await channel.send(embed=embed)
-    print(8)
 
-async def manual_verify_deny_ext(guild, uid, requester, msg=None):
+async def manual_verify_deny_ext(guild, uid, requester):
     """Manually verifies user with specified uid"""
     guild_data = sql.get_guild(guild.id)
-    channel = guild_data[sql.gld_cols.manualverifychannel]
+    channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
     member = guild.get_member(int(uid))
     user_data = sql.get_user(int(uid))
 
@@ -207,8 +190,6 @@ async def manual_verify_deny_ext(guild, uid, requester, msg=None):
     embed = embeds.verification_denied(member.mention, requester.mention)
     await member.send(embed=embed)
 
-    if msg:
-        await msg.delete()
     embed = discord.Embed(
         description=f"❌ {member.mention} ***has been denied verification by*** {requester.mention}***.***",
         color=discord.Color.red())

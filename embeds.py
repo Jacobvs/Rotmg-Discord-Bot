@@ -110,19 +110,19 @@ def verification_checking_realmeye():
     return embed
 
 
-def verification_manual_verify(user, ign, uid, code, prefix, fame, maxed, stars, months, private):
+def verification_manual_verify(user, ign, code, fame, nfame, nfamereq, maxed, nmaxed, nmaxedreq, stars, nstars, nstarsreq, months, nmonths, nmonthsreq, private):
     embed = discord.Embed(
         title="Manual Verification",
         description=f"{user} with the ign: {ign} - ([Realmeye Link](https://www.realmeye.com/player/{ign})) failed to meet the requirements and would like "
         f"to be manually verified.\nThe code they were provided is: `{code}`"
     )
-    embed.add_field(name="Fame", value=bool_to_emoji(fame), inline=True)
-    embed.add_field(name="Maxed Characters", value=bool_to_emoji(maxed), inline=True)
-    embed.add_field(name="Stars", value=bool_to_emoji(stars), inline=True)
-    embed.add_field(name="Account Creation Date", value=bool_to_emoji(months), inline=True)
+    embed.add_field(name="Fame", value=bool_to_emoji(fame) + f"({nfame}/{nfamereq} fame)", inline=True)
+    embed.add_field(name="Maxed Characters", value=bool_to_emoji(maxed) + f"({nmaxed}/{nmaxedreq} 8/8's)", inline=True)
+    embed.add_field(name="Stars", value=bool_to_emoji(stars) + f"({nstars}/{nstarsreq} stars)", inline=True)
+    embed.add_field(name="Account Creation Date", value=bool_to_emoji(months) + f"({nmonths}/{nmonthsreq} fame)", inline=True)
     embed.add_field(name="Private Location", value=bool_to_emoji(private), inline=True)
     embed.add_field(name='\a', value='\a', inline=True)
-    embed.add_field(name='Command:', value=f'To manually verify them use the following command below: \n```{prefix}manual_verify {uid}```', inline=False)
+    embed.add_field(name='Command:', value=f'To manually verify them use the check, to deny them use the X.', inline=False)
     return embed
 
 
@@ -193,7 +193,7 @@ def verification_bad_reqs(requirements, fame, maxed, stars, months, private):
     embed.add_field(name="Account Creation Date", value=bool_to_emoji(months), inline=True)
     embed.add_field(name="Private Location", value=bool_to_emoji(private), inline=True)
     embed.add_field(name='\a', value='\a', inline=True)
-    embed.add_field(name="\a", value="If you would like to appeal the verification to a mod, re-react to the ""check emoji.", inline=False)
+    embed.add_field(name="\a", value="**If you would like to appeal the verification to a mod, *re-react to the ""check emoji.***", inline=False)
     embed.set_footer(text="React to the 'X' to cancel verification (if you would like to retry - cancel then react to the message in the server again.")
     return embed
 

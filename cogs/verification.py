@@ -359,8 +359,8 @@ async def dm_verify_react_handler(self, payload, user_data, user):
             private_passed = not private_loc or location == "hidden"
 
             msg = await channel.send(f"Manual verify UID: {payload.user_id}",
-                embed=embeds.verification_manual_verify(user.mention, user_data[sql.usr_cols.ign], payload.user_id,
-                                                        key, prefixes[str(guild.id)], fame_passed, maxed_passed, stars_passed, months_passed, private_passed))
+                embed=embeds.verification_manual_verify(user.mention, user_data[sql.usr_cols.ign],
+                                                        key, fame_passed, alive_fame, fame_req, maxed_passed, n_maxed, n_maxed_req, stars_passed, n_stars, star_req, months_passed, months, months_req, private_passed))
             sql.update_user(payload.user_id, "status", "deny_appeal")
             sql.update_user(payload.user_id, "verifyid", msg.id)
             await user.send("Your application is being reviewed by staff. Please wait for their decision.")
@@ -369,6 +369,6 @@ async def dm_verify_react_handler(self, payload, user_data, user):
         elif str(payload.emoji) == '❌':
             embed = embeds.verification_cancelled()
             await user.send(embed=embed)
-            sql.update_user(payload.user_id, "verifyguild", None)
-            sql.update_user(payload.user_id, "verifyid", None)
+            sql.update_user(payload.user_id, "verifyguild", "")
+            sql.update_user(payload.user_id, "verifyid", "")
             sql.update_user(payload.user_id, "status", "cancelled")
