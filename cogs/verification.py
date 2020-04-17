@@ -62,9 +62,9 @@ class Verification(commands.Cog):
                 "There has been an issue with retrieving data from realmeye. Ensure your profile is public. If this problem persists contact the developer.")
             return await member.send(embed=embed)
 
-        if 'error' in data.keys() or sql.ign_exists(user_data[sql.usr_cols.ign]):
+        if 'error' in data.keys() or sql.ign_exists(user_data[sql.usr_cols.ign], user_id):
             embed = embeds.verification_bad_username()
-            await member.send(embed=embed, delete_after=10)
+            await member.send(embed=embed)
             sql.update_user(user_id, "status", "stp_1")
             embed = embeds.verification_dm_start()
             message = await member.fetch_message(user_data[sql.usr_cols.verifyid])
@@ -80,7 +80,7 @@ class Verification(commands.Cog):
         if data["characters_hidden"]:
             print(4.5)
             embed = embeds.verification_private_chars()
-            await member.send(embed=embed, delete_after=10)
+            await member.send(embed=embed)
             return await channel.send(f"{member.mention} has private characters")
 
         for char in data["characters"]:
@@ -110,7 +110,7 @@ class Verification(commands.Cog):
             months = int(days/30)
         else:
             embed = embeds.verification_private_time()
-            await member.send(embed=embed, delete_after=10)
+            await member.send(embed=embed)
             return await channel.send(f"{member.mention} has hidden their account creation date.")
 
         fame_passed = alive_fame >= fame_req
@@ -147,10 +147,10 @@ class Verification(commands.Cog):
 
             else:
                 embed = embeds.verification_public_location()
-                await member.send(embed=embed, delete_after=10)
+                await member.send(embed=embed)
         else:
             embed = embeds.verification_missing_code(user_data[sql.usr_cols.verifykey])
-            await member.send(embed=embed, delete_after=10)
+            await member.send(embed=embed)
             await channel.send(f"{member.mention} is missing their realmeye code (or api is down).")
 
 

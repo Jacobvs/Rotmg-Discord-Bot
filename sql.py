@@ -28,9 +28,12 @@ def get_guild(uid):
     cursor.execute("SELECT * from rotmg.guilds WHERE id = {}".format(uid))
     return cursor.fetchone()
 
-def ign_exists(ign):
+def ign_exists(ign, id):
     cursor.execute("SELECT * from rotmg.users WHERE ign = '{}' AND status = 'verified'".format(ign))
-    if not cursor.fetchall():
+    user = cursor.fetchone()
+    if not user:
+        return False
+    if user[0] == id:
         return False
     return True
 
