@@ -170,6 +170,40 @@ class Verification(commands.Cog):
         # Save verification message id for later to check reacts with
         sql.update_guild(ctx.guild.id, "verificationid", message.id)
 
+    @commands.command(usage="!add_first_subverify")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def add_first_subverify(self, ctx):
+        """Add the verification message to channel"""
+
+        guild_db = sql.get_guild(ctx.guild.id)
+        embed = embeds.subverify_msg(guild_db[sql.gld_cols.subverify1name], guild_db[sql.gld_cols.supportchannelname])
+        message = await ctx.send(embed=embed)
+        await message.add_reaction("✅")
+        await message.add_reaction("❌")
+        await ctx.message.delete()
+
+        # Save verification message id for later to check reacts with
+        sql.update_guild(ctx.guild.id, "subverify1id", message.id)
+
+    @commands.command(usage="!add_second_subverify")
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def add_second_subverify(self, ctx):
+        """Add the verification message to channel"""
+
+        guild_db = sql.get_guild(ctx.guild.id)
+        embed = embeds.subverify_msg(guild_db[sql.gld_cols.subverify2name], guild_db[sql.gld_cols.supportchannelname])
+        message = await ctx.send(embed=embed)
+        await message.add_reaction("✅")
+        await message.add_reaction("❌")
+        await ctx.message.delete()
+
+        # Save verification message id for later to check reacts with
+        sql.update_guild(ctx.guild.id, "subverify2id", message.id)
+
+
+
 
 def setup(client):
     client.add_cog(Verification(client))
@@ -372,3 +406,45 @@ async def dm_verify_react_handler(self, payload, user_data, user):
             sql.update_user(payload.user_id, "verifyguild", "")
             sql.update_user(payload.user_id, "verifyid", "")
             sql.update_user(payload.user_id, "status", "cancelled")
+
+## Subverification
+async def subverify_react_handler(self, payload, num, guild_data, user, guild, subverify_msg_id):
+    vfy_msg = await self.client.get_channel(payload.channel_id).fetch_message(subverify_msg_id)
+    if num == 1:
+        role = discord.utils.get(guild.roles, id=guild_data[sql.gld_cols.subverify1roleid])
+        category_name = guild_data[sql.gld_cols.subverify1name]
+    else:
+        role = discord.utils.get(guild.roles, id=guild_data[sql.gld_cols.subverify2roleid])
+        category_name = guild_data[sql.gld_cols.subverify2name]
+    logchannel = guild.get_channel(guild_data[sql.gld_cols.subverifylogchannel])
+    member = guild.get_member(user.id)
+    if str(payload.emoji) == '✅':
+        await vfy_msg.remove_reaction('✅', user)
+        if role in member.roles:
+            await user.send("You already have the role for this category! If this is an error, contact: `@Darkmatter#7321`")
+            return await logchannel.send(f"{user.mention} tried to verify for `{category_name}` but already has the role.")
+        try:
+            await member.add_roles(role)
+            embed = discord.Embed(title="Success!",
+                description=f"You have been given access to {category_name} in {guild.name}. To remove access, use the ❌ in the category verification message.",
+                color=discord.Color.green())
+            await user.send(embed=embed)
+            await logchannel.send(f"{user.mention} was verified for the category: `{category_name}`")
+        except discord.errors.Forbidden:
+            await logchannel.send("Missing permissions for: {} in guild: {}".format(user.name, guild.name))
+    else:
+        await vfy_msg.remove_reaction('❌', user)
+        if role not in member.roles:
+            await user.send("You don't yet have the role for this category! To gain access please use the ✅ emoji. If this is an error, contact: `@Darkmatter#7321`")
+            return await logchannel.send(f"{user.mention} tried to remove their verification for `{category_name}` but doesn't have the role.")
+        try:
+            await member.remove_roles(role)
+            embed = discord.Embed(
+                title="Success!",
+                description=f"Your access to {category_name} in {guild.name} has been removed. To regain access, use the ✅ in the category verification message.",
+                color=discord.Color.red()
+            )
+            await user.send(embed=embed)
+            await logchannel.send(f"{user.mention} has removed their verification for the category: `{category_name}`")
+        except discord.errors.Forbidden:
+            await logchannel.send("Missing permissions for: {} in guild: {}".format(user.name, guild.name))

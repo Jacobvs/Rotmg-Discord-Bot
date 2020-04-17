@@ -8,7 +8,7 @@ import sql
 from checks import is_rl_or_higher
 from cogs import verification, raiding, moderation
 from cogs.raiding import afk_check_reaction_handler, confirmed_raiding_reacts, end_afk_check
-from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification
+from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification, subverify_react_handler
 
 states = {}
 
@@ -152,10 +152,16 @@ class Core(commands.Cog):
             guild = self.client.get_guild(payload.guild_id)
             guild_data = sql.get_guild(guild.id)
             verify_message_id = guild_data[sql.gld_cols.verificationid]
+            subverify_1_msg_id = guild_data[sql.gld_cols.subverify1id]
+            subverify_2_msg_id = guild_data[sql.gld_cols.subverify2id]
 
             if payload.message_id == verify_message_id and str(payload.emoji) == '✅':  # handles verification reacts
                 return await guild_verify_react_handler(Verification(self.client), payload, user_data, guild_data, user,
                                                         guild, verify_message_id)
+            elif payload.message_id == subverify_1_msg_id and (str(payload.emoji) == '✅' or str(payload.emoji) == '❌'):
+                return await subverify_react_handler(Verification(self.client), payload, 1, guild_data, user, guild, subverify_1_msg_id)
+            elif payload.message_id == subverify_2_msg_id and (str(payload.emoji) == '✅' or str(payload.emoji) == '❌'):
+                return await subverify_react_handler(Verification(self.client), payload, 2, guild_data, user, guild, subverify_2_msg_id)
             elif payload.channel_id in [guild_data[sql.gld_cols.raidhc1], guild_data[sql.gld_cols.raidhc2],
                                         guild_data[sql.gld_cols.raidhc3], guild_data[sql.gld_cols.vethcid]]:
                 if str(payload.emoji) == '❌' and await is_rl_or_higher(guild.get_member(user.id), guild):

@@ -216,6 +216,17 @@ def verification_cancelled():
     )
     return embed
 
+# Subverification
+
+def subverify_msg(name, support_channel_name):
+    embed = discord.Embed(
+        title=f"Verification for {name}",
+        description="Click the ✅ emoji below to gain access to this category, or the ❌ to remove it.",
+        color=discord.Color.green()
+    )
+    embed.add_field(name="Troubleshooting",
+                    value=f"If you're having trouble verifying, post in #{support_channel_name}!", inline=False)
+    return embed
 
 # Misc
 def poll(title, options):

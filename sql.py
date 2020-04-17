@@ -120,3 +120,10 @@ class gld_cols(enum.IntEnum):
     vetroleid = 22
     vetrlroleid = 23
     creationmonths = 24
+    subverify1id = 25
+    subverify1name = 26
+    subverify1roleid = 27
+    subverifylogchannel = 28
+    subverify2id = 29
+    subverify2name = 30
+    subverify2roleid = 31
