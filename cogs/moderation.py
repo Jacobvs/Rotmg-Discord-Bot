@@ -109,25 +109,25 @@ class Moderation(commands.Cog):
     @commands.has_permissions(manage_roles=True)
     async def manual_verify(self, ctx, uid, ign=None):
         await ctx.message.delete()
-        return await manual_verify_ext(ctx.guild, uid, ctx.author, ign)
+        return await manual_verify_ext(self.client.pool, ctx.guild, uid, ctx.author, ign)
 
     @commands.command(usage="!manual_verify_deny [uid]")
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def manual_verify_deny(self, ctx, uid, ign=None):
         await ctx.message.delete()
-        return await manual_verify_deny_ext(ctx.guild, uid, ctx.author, ign)
+        return await manual_verify_deny_ext(self.client.pool, ctx.guild, uid, ctx.author, ign)
 
 
 def setup(client):
     client.add_cog(Moderation(client))
 
-async def manual_verify_ext(guild, uid, requester, ign=None):
+async def manual_verify_ext(pool, guild, uid, requester, ign=None):
     """Manually verifies user with specified uid"""
-    guild_data = await get_guild(guild.id)
+    guild_data = await get_guild(pool, guild.id)
     channel = guild.get_channel(guild_data[gld_cols.manualverifychannel])
     member = guild.get_member(int(uid))
-    user_data = await get_user(int(uid))
+    user_data = await get_user(pool, int(uid))
 
     if user_data is not None:
         name = user_data[usr_cols.ign]
@@ -148,24 +148,24 @@ async def manual_verify_ext(guild, uid, requester, ign=None):
         else:
             await channel.send("The specified member has already been verified.")
     elif ign is not None:
-        await add_new_user(int(uid), guild.id, None)
-        user_data = await get_user(int(uid))
+        await add_new_user(pool, int(uid), guild.id, None)
+        user_data = await get_user(pool, int(uid))
         name = ign
     else:
         return await channel.send("Please specify an IGN for this user.")
 
-    await verification.complete_verification(guild, guild_data, member, name, user_data, True)
+    await verification.complete_verification(pool, guild, guild_data, member, name, user_data, True)
     embed = discord.Embed(
         description=f"✅ {member.mention} ***has been manually verified by*** {requester.mention}***.***",
         color=discord.Color.green())
     await channel.send(embed=embed)
 
-async def manual_verify_deny_ext(guild, uid, requester):
+async def manual_verify_deny_ext(pool, guild, uid, requester):
     """Manually verifies user with specified uid"""
-    guild_data = await get_guild(guild.id)
+    guild_data = await get_guild(pool, guild.id)
     channel = guild.get_channel(guild_data[gld_cols.manualverifychannel])
     member = guild.get_member(int(uid))
-    user_data = await get_user(int(uid))
+    user_data = await get_user(pool, int(uid))
 
     if user_data is not None:
         status = user_data[usr_cols.status]
@@ -177,17 +177,17 @@ async def manual_verify_deny_ext(guild, uid, requester):
         else:
             await channel.send("The specified member has already been verified.")
 
-    await update_user(member.id, "status", "appeal_denied")
+    await update_user(pool, member.id, "status", "appeal_denied")
     guilds = user_data[usr_cols.verifiedguilds]
     if guilds is None:
         guilds = []
     else:
         guilds = guilds.split(",")
     guilds.append(guild.name)
-    await update_user(member.id, "verifiedguilds", ','.join(guilds))
-    await update_user(member.id, "verifyguild", None)
-    await update_user(member.id, "verifykey", None)
-    await update_user(member.id, "verifyid", None)
+    await update_user(pool, member.id, "verifiedguilds", ','.join(guilds))
+    await update_user(pool, member.id, "verifyguild", None)
+    await update_user(pool, member.id, "verifykey", None)
+    await update_user(pool, member.id, "verifyid", None)
     embed = embeds.verification_denied(member.mention, requester.mention)
     await member.send(embed=embed)
 

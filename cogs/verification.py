@@ -20,21 +20,21 @@ class Verification(commands.Cog):
     async def step_2_verify(self, user_id):
         user = self.client.get_user(user_id)
         key = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
-        user_data = await get_user(user_id)
+        user_data = await get_user(self.client.pool, user_id)
         message = await user.fetch_message(user_data[usr_cols.verifyid])
         embed = embeds.verification_step_2(user_data[usr_cols.ign], key)
         await message.edit(embed=embed)
-        await update_user(user_id, "verifykey", key)
-        guild_data = await get_guild(user_data[usr_cols.verifyguild])
+        await update_user(self.client.pool, user_id, "verifykey", key)
+        guild_data = await get_guild(self.client.pool, user_data[usr_cols.verifyguild])
         channel = self.client.get_channel(guild_data[gld_cols.verifylogchannel])
         await channel.send(f"{user.mention} is on step 3 of verification.")
-        await update_user(user_id, "status", "stp_3")
+        await update_user(self.client.pool, user_id, "status", "stp_3")
 
     async def step_3_verify(self, user_id, reverify):
-        user_data = await get_user(user_id)
+        user_data = await get_user(self.client.pool, user_id)
         guild = self.client.get_guild(user_data[usr_cols.verifyguild])
         member = guild.get_member(user_id)
-        guild_data = await get_guild(guild.id)
+        guild_data = await get_guild(self.client.pool, guild.id)
 
         channel = self.client.get_channel(guild_data[gld_cols.verifylogchannel])
 
@@ -51,7 +51,7 @@ class Verification(commands.Cog):
             data = requests.get('https://localhost/?player={}'.format(user_data[usr_cols.ign]), verify=False).json()
         except requests.exceptions.HTTPError:
             print("THIS IS BAD")
-            await update_user(user_id, "status", "stp_1")
+            await update_user(self.client.pool, user_id, "status", "stp_1")
             embed = embeds.verification_dm_start()
             await member.send("There has been an issue with retrieving data from realmeye. Ensure your profile is public. If this problem persists contact the developer.")
             return await member.send(embed=embed)
@@ -63,10 +63,10 @@ class Verification(commands.Cog):
                 "There has been an issue with retrieving data from realmeye. Ensure your profile is public. If this problem persists contact the developer.")
             return await member.send(embed=embed)
 
-        if 'error' in data.keys() or await ign_exists(user_data[usr_cols.ign], user_id):
+        if 'error' in data.keys() or await ign_exists(self.client.pool, user_data[usr_cols.ign], user_id):
             embed = embeds.verification_bad_username()
             await member.send(embed=embed)
-            await update_user(user_id, "status", "stp_1")
+            await update_user(self.client.pool, user_id, "status", "stp_1")
             embed = embeds.verification_dm_start()
             message = await member.fetch_message(user_data[usr_cols.verifyid])
             await message.edit(embed=embed)
@@ -139,12 +139,12 @@ class Verification(commands.Cog):
                     if fame_passed or maxed_passed or stars_passed or months_passed:
                         verified = True
                 if verified:
-                    await complete_verification(guild, guild_data, member, name, user_data, reverify)
+                    await complete_verification(self.client.pool, guild, guild_data, member, name, user_data, reverify)
                     await channel.send(f"{member.mention} has completed verification.")
                 else:
                     embed = embeds.verification_bad_reqs(guild_data[gld_cols.reqsmsg], fame_passed, maxed_passed, stars_passed, months_passed, private_passed)
-                    await update_user(user_id, "status", "denied")
-                    await update_user(user_id, "ign", name)
+                    await update_user(self.client.pool, user_id, "status", "denied")
+                    await update_user(self.client.pool, user_id, "ign", name)
                     message = await member.fetch_message(user_data[usr_cols.verifyid])
                     await message.edit(embed=embed)
                     await channel.send(f"{member.mention} does not meet requirements.")
@@ -165,14 +165,14 @@ class Verification(commands.Cog):
     async def add_verify_msg(self, ctx):
         """Add the verification message to channel"""
 
-        guild_db = await get_guild(ctx.guild.id)
+        guild_db = await get_guild(self.client.pool, ctx.guild.id)
         embed = embeds.verification_check_msg(guild_db[gld_cols.reqsmsg], guild_db[gld_cols.supportchannelname])
         message = await ctx.send(embed=embed)
         await message.add_reaction("✅")
         await ctx.message.delete()
 
         # Save verification message id for later to check reacts with
-        await update_guild(ctx.guild.id, "verificationid", message.id)
+        await update_guild(self.client.pool, ctx.guild.id, "verificationid", message.id)
 
     @commands.command(usage="!add_first_subverify")
     @commands.guild_only()
@@ -180,7 +180,7 @@ class Verification(commands.Cog):
     async def add_first_subverify(self, ctx):
         """Add the verification message to channel"""
 
-        guild_db = await get_guild(ctx.guild.id)
+        guild_db = await get_guild(self.client.pool, ctx.guild.id)
         embed = embeds.subverify_msg(guild_db[gld_cols.subverify1name], guild_db[gld_cols.supportchannelname])
         message = await ctx.send(embed=embed)
         await message.add_reaction("✅")
@@ -188,7 +188,7 @@ class Verification(commands.Cog):
         await ctx.message.delete()
 
         # Save verification message id for later to check reacts with
-        await update_guild(ctx.guild.id, "subverify1id", message.id)
+        await update_guild(self.client.pool, ctx.guild.id, "subverify1id", message.id)
 
     @commands.command(usage="!add_second_subverify")
     @commands.guild_only()
@@ -196,7 +196,7 @@ class Verification(commands.Cog):
     async def add_second_subverify(self, ctx):
         """Add the verification message to channel"""
 
-        guild_db = await get_guild(ctx.guild.id)
+        guild_db = await get_guild(self.client.pool, ctx.guild.id)
         embed = embeds.subverify_msg(guild_db[gld_cols.subverify2name], guild_db[gld_cols.supportchannelname])
         message = await ctx.send(embed=embed)
         await message.add_reaction("✅")
@@ -204,7 +204,7 @@ class Verification(commands.Cog):
         await ctx.message.delete()
 
         # Save verification message id for later to check reacts with
-        await update_guild(ctx.guild.id, "subverify2id", message.id)
+        await update_guild(self.client.pool, ctx.guild.id, "subverify2id", message.id)
 
 
 
@@ -213,18 +213,18 @@ def setup(client):
     client.add_cog(Verification(client))
 
 
-async def step_1_verify(user, ign):
+async def step_1_verify(pool, user, ign):
     embed = embeds.verification_step_1(ign)
     msg = await user.send(embed=embed)
     await msg.add_reaction("✅")
     await msg.add_reaction("❌")
 
-    await update_user(user.id, "ign", ign)
-    await update_user(user.id, "status", "stp_2")
-    await update_user(user.id, "verifyid", msg.id)
+    await update_user(pool, user.id, "ign", ign)
+    await update_user(pool, user.id, "status", "stp_2")
+    await update_user(pool, user.id, "verifyid", msg.id)
 
 
-async def complete_verification(guild, guild_data, member, name, user_data, reverify):
+async def complete_verification(pool, guild, guild_data, member, name, user_data, reverify):
     role = discord.utils.get(guild.roles, id=guild_data[gld_cols.verifiedroleid])
     tag = member.name
     try:
@@ -244,13 +244,13 @@ async def complete_verification(guild, guild_data, member, name, user_data, reve
     else:
         guilds = guilds.split(",")
     guilds.append(guild.name)
-    await update_user(member.id, "status", "verified")
-    await update_user(member.id, "verifiedguilds", ','.join(guilds))
+    await update_user(pool, member.id, "status", "verified")
+    await update_user(pool, member.id, "verifiedguilds", ','.join(guilds))
     if not reverify:
-        await update_user(member.id, "ign", name)
-    await update_user(member.id, "verifykey", None)
-    await update_user(member.id, "verifyid", None)
-    await update_user(member.id, "verifyguild", None)
+        await update_user(pool, member.id, "ign", name)
+    await update_user(pool, member.id, "verifykey", None)
+    await update_user(pool, member.id, "verifyid", None)
+    await update_user(pool, member.id, "verifyguild", None)
 
 
 async def guild_verify_react_handler(self, payload, user_data, guild_data, user, guild, verify_msg_id):
@@ -273,7 +273,7 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
                 embed = embeds.verification_already_verified()
                 msg = await user.send(embed=embed)
             elif status == "cancelled":
-                await update_user(user.id, "status", "stp_1")
+                await update_user(self.client.pool, user.id, "status", "stp_1")
                 embed = embeds.verification_dm_start()
                 channel = self.client.get_channel(guild_data[gld_cols.verifylogchannel])
                 await channel.send(f"{user.mention} is re-verifying after cancelling.")
@@ -284,8 +284,8 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
                 msg = await user.send(embed=embed)
                 await msg.add_reaction('👍')
                 await msg.add_reaction('❌')  # TODO: test cancel
-                await update_user(user.id, "verifyid", msg.id)
-                await update_user(user.id, "verifyguild", guild.id)
+                await update_user(self.client.pool, user.id, "verifyid", msg.id)
+                await update_user(self.client.pool, user.id, "verifyguild", guild.id)
                 channel = self.client.get_channel(guild_data[gld_cols.verifylogchannel])
                 await channel.send(f"{user.mention} is re-verifying for this guild.")
                 return
@@ -293,7 +293,7 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
             embed = embeds.verification_bad_reqs(guild_data[gld_cols.reqsmsg])
             msg = await user.send(embed=embed)
             await msg.add_reaction('✅')
-            await update_user(payload.user_id, "verifyid", msg.id)
+            await update_user(self.client.pool, payload.user_id, "verifyid", msg.id)
         elif status == "deny_appeal":
             await user.send("Your application is being reviewed by staff. Please wait for their decision.")
         elif status != "stp_1" and status != "stp_2" and status != "stp_3":
@@ -309,10 +309,10 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
         msg = await user.send(embed=embed)
 
     if user_data is None:
-        await add_new_user(payload.user_id, guild.id, msg.id)
+        await add_new_user(self.client.pool, payload.user_id, guild.id, msg.id)
     else:
-        await update_user(payload.user_id, "verifyguild", guild.id)
-        await update_user(payload.user_id, "verifyid", msg.id)
+        await update_user(self.client.pool, payload.user_id, "verifyguild", guild.id)
+        await update_user(self.client.pool, payload.user_id, "verifyid", msg.id)
     if not verified:
         await msg.add_reaction('❌')
 
@@ -335,15 +335,15 @@ async def dm_verify_react_handler(self, payload, user_data, user):
                 channel = self.client.get_channel(await get_guild(user_data[usr_cols.verifyguild])[
                                                       gld_cols.verifylogchannel])  # unknown colum none in where clause
                 await channel.send(f"{user.mention} has cancelled the verification process.")
-                await update_user(payload.user_id, "verifyguild", None)
-                await update_user(payload.user_id, "status", "cancelled")
+                await update_user(self.client.pool, payload.user_id, "verifyguild", None)
+                await update_user(self.client.pool, payload.user_id, "status", "cancelled")
             elif str(payload.emoji) == '👍':
                 await self.step_3_verify(payload.user_id, reverify=True)
-        if str(payload.emoji) == '👍':
-            step_1_verify()
+        # if str(payload.emoji) == '👍':
+        #     await step_1_verify(self.client.pool, )
     else:
         if str(payload.emoji) == '✅' or str(payload.emoji) == '👍':
-            guild_data = await get_guild(user_data[usr_cols.verifyguild])
+            guild_data = await get_guild(self.client.pool, user_data[usr_cols.verifyguild])
             guild = self.client.get_guild(guild_data[gld_cols.id])
             channel = guild.get_channel(guild_data[gld_cols.manualverifychannel])
             key = user_data[usr_cols.verifykey]

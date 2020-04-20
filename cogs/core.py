@@ -4,10 +4,11 @@ from datetime import datetime, timedelta
 import discord
 from discord.ext import commands
 
+from cogs.moderation import Moderation
 from sql import get_guild, get_user, add_new_guild, usr_cols, gld_cols
 from checks import is_rl_or_higher
 from cogs import verification, raiding, moderation
-from cogs.raiding import afk_check_reaction_handler, confirmed_raiding_reacts, end_afk_check
+from cogs.raiding import afk_check_reaction_handler, confirmed_raiding_reacts, end_afk_check, Raiding
 from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification, subverify_react_handler
 
 states = {}
@@ -68,7 +69,7 @@ class Core(commands.Cog):
                     await message.author.send('You do not have the permissions to use this command.')
                 return
 
-            user_data = await get_user(message.author.id)
+            user_data = await get_user(self.client.pool, message.author.id)
 
             if user_data is not None:  # TODO: implement modmail & check to ensure not verifying
                 if user_data[usr_cols.status] == 'verified' or (user_data[usr_cols.status] == 'cancelled' and user_data[usr_cols.verifiedguilds] is not None):
@@ -80,11 +81,11 @@ class Core(commands.Cog):
                         return await message.author.send("Please provide your username only. No numbers or symbols", delete_after=10)
                     # if ign_exists(message.content.strip()):
                     #     return await message.author.send(f"This username has already been taken. If you believe this is a bug DM the developer: __Darkmatter#7321__")
-                    await verification.step_1_verify(message.author, message.content.strip())
+                    await verification.step_1_verify(self.client.pool, message.author, message.content.strip())
                 else:
                     if user_data[usr_cols.status] == 'cancelled':
                         if user_data[usr_cols.verifiedguilds] is None:
-                            await verification.step_1_verify(message.author, message.content.strip())
+                            await verification.step_1_verify(self.client.pool, message.author, message.content.strip())
                         else:
                             await message.author.send("You are not verified in any guilds this bot is in yet. Please "
                                                       "verify before attempting to send modmail.")
@@ -145,13 +146,13 @@ class Core(commands.Cog):
         if payload.user_id == self.client.user.id:
             return
 
-        user_data = await get_user(payload.user_id)
+        user_data = await get_user(self.client.pool, payload.user_id)
         user = self.client.get_user(payload.user_id)
 
         # check if reaction is in dm's or in guild
         if payload.guild_id is not None:
             guild = self.client.get_guild(payload.guild_id)
-            guild_data = await get_guild(guild.id)
+            guild_data = await get_guild(self.client.pool, guild.id)
             verify_message_id = guild_data[gld_cols.verificationid]
             subverify_1_msg_id = guild_data[gld_cols.subverify1id]
             subverify_2_msg_id = guild_data[gld_cols.subverify2id]
@@ -165,20 +166,20 @@ class Core(commands.Cog):
                 return await subverify_react_handler(Verification(self.client), payload, 2, guild_data, user, guild, subverify_2_msg_id)
             elif payload.channel_id in [guild_data[gld_cols.raidhc1], guild_data[gld_cols.raidhc2],
                                         guild_data[gld_cols.raidhc3], guild_data[gld_cols.vethcid]]:
-                if str(payload.emoji) == '❌' and await is_rl_or_higher(guild.get_member(user.id), guild):
-                    return await end_afk_check(guild.get_member(user.id), guild, False)
-                return await afk_check_reaction_handler(payload, guild.get_member(user.id), guild)
+                if str(payload.emoji) == '❌' and await is_rl_or_higher(self.client.pool, guild.get_member(user.id), guild):
+                    return await end_afk_check(self.client.pool, guild.get_member(user.id), guild, False)
+                return await afk_check_reaction_handler(self.client.pool, payload, guild.get_member(user.id), guild)
             elif payload.channel_id == guild_data[gld_cols.manualverifychannel]:
                 if str(payload.emoji) == '✅':
                     channel = guild.get_channel(payload.channel_id)
                     msg = await channel.fetch_message(payload.message_id)
                     uid = msg.content.split(": ")[1]
-                    return await moderation.manual_verify_ext(guild, uid, user)
+                    return await moderation.manual_verify_ext(self.client.pool, guild, uid, user)
                 elif str(payload.emoji) == '❌':
                     channel = guild.get_channel(payload.channel_id)
                     msg = await channel.fetch_message(payload.message_id)
                     uid = int(msg.content.split(": ")[1])
-                    return await moderation.manual_verify_deny_ext(guild, uid, user)
+                    return await moderation.manual_verify_deny_ext(self.client.pool, guild, uid, user)
 
 
         elif str(payload.emoji) in ['✅', '👍', '❌']:

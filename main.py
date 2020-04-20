@@ -3,6 +3,7 @@ import logging
 import os
 import traceback
 
+import aiomysql
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -29,6 +30,17 @@ def get_prefix(client, message):
 bot = commands.Bot(command_prefix=get_prefix)
 bot.remove_command('help')
 bot.owner_id = 196282885601361920
+
+@bot.event
+async def on_ready():
+    bot.pool = await aiomysql.create_pool(
+        host=os.getenv("MYSQL_HOST"),
+        port=3306,
+        user='root',
+        password=os.getenv("MYSQL_PASSWORD"),
+        db='mysql',
+        loop=bot.loop
+    )
 
 
 @bot.command(usage="!load [cog]")

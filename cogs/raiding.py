@@ -34,9 +34,9 @@ class Raiding(commands.Cog):
             location = " ".join(location)
 
         # TODO CHECK IF IS OPTION FOR CHANNEL NUM
-        guild_db = await get_guild(ctx.guild.id)
+        guild_db = await get_guild(self.client.pool, ctx.guild.id)
         if channel == "vet" or channel == "veteran":
-            if await is_vet_rl_or_higher(ctx.author, ctx.guild):
+            if await is_vet_rl_or_higher(self.client.pool, ctx.author, ctx.guild):
                 hc_channel = ctx.guild.get_channel(guild_db[gld_cols.vethcid])
                 vc = ctx.guild.get_channel(guild_db[gld_cols.vetvcid])
                 role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.vetroleid])
@@ -73,7 +73,7 @@ class Raiding(commands.Cog):
         if " <-- Join!" not in vc.name:
             await vc.edit(name=vc.name + " <-- Join!")
         await vc.set_permissions(target=role, connect=True, view_channel=True, speak=False)
-        emojis = run_emojis(type)
+        emojis = run_emojis(title[0])
         state = get_state(ctx.guild, core.states)
         if title[0] == 'Fame Train':
             embed = embeds.afk_check_base(title[0], ctx.author, keyed_run, emojis, location)
@@ -95,7 +95,7 @@ class Raiding(commands.Cog):
     @tasks.loop(seconds=5.0, count=72)  # loop for 6 mins
     async def update_afk_loop(self, msg, guild):
         if self.update_afk_loop.current_loop == 71:
-            await end_afk_check(None, guild, True)
+            await end_afk_check(self.client.pool, None, guild, True)
         else:
             uptime = (self.update_afk_loop.current_loop + 2) * 5
             minutes = 6 - ceil(uptime / 60)
@@ -112,9 +112,9 @@ class Raiding(commands.Cog):
     @commands.check(is_rl_or_higher_check)
     async def headcount(self, ctx, type, hc_channel_num='1'):
         """Starts a headcount for the type of run specified. Valid run types are: ```realmclear, fametrain, void, fskipvoid, cult```"""
-        guild_db = await get_guild(ctx.guild.id)
+        guild_db = await get_guild(self.client.pool, ctx.guild.id)
         if hc_channel_num == "vet" or hc_channel_num == "veteran":
-            if await is_vet_rl_or_higher(ctx.author, ctx.guild):
+            if await is_vet_rl_or_higher(self.client.pool, ctx.author, ctx.guild):
                 hc_channel = ctx.guild.get_channel(guild_db[gld_cols.vethcid])
             else:
                 return await ctx.send("You have to be a vet rl to use this command.")
@@ -137,7 +137,7 @@ class Raiding(commands.Cog):
         keyed_run = True
         if title[0] == 'Realm Clearing' or title[0] == 'Fame Train':
             keyed_run = False
-        emojis = run_emojis(type)
+        emojis = run_emojis(title[0])
         embed = embeds.headcount_base(title[0], ctx.author, keyed_run, emojis)
         msg = await hc_channel.send("@here", embed=embed)
         for e in emojis:
@@ -149,9 +149,9 @@ class Raiding(commands.Cog):
     @commands.check(is_rl_or_higher_check)
     async def lock(self, ctx, vc_channel):
         """Locks the raiding voice channel"""
-        guild_db = await get_guild(ctx.guild.id)
+        guild_db = await get_guild(self.client.pool, ctx.guild.id)
         if vc_channel == "vet" or vc_channel == "veteran":
-            if await is_vet_rl_or_higher(ctx.author, ctx.guild):
+            if await is_vet_rl_or_higher(self.client.pool, ctx.author, ctx.guild):
                 vc = ctx.guild.get_channel(guild_db[gld_cols.vetvcid])
                 role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.vetroleid])
             else:
@@ -178,9 +178,9 @@ class Raiding(commands.Cog):
     @commands.check(is_rl_or_higher_check)
     async def unlock(self, ctx, vc_channel):
         """Unlocks the raiding voice channel"""
-        guild_db = await get_guild(ctx.guild.id)
+        guild_db = await get_guild(self.client.pool, ctx.guild.id)
         if vc_channel == "vet" or vc_channel == "veteran":
-            if await is_vet_rl_or_higher(ctx.author, ctx.guild):
+            if await is_vet_rl_or_higher(self.client.pool, ctx.author, ctx.guild):
                 vc = ctx.guild.get_channel(guild_db[gld_cols.vetvcid])
                 role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.vetroleid])
             else:
@@ -212,9 +212,9 @@ class Raiding(commands.Cog):
             location = " ".join(location)
 
         # TODO CHECK IF IS OPTION FOR CHANNEL NUM
-        guild_db = await get_guild(ctx.guild.id)
+        guild_db = await get_guild(self.client.pool, ctx.guild.id)
         if channel == "vet" or channel == "veteran":
-            if await is_vet_rl_or_higher(ctx.author, ctx.guild):
+            if await is_vet_rl_or_higher(self.client.pool, ctx.author, ctx.guild):
                 hc_channel = ctx.guild.get_channel(guild_db[gld_cols.vethcid])
                 vc = ctx.guild.get_channel(guild_db[gld_cols.vetvcid])
                 role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.vetroleid])
@@ -237,7 +237,7 @@ class Raiding(commands.Cog):
         if " <-- Join!" not in vc.name:
             await vc.edit(name=vc.name + " <-- Join!")
         await vc.set_permissions(target=role, connect=True, view_channel=True, speak=False)
-        emojis = run_emojis("realmclear")
+        emojis = run_emojis("Realm Clearing")
         embed = embeds.afk_check_base("Realm Clearing", ctx.author, False, emojis)
         msg = await hc_channel.send(f"@here `Realm Clearing` {emojis[0]} started by {ctx.author.mention} in {vc.name}",
                                     embed=embed)
@@ -368,13 +368,14 @@ def get_rcstate(guild, st):
         return st[guild.id]
 
 
-async def end_afk_check(member, guild, auto):
+async def end_afk_check(pool, member, guild, auto):
     if auto or await is_rl_or_higher(member, guild):
         state = get_state(guild, core.states)
-        guild_db = await get_guild(guild.id)
+        guild_db = await get_guild(pool, guild.id)
         # Lock VC
         role = discord.utils.get(guild.roles, id=guild_db[gld_cols.verifiedroleid])
-        state.loop.cancel()
+        if state.loop:
+            state.loop.cancel()
         vc_name = state.vc.name
         if " <-- Join!" in vc_name:
             vc_name = vc_name.split(" <")[0]
@@ -394,7 +395,7 @@ async def end_afk_check(member, guild, auto):
         await state.msg.clear_reaction('❌')
         # Kick members who haven't reacted
         for m in state.vc.members:
-            if m.id not in state.raiders and not await is_rl_or_higher(m, guild):
+            if m.id not in state.raiders and not await is_rl_or_higher(pool, m, guild):
                 try:
                     await m.edit(voice_channel=None)
                 except discord.errors.Forbidden:
@@ -417,7 +418,7 @@ async def post_afk_loop(state, guild_id):
         await state.msg.edit(embed=embed)
 
 
-async def afk_check_reaction_handler(payload, member, guild):
+async def afk_check_reaction_handler(pool, payload, member, guild):
     emoji_id = payload.emoji.id
     state = get_state(guild, core.states)
     if payload.message_id == state.msg.id:
@@ -442,7 +443,7 @@ async def afk_check_reaction_handler(payload, member, guild):
                 await msg.add_reaction(state.emojis[1])
 
         elif emoji_id == 682365548465487965:  # if react is nitro
-            if member.premium_since is not None or await is_rl_or_higher(member, guild):
+            if member.premium_since is not None or await is_rl_or_higher(pool, member, guild):
                 if state.location != "No location specified.":
                     await member.send(f"The location for this run is: __{state.location}__")
                 else:
@@ -533,20 +534,20 @@ default_emojis = ["<:defaultdungeon:682212333182910503>", "<:eventkey:6822123496
 
 def run_emojis(type):
     return {
-        'realmclear': ["<:defaultdungeon:682212333182910503>", "<:trickster:682214467483861023>"],
-        'fametrain': ["<:fame:682209281722024044>", "<:sorcerer:682214487490560010>",
+        'Realm Clearing': ["<:defaultdungeon:682212333182910503>", "<:trickster:682214467483861023>"],
+        'Fame Train': ["<:fame:682209281722024044>", "<:sorcerer:682214487490560010>",
                       "<:necromancer:682214503106215966>", "<:sseal:683815374403141651>",
                       "<:paladin:682205688033968141>"],
-        'void': ["<:void:682205817424183346>", "<:lhkey:682205801728835656>", "<:vial:682205784524062730>",
+        'Void': ["<:void:682205817424183346>", "<:lhkey:682205801728835656>", "<:vial:682205784524062730>",
                  default_emojis[2], default_emojis[3], default_emojis[4], "<:mseal:682205755754938409>",
                  "<:puri:682205769973760001>", "<:planewalker:682212363889279091>"],
-        'fskipvoid': ["<:fskipvoid:682206558075224145>", "<:lhkey:682205801728835656>", "<:vial:682205784524062730>",
+        'Full-Skip Void': ["<:fskipvoid:682206558075224145>", "<:lhkey:682205801728835656>", "<:vial:682205784524062730>",
                       default_emojis[2], default_emojis[3], default_emojis[4], "<:mseal:682205755754938409>",
                       "<:puri:682205769973760001>", "<:brainofthegolem:682205737492938762>",
                       "<:mystic:682205700918607969>"],
-        'cult': ["<:cult:682205832879800388>", "<:lhkey:682205801728835656>", default_emojis[2], default_emojis[3],
+        'Cult': ["<:cult:682205832879800388>", "<:lhkey:682205801728835656>", default_emojis[2], default_emojis[3],
                  default_emojis[4], "<:puri:682205769973760001>", "<:planewalker:682212363889279091>"],
-        'eventdungeon': default_emojis
+        'Event Dungeon': default_emojis
     }.get(type, default_emojis)
 
 

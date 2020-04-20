@@ -9,6 +9,7 @@ from discord.ext import commands
 from discord.utils import get
 
 import embeds
+from sql import get_num_verified
 from checks import in_voice_channel, is_dj, is_rl_or_higher_check
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -150,9 +151,10 @@ class Misc(commands.Cog):
             title="Bot Status",
             color=discord.Color.dark_gold()
         )
+        nverified = await get_num_verified(self.client.pool)
         embed.add_field(name="Bot latency:", value=f"**`{round(self.client.latency*1000, 2)}`** Milliseconds.", inline=False)
         embed.add_field(name="Connected Servers:", value=f"**`{len(self.client.guilds)}`** servers with **`{len(list(self.client.get_all_members()))}`** total members.", inline=False)
-        embed.add_field(name="Verified Raiders:", value=f"**`{await get_num_verified()[0]}`** verified raiders.", inline=False)
+        embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.", inline=False)
         embed.add_field(name="Lines of Code:", value=(f"**`{line_count('/home/jacobvs2/Rotmg-Bot/')+line_count('/home/jacobvs2/Rotmg-Bot/cogs')}"
                                                       "`** lines of code."), inline=False)
         embed.add_field(name="Server Status:", value=(f"```yaml\nServer: Google Cloud Compute (US East)\nCPU: {psutil.cpu_percent()}% utilization."

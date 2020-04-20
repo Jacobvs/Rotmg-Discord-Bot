@@ -1,47 +1,28 @@
 import enum
-import os
-import main
-import aiomysql
-from dotenv import load_dotenv
 
-load_dotenv()
-bot = main.bot
-
-
-@bot.event
-async def on_ready():
-    bot.pool = await aiomysql.create_pool(
-        host=os.getenv("MYSQL_HOST"),
-        port=3306,
-        user='root',
-        password=os.getenv("MYSQL_PASSWORD"),
-        db='mysql',
-        loop=bot.loop
-    )
-
-async def get_user(uid):
-    async with bot.pool.acquire() as conn:
+async def get_user(pool, uid):
+    async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute("SELECT * from rotmg.users WHERE id = {}".format(uid))
-            return cursor.fetchone()
+            return await cursor.fetchone()
 
-async def get_num_verified():
-    async with bot.pool.acquire() as conn:
+async def get_num_verified(pool):
+    async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute("SELECT COUNT(*) FROM rotmg.users where status = 'verified'")
-            return cursor.fetchone()
+            return await cursor.fetchone()
 
-async def get_guild(uid):
-    async with bot.pool.acquire() as conn:
+async def get_guild(pool, uid):
+    async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute("SELECT * from rotmg.guilds WHERE id = {}".format(uid))
-            return cursor.fetchone()
+            return await cursor.fetchone()
 
-async def ign_exists(ign, id):
-    async with bot.pool.acquire() as conn:
+async def ign_exists(pool, ign, id):
+    async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute("SELECT * from rotmg.users WHERE ign = '{}' AND status = 'verified'".format(ign))
-            user = cursor.fetchone()
+            user = await cursor.fetchone()
             if not user:
                 return False
             if user[0] == id:
@@ -54,8 +35,8 @@ async def ign_exists(ign, id):
 #     return True
 
 
-async def add_new_user(user_id, guild_id, verify_id):
-    async with bot.pool.acquire() as conn:
+async def add_new_user(pool, user_id, guild_id, verify_id):
+    async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             sql = "INSERT INTO rotmg.users (id, status, verifyguild, verifyid) VALUES (%s, 'stp_1', %s, %s)"
             data = (user_id, guild_id, verify_id)
@@ -63,16 +44,16 @@ async def add_new_user(user_id, guild_id, verify_id):
             await conn.commit()
 
 
-async def update_user(id, column, change):
-    async with bot.pool.acquire() as conn:
+async def update_user(pool, id, column, change):
+    async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             sql = "UPDATE rotmg.users SET {} = %s WHERE id = {}".format(column, id)
             await cursor.execute(sql, (change,))
             await conn.commit()
 
 
-async def add_new_guild(guild_id, guild_name):
-    async with bot.pool.acquire() as conn:
+async def add_new_guild(pool, guild_id, guild_name):
+    async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             sql = ("INSERT INTO rotmg.guilds (id, name, verificationid, nmaxed, nfame,"
                    "nstars, reqall, privateloc, reqsmsg, manualverifychannel, verifiedroleid,"
@@ -91,8 +72,8 @@ async def add_new_guild(guild_id, guild_name):
             await conn.commit()
 
 
-async def update_guild(id, column, change):
-    async with bot.pool.acquire() as conn:
+async def update_guild(pool, id, column, change):
+    async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             sql = "UPDATE rotmg.guilds SET {} = %s WHERE id = {}".format(column, id)
             await cursor.execute(sql, (change,))
