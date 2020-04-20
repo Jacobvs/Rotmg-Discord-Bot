@@ -9,7 +9,6 @@ from discord.ext import commands
 from discord.utils import get
 
 import embeds
-import sql
 from checks import in_voice_channel, is_dj, is_rl_or_higher_check
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -112,17 +111,17 @@ class Misc(commands.Cog):
     @commands.command(usage="!oogabooga")
     @commands.check(is_rl_or_higher_check)
     async def oogabooga(self, ctx):
-        await ctx.send(file=discord.File('files/oogabooga.png'))
+        await ctx.send(file=discord.File(open('files/oogabooga.png', 'rb')))
 
     @commands.command(usage="!whatthefuck")
     @commands.check(is_rl_or_higher_check)
     async def whatthefuck(self, ctx):
-        await ctx.send(file=discord.File('files/whatthefuck.jpg'))
+        await ctx.send(file=discord.File(open('files/whatthefuck.jpg', 'rb')))
 
     @commands.command(usage="!isitgone")
     @commands.check(is_rl_or_higher_check)
     async def isitgone(self, ctx):
-        await ctx.send(file=discord.File('files/isitgone.jpg'))
+        await ctx.send(file=discord.File(open('files/isitgone.jpg', 'rb')))
 
     @commands.command(usage='!poll "[title]" [option 1] [option 2]...')
     @commands.guild_only()
@@ -153,7 +152,7 @@ class Misc(commands.Cog):
         )
         embed.add_field(name="Bot latency:", value=f"**`{round(self.client.latency*1000, 2)}`** Milliseconds.", inline=False)
         embed.add_field(name="Connected Servers:", value=f"**`{len(self.client.guilds)}`** servers with **`{len(list(self.client.get_all_members()))}`** total members.", inline=False)
-        embed.add_field(name="Verified Raiders:", value=f"**`{sql.get_num_verified()[0]}`** verified raiders.", inline=False)
+        embed.add_field(name="Verified Raiders:", value=f"**`{await get_num_verified()[0]}`** verified raiders.", inline=False)
         embed.add_field(name="Lines of Code:", value=(f"**`{line_count('/home/jacobvs2/Rotmg-Bot/')+line_count('/home/jacobvs2/Rotmg-Bot/cogs')}"
                                                       "`** lines of code."), inline=False)
         embed.add_field(name="Server Status:", value=(f"```yaml\nServer: Google Cloud Compute (US East)\nCPU: {psutil.cpu_percent()}% utilization."

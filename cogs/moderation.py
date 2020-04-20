@@ -5,7 +5,8 @@ import discord
 from discord.ext import commands
 
 import embeds
-import sql
+
+from sql import get_guild, get_user, update_user, add_new_user, gld_cols, usr_cols
 from checks import is_rl_or_higher_check
 from cogs import verification
 
@@ -123,19 +124,19 @@ def setup(client):
 
 async def manual_verify_ext(guild, uid, requester, ign=None):
     """Manually verifies user with specified uid"""
-    guild_data = sql.get_guild(guild.id)
-    channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
+    guild_data = await get_guild(guild.id)
+    channel = guild.get_channel(guild_data[gld_cols.manualverifychannel])
     member = guild.get_member(int(uid))
-    user_data = sql.get_user(int(uid))
+    user_data = await get_user(int(uid))
 
     if user_data is not None:
-        name = user_data[sql.usr_cols.ign]
-        status = user_data[sql.usr_cols.status]
+        name = user_data[usr_cols.ign]
+        status = user_data[usr_cols.status]
         if status != 'verified':
             if status != "stp_1" and status != "stp_2":
                 if status == 'deny_appeal':
-                    channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
-                    message = await channel.fetch_message(user_data[sql.usr_cols.verifyid])
+                    channel = guild.get_channel(guild_data[gld_cols.manualverifychannel])
+                    message = await channel.fetch_message(user_data[usr_cols.verifyid])
                     await message.delete()
                 if ign is not None:
                     name = ign
@@ -147,8 +148,8 @@ async def manual_verify_ext(guild, uid, requester, ign=None):
         else:
             await channel.send("The specified member has already been verified.")
     elif ign is not None:
-        sql.add_new_user(int(uid), guild.id, None)
-        user_data = sql.get_user(int(uid))
+        await add_new_user(int(uid), guild.id, None)
+        user_data = await get_user(int(uid))
         name = ign
     else:
         return await channel.send("Please specify an IGN for this user.")
@@ -161,32 +162,32 @@ async def manual_verify_ext(guild, uid, requester, ign=None):
 
 async def manual_verify_deny_ext(guild, uid, requester):
     """Manually verifies user with specified uid"""
-    guild_data = sql.get_guild(guild.id)
-    channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
+    guild_data = await get_guild(guild.id)
+    channel = guild.get_channel(guild_data[gld_cols.manualverifychannel])
     member = guild.get_member(int(uid))
-    user_data = sql.get_user(int(uid))
+    user_data = await get_user(int(uid))
 
     if user_data is not None:
-        status = user_data[sql.usr_cols.status]
+        status = user_data[usr_cols.status]
         if status != 'verified':
             if status == 'deny_appeal':
-                channel = guild.get_channel(guild_data[sql.gld_cols.manualverifychannel])
-                message = await channel.fetch_message(user_data[sql.usr_cols.verifyid])
+                channel = guild.get_channel(guild_data[gld_cols.manualverifychannel])
+                message = await channel.fetch_message(user_data[usr_cols.verifyid])
                 await message.delete()
         else:
             await channel.send("The specified member has already been verified.")
 
-    sql.update_user(member.id, "status", "appeal_denied")
-    guilds = user_data[sql.usr_cols.verifiedguilds]
+    await update_user(member.id, "status", "appeal_denied")
+    guilds = user_data[usr_cols.verifiedguilds]
     if guilds is None:
         guilds = []
     else:
         guilds = guilds.split(",")
     guilds.append(guild.name)
-    sql.update_user(member.id, "verifiedguilds", ','.join(guilds))
-    sql.update_user(member.id, "verifyguild", None)
-    sql.update_user(member.id, "verifykey", None)
-    sql.update_user(member.id, "verifyid", None)
+    await update_user(member.id, "verifiedguilds", ','.join(guilds))
+    await update_user(member.id, "verifyguild", None)
+    await update_user(member.id, "verifykey", None)
+    await update_user(member.id, "verifyid", None)
     embed = embeds.verification_denied(member.mention, requester.mention)
     await member.send(embed=embed)
 

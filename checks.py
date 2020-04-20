@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
 
-import sql
+
+from sql import get_guild, gld_cols
 
 
 async def is_rl_or_higher_check(ctx):
@@ -11,7 +12,7 @@ async def is_rl_or_higher_check(ctx):
 async def is_rl_or_higher(member, guild):
     if member:
         if member.roles:
-            rl_id = sql.get_guild(guild.id)[sql.gld_cols.rlroleid]
+            rl_id = await get_guild(guild.id)[gld_cols.rlroleid]
             member_highest_role_id = member.roles[len(member.roles) - 1].id
             role_ids = list(map(lambda r: r.id, guild.roles))
             index = role_ids.index(rl_id)
@@ -26,7 +27,7 @@ async def is_vet_rl_or_higher_check(ctx):
 async def is_vet_rl_or_higher(member, guild):
     if member:
         if member.roles:
-            rl_id = sql.get_guild(guild.id)[sql.gld_cols.vetrlroleid]
+            rl_id = await get_guild(guild.id)[gld_cols.vetrlroleid]
             member_highest_role_id = member.roles[len(member.roles) - 1].id
             role_ids = list(map(lambda r: r.id, guild.roles))
             index = role_ids.index(rl_id)

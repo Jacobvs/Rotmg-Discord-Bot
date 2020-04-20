@@ -1,14 +1,19 @@
+import io
 from datetime import datetime
 from difflib import get_close_matches
+import matplotlib.pyplot as plt
+from matplotlib.patches import Circle
+import json
 
 import discord
 from discord.ext import tasks, commands
 from math import ceil
 
 import embeds
-import sql
+
 from checks import is_rl_or_higher_check, is_rl_or_higher, is_vet_rl_or_higher
 from cogs import core
+from sql import gld_cols, get_guild
 
 
 class Raiding(commands.Cog):
@@ -29,25 +34,25 @@ class Raiding(commands.Cog):
             location = " ".join(location)
 
         # TODO CHECK IF IS OPTION FOR CHANNEL NUM
-        guild_db = sql.get_guild(ctx.guild.id)
+        guild_db = await get_guild(ctx.guild.id)
         if channel == "vet" or channel == "veteran":
             if await is_vet_rl_or_higher(ctx.author, ctx.guild):
-                hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.vethcid])
-                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.vetvcid])
-                role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.vetroleid])
+                hc_channel = ctx.guild.get_channel(guild_db[gld_cols.vethcid])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.vetvcid])
+                role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.vetroleid])
             else:
                 return await ctx.send("You have to be a vet rl to use this command.")
         else:
-            role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.verifiedroleid])
+            role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.verifiedroleid])
             if channel == '1':
-                hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc1])
-                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc1])
+                hc_channel = ctx.guild.get_channel(guild_db[gld_cols.raidhc1])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc1])
             elif channel == '2':
-                hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc2])
-                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc2])
+                hc_channel = ctx.guild.get_channel(guild_db[gld_cols.raidhc2])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc2])
             elif channel == '3':
-                hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc3])
-                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc3])
+                hc_channel = ctx.guild.get_channel(guild_db[gld_cols.raidhc3])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc3])
             else:
                 return await ctx.send("That channel number is not an option, please choose a channel from 1-3 or 'vet'/'veteran'")
 
@@ -107,18 +112,18 @@ class Raiding(commands.Cog):
     @commands.check(is_rl_or_higher_check)
     async def headcount(self, ctx, type, hc_channel_num='1'):
         """Starts a headcount for the type of run specified. Valid run types are: ```realmclear, fametrain, void, fskipvoid, cult```"""
-        guild_db = sql.get_guild(ctx.guild.id)
+        guild_db = await get_guild(ctx.guild.id)
         if hc_channel_num == "vet" or hc_channel_num == "veteran":
             if await is_vet_rl_or_higher(ctx.author, ctx.guild):
-                hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.vethcid])
+                hc_channel = ctx.guild.get_channel(guild_db[gld_cols.vethcid])
             else:
                 return await ctx.send("You have to be a vet rl to use this command.")
         elif hc_channel_num == '1':
-            hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc1])
+            hc_channel = ctx.guild.get_channel(guild_db[gld_cols.raidhc1])
         elif hc_channel_num == '2':
-            hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc2])
+            hc_channel = ctx.guild.get_channel(guild_db[gld_cols.raidhc2])
         elif hc_channel_num == '3':
-            hc_channel = ctx.guild.get_channel(guild_db[sql.gld_cols.raidhc3])
+            hc_channel = ctx.guild.get_channel(guild_db[gld_cols.raidhc3])
         else:
             return await ctx.send(
                 "That channel number is not an option, please choose a channel from 1-3 or 'vet'/'veteran'")
@@ -144,21 +149,21 @@ class Raiding(commands.Cog):
     @commands.check(is_rl_or_higher_check)
     async def lock(self, ctx, vc_channel):
         """Locks the raiding voice channel"""
-        guild_db = sql.get_guild(ctx.guild.id)
+        guild_db = await get_guild(ctx.guild.id)
         if vc_channel == "vet" or vc_channel == "veteran":
             if await is_vet_rl_or_higher(ctx.author, ctx.guild):
-                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.vetvcid])
-                role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.vetroleid])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.vetvcid])
+                role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.vetroleid])
             else:
                 return await ctx.send("You have to be a vet rl to use this command.")
         else:
-            role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.verifiedroleid])
+            role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.verifiedroleid])
             if vc_channel == '1':
-                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc1])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc1])
             elif vc_channel == '2':
-                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc2])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc2])
             elif vc_channel == '3':
-                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc3])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc3])
             else:
                 return await ctx.send("That channel number is not an option, please choose a channel from 1-3 or 'vet'/'veteran'")
         vc_name = vc.name
@@ -173,27 +178,122 @@ class Raiding(commands.Cog):
     @commands.check(is_rl_or_higher_check)
     async def unlock(self, ctx, vc_channel):
         """Unlocks the raiding voice channel"""
-        guild_db = sql.get_guild(ctx.guild.id)
+        guild_db = await get_guild(ctx.guild.id)
         if vc_channel == "vet" or vc_channel == "veteran":
             if await is_vet_rl_or_higher(ctx.author, ctx.guild):
-                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.vetvcid])
-                role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.vetroleid])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.vetvcid])
+                role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.vetroleid])
             else:
                 return await ctx.send("You have to be a vet rl to use this command.")
         else:
-            role = discord.utils.get(ctx.guild.roles, id=guild_db[sql.gld_cols.verifiedroleid])
+            role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.verifiedroleid])
             if vc_channel == '1':
-                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc1])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc1])
             elif vc_channel == '2':
-                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc2])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc2])
             elif vc_channel == '3':
-                vc = ctx.guild.get_channel(guild_db[sql.gld_cols.raidvc3])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc3])
             else:
                 return await ctx.send(
                     "That channel number is not an option, please choose a channel from 1-3 or 'vet'/'veteran'")
         await vc.edit(name=vc.name + " <-- Join!")
         await vc.set_permissions(role, connect=True, view_channel=True, speak=False)
         await ctx.send(f"{vc.name} Has been unlocked!")
+
+    @commands.command(usage="!realmclear [world #] [hc_channel_num] [location]")
+    @commands.guild_only()
+    #@commands.check(is_rl_or_higher)
+    async def realmclear(self, ctx, world_num, channel="1", *location):
+        #TODO: Check world number
+
+        if len(location) == 0:
+            location = "No location specified."
+        else:
+            location = " ".join(location)
+
+        # TODO CHECK IF IS OPTION FOR CHANNEL NUM
+        guild_db = await get_guild(ctx.guild.id)
+        if channel == "vet" or channel == "veteran":
+            if await is_vet_rl_or_higher(ctx.author, ctx.guild):
+                hc_channel = ctx.guild.get_channel(guild_db[gld_cols.vethcid])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.vetvcid])
+                role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.vetroleid])
+            else:
+                return await ctx.send("You have to be a vet rl to use this command.")
+        else:
+            role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.verifiedroleid])
+            if channel == '1':
+                hc_channel = ctx.guild.get_channel(guild_db[gld_cols.raidhc1])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc1])
+            elif channel == '2':
+                hc_channel = ctx.guild.get_channel(guild_db[gld_cols.raidhc2])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc2])
+            elif channel == '3':
+                hc_channel = ctx.guild.get_channel(guild_db[gld_cols.raidhc3])
+                vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc3])
+            else:
+                return await ctx.send("That channel number is not an option, please choose a channel from 1-3 or 'vet'/'veteran'")
+
+        if " <-- Join!" not in vc.name:
+            await vc.edit(name=vc.name + " <-- Join!")
+        await vc.set_permissions(target=role, connect=True, view_channel=True, speak=False)
+        emojis = run_emojis("realmclear")
+        embed = embeds.afk_check_base("Realm Clearing", ctx.author, False, emojis)
+        msg = await hc_channel.send(f"@here `Realm Clearing` {emojis[0]} started by {ctx.author.mention} in {vc.name}",
+                                    embed=embed)
+
+        embed = embeds.afk_check_control_panel(msg.jump_url, location, "Realm Clearing", emojis[1], False) # TODO: CHANGE TO ADD marked #'s
+        cpmsg = await ctx.send(embed=embed)
+        for e in emojis:
+            await msg.add_reaction(e)
+        # await msg.add_reaction('<:shard:682365548465487965>')
+        # await msg.add_reaction('❌')
+
+        world_num = world_num.lower()
+        if "w" in world_num:
+            world_num = world_num.replace("w", "")
+
+        msg = await hc_channel.send("Current Map:", file=discord.File(open(f"world-maps/world_{world_num}.png", 'rb'), "current_map.png"))
+        state = get_rcstate(ctx.guild, core.rcstates)
+        state.worldnum = world_num
+        state.mapmsg = msg
+        state.hcchannel = hc_channel
+        state.cpmsg = cpmsg
+        #TODO set in sql as well
+        #TODO: Create control panel
+
+    @commands.command(usage="!markmap [number(s)]", aliases=["mm"])
+    @commands.guild_only()
+    #@commands.check(is_rl_or_higher) #TODO: add map marker
+    async def markmap(self, ctx, *numbers):
+        # TODO: CHECK IF CLEARING IS HAPPENING ATM
+        #TODO: Check numbers for duplicates / range
+        state = get_rcstate(ctx.guild, core.rcstates)
+        for n in numbers:
+            n = int(n)
+            n -= 1
+            n = str(n)
+            state.markednums.append(n)
+        with open("data/world_data_clean.json") as file:
+            data = json.load(file)
+        img = plt.imread(f"world-maps/world_{state.worldnum}.png")
+        fig, ax = plt.subplots(1)
+        ax.set_aspect('equal')
+        ax.axis("off")
+        ax.imshow(img)
+        for n in state.markednums:
+            point = data[f"world_{state.worldnum}.png"][n]
+            circ = Circle((point["x"], point["y"]), 30, color='#0000FFC8')
+            ax.add_patch(circ)
+        file = io.BytesIO()
+        plt.savefig(file, transparent=True, bbox_inches='tight', pad_inches=0, format='png', dpi=500)
+        file.seek(0)
+        try:
+            await state.mapmsg.delete()
+        except discord.errors.NotFound:
+            print("Message not found")
+        msg = await state.hcchannel.send("Current Map:", file=discord.File(file, "current_map.png"))
+        state.mapmsg = msg
 
 
 def setup(client):
@@ -222,6 +322,14 @@ class GuildRaidState:
         self.nitroboosters = []
         self.loop = None
 
+class GuildRealmClearState:
+    def __init__(self):
+        self.markednums = []
+        self.worldnum = None
+        self.mapmsg = None
+        self.hcchannel = None
+        self.cpmsg = None
+
 
 def start_run(state, title, keyed_run, emojis, vc, msg, cpmsg, location, loop):
     state.runtitle = title
@@ -242,6 +350,7 @@ def start_run(state, title, keyed_run, emojis, vc, msg, cpmsg, location, loop):
     state.nitroboosters = []
     state.loop = loop
 
+#TODO : Add getter/setter state methods to manage sql queries
 
 def get_state(guild, st):
     """Gets the state for `guild`, creating it if it does not exist."""
@@ -251,13 +360,20 @@ def get_state(guild, st):
         st[guild.id] = GuildRaidState()
         return st[guild.id]
 
+def get_rcstate(guild, st):
+    if guild.id in st:
+        return st[guild.id]
+    else:
+        st[guild.id] = GuildRealmClearState()
+        return st[guild.id]
+
 
 async def end_afk_check(member, guild, auto):
     if auto or await is_rl_or_higher(member, guild):
         state = get_state(guild, core.states)
-        guild_db = sql.get_guild(guild.id)
+        guild_db = await get_guild(guild.id)
         # Lock VC
-        role = discord.utils.get(guild.roles, id=guild_db[sql.gld_cols.verifiedroleid])
+        role = discord.utils.get(guild.roles, id=guild_db[gld_cols.verifiedroleid])
         state.loop.cancel()
         vc_name = state.vc.name
         if " <-- Join!" in vc_name:
