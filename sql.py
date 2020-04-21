@@ -1,87 +1,83 @@
 import enum
-import os
 
-import mysql.connector
-from dotenv import load_dotenv
+async def get_user(pool, uid):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute("SELECT * from rotmg.users WHERE id = {}".format(uid))
+            return await cursor.fetchone()
 
-load_dotenv()
+async def get_num_verified(pool):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute("SELECT COUNT(*) FROM rotmg.users where status = 'verified'")
+            return await cursor.fetchone()
 
-mydb = mysql.connector.connect(
-    host=os.getenv("MYSQL_HOST"),
-    user="root",
-    passwd=os.getenv("MYSQL_PASSWORD"),
-    auth_plugin='mysql_native_password',
-)
+async def get_guild(pool, uid):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute("SELECT * from rotmg.guilds WHERE id = {}".format(uid))
+            return await cursor.fetchone()
 
-cursor = mydb.cursor()
+async def ign_exists(pool, ign, id):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute("SELECT * from rotmg.users WHERE ign = '{}' AND status = 'verified'".format(ign))
+            user = await cursor.fetchone()
+            if not user:
+                return False
+            if user[0] == id:
+                return False
+            return True
 
-
-def get_user(uid):
-    cursor.execute("SELECT * from rotmg.users WHERE id = {}".format(uid))
-    return cursor.fetchone()
-
-def get_num_verified():
-    cursor.execute("SELECT COUNT(*) FROM rotmg.users where status = 'verified'")
-    return cursor.fetchone()
-
-def get_guild(uid):
-    cursor.execute("SELECT * from rotmg.guilds WHERE id = {}".format(uid))
-    return cursor.fetchone()
-
-def ign_exists(ign, id):
-    cursor.execute("SELECT * from rotmg.users WHERE ign = '{}' AND status = 'verified'".format(ign))
-    user = cursor.fetchone()
-    if not user:
-        return False
-    if user[0] == id:
-        return False
-    return True
-
-def user_exists(uid):
-    if get_user(uid) is None:
-        return False
-    return True
+# async def user_exists(uid):
+#     if await get_user(uid) is None:
+#         return False
+#     return True
 
 
-def add_new_user(user_id, guild_id, verify_id):
-    sql = "INSERT INTO rotmg.users (id, status, verifyguild, verifyid) VALUES (%s, 'stp_1', %s, %s)"
-    data = (user_id, guild_id, verify_id)
-    cursor.execute(sql, data)
-    mydb.commit()
+async def add_new_user(pool, user_id, guild_id, verify_id):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "INSERT INTO rotmg.users (id, status, verifyguild, verifyid) VALUES (%s, 'stp_1', %s, %s)"
+            data = (user_id, guild_id, verify_id)
+            await cursor.execute(sql, data)
+            await conn.commit()
 
 
-def update_user(id, column, change):
-    # if isinstance(change, str):
-    #     change = "'{}'".format(change)
-    sql = "UPDATE rotmg.users SET {} = %s WHERE id = {}".format(column, id)
-    cursor.execute(sql, (change,))
-    mydb.commit()
+async def update_user(pool, id, column, change):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "UPDATE rotmg.users SET {} = %s WHERE id = {}".format(column, id)
+            await cursor.execute(sql, (change,))
+            await conn.commit()
 
 
-def add_new_guild(guild_id, guild_name):
-    sql = ("INSERT INTO rotmg.guilds (id, name, verificationid, nmaxed, nfame,"
-           "nstars, reqall, privateloc, reqsmsg, manualverifychannel, verifiedroleid,"
-           "verifylogchannel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
-    data = (guild_id, guild_name, 0, 0, 0, 0, False, True, "", 0, 0, 0)
-    cursor.execute(sql, data)
-    sql = (f"create table guild_tables.`{guild_id}_logs` (id int null, runcomplete int default"
-           " 0 null, keypop int default 0 null, runled int default 0 null, eventcomplete int"
-           " default 0 null, eventled int default 0 null, constraint"
-           f" `{guild_id}_logs_pk` primary key (id));")
-    cursor.execute(sql)
-    sql = (f"create table `{guild_id}_punishments`(id int not null, type VARCHAR(255) null,"
-           " expiry DATETIME null, reason VARCHAR(255) null, requester int null, "
-           f"constraint `{guild_id}_punishments_pk` primary key (id));")
-    cursor.execute(sql)
-    mydb.commit()
+async def add_new_guild(pool, guild_id, guild_name):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = ("INSERT INTO rotmg.guilds (id, name, verificationid, nmaxed, nfame,"
+                   "nstars, reqall, privateloc, reqsmsg, manualverifychannel, verifiedroleid,"
+                   "verifylogchannel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
+            data = (guild_id, guild_name, 0, 0, 0, 0, False, True, "", 0, 0, 0)
+            await cursor.execute(sql, data)
+            # sql = (f"create table guild_tables.`{guild_id}_logs` (id int null, runcomplete int default"
+            #        " 0 null, keypop int default 0 null, runled int default 0 null, eventcomplete int"
+            #        " default 0 null, eventled int default 0 null, constraint"
+            #        f" `{guild_id}_logs_pk` primary key (id));")
+            # cursor.execute(sql)
+            # sql = (f"create table `{guild_id}_punishments`(id int not null, type VARCHAR(255) null,"
+            #        " expiry DATETIME null, reason VARCHAR(255) null, requester int null, "
+            #        f"constraint `{guild_id}_punishments_pk` primary key (id));")
+            # cursor.execute(sql)
+            await conn.commit()
 
 
-def update_guild(id, column, change):
-    # if isinstance(change, str):
-    #     change = "'{}'".format(change)
-    sql = "UPDATE rotmg.guilds SET {} = %s WHERE id = {}".format(column, id)
-    cursor.execute(sql, (change,))
-    mydb.commit()
+async def update_guild(pool, id, column, change):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "UPDATE rotmg.guilds SET {} = %s WHERE id = {}".format(column, id)
+            await cursor.execute(sql, (change,))
+            await conn.commit()
 
 
 class usr_cols(enum.IntEnum):

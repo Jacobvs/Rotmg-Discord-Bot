@@ -1,17 +1,19 @@
 import discord
 from discord.ext import commands
 
-import sql
+
+from sql import get_guild, gld_cols
 
 
 async def is_rl_or_higher_check(ctx):
-    return await is_rl_or_higher(ctx.message.author, ctx.message.guild)
+    return await is_rl_or_higher(ctx.bot.pool, ctx.message.author, ctx.message.guild)
 
 
-async def is_rl_or_higher(member, guild):
+async def is_rl_or_higher(pool, member, guild):
     if member:
         if member.roles:
-            rl_id = sql.get_guild(guild.id)[sql.gld_cols.rlroleid]
+            rl_id = await get_guild(pool, guild.id)
+            rl_id = rl_id[gld_cols.rlroleid]
             member_highest_role_id = member.roles[len(member.roles) - 1].id
             role_ids = list(map(lambda r: r.id, guild.roles))
             index = role_ids.index(rl_id)
@@ -21,12 +23,13 @@ async def is_rl_or_higher(member, guild):
     return False
 
 async def is_vet_rl_or_higher_check(ctx):
-    return await is_vet_rl_or_higher(ctx.message.author, ctx.message.guild)
+    return await is_vet_rl_or_higher(ctx.bot.pool, ctx.message.author, ctx.message.guild)
 
-async def is_vet_rl_or_higher(member, guild):
+async def is_vet_rl_or_higher(pool, member, guild):
     if member:
         if member.roles:
-            rl_id = sql.get_guild(guild.id)[sql.gld_cols.vetrlroleid]
+            rl_id = await get_guild(pool, guild.id)
+            rl_id = rl_id[gld_cols.vetrlroleid]
             member_highest_role_id = member.roles[len(member.roles) - 1].id
             role_ids = list(map(lambda r: r.id, guild.roles))
             index = role_ids.index(rl_id)
