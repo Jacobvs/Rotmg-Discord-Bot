@@ -4,28 +4,33 @@ async def get_user(pool, uid):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute("SELECT * from rotmg.users WHERE id = {}".format(uid))
-            return await cursor.fetchone()
+            data = await cursor.fetchone()
+            await conn.commit()
+            return data
 
 async def get_num_verified(pool):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute("SELECT COUNT(*) FROM rotmg.users where status = 'verified'")
-            return await cursor.fetchone()
+            data = await cursor.fetchone()
+            await conn.commit()
+            return data
 
 async def get_guild(pool, uid):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute("SELECT * from rotmg.guilds WHERE id = {}".format(uid))
-            return await cursor.fetchone()
+            data = await cursor.fetchone()
+            await conn.commit()
+            return data
 
 async def ign_exists(pool, ign, id):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute("SELECT * from rotmg.users WHERE ign = '{}' AND status = 'verified'".format(ign))
             user = await cursor.fetchone()
-            if not user:
-                return False
-            if user[0] == id:
+            await conn.commit()
+            if not user or user[0] == id:
                 return False
             return True
 
@@ -70,6 +75,7 @@ async def add_new_guild(pool, guild_id, guild_name):
             #        f"constraint `{guild_id}_punishments_pk` primary key (id));")
             # cursor.execute(sql)
             await conn.commit()
+            
 
 
 async def update_guild(pool, id, column, change):
@@ -78,6 +84,7 @@ async def update_guild(pool, id, column, change):
             sql = "UPDATE rotmg.guilds SET {} = %s WHERE id = {}".format(column, id)
             await cursor.execute(sql, (change,))
             await conn.commit()
+            
 
 
 class usr_cols(enum.IntEnum):

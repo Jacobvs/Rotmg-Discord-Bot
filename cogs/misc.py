@@ -96,7 +96,7 @@ class Misc(commands.Cog):
     @commands.check(is_dj)
     @commands.check(in_voice_channel)
     async def richard(self, ctx):
-        "RICHARD!"
+        """"RICHARD!"""
         voice = await connect_helper(self, ctx)
         client = ctx.guild.voice_client
         if not client.source:

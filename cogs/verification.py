@@ -12,7 +12,7 @@ from sql import get_guild, get_user, update_user, ign_exists, update_guild, add_
 
 
 class Verification(commands.Cog):
-    "Verification Commands"
+    """"Verification Commands"""
 
     def __init__(self, client):
         self.client = client
@@ -57,7 +57,7 @@ class Verification(commands.Cog):
             return await member.send(embed=embed)
 
         if not data:
-            await update_user(user_id, "status", "stp_1")
+            await update_user(self.client.pool, user_id, "status", "stp_1")
             embed = embeds.verification_dm_start()
             await member.send(
                 "There has been an issue with retrieving data from realmeye. Ensure your profile is public. If this problem persists contact the developer.")
@@ -290,10 +290,7 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
                 await channel.send(f"{user.mention} is re-verifying for this guild.")
                 return
         elif status == "denied":
-            embed = embeds.verification_bad_reqs(guild_data[gld_cols.reqsmsg])
-            msg = await user.send(embed=embed)
-            await msg.add_reaction('✅')
-            await update_user(self.client.pool, payload.user_id, "verifyid", msg.id)
+            msg = await user.send("You did not meet the requirements of the server, if you'd like to appeal re-react to the denied message above.")
         elif status == "deny_appeal":
             await user.send("Your application is being reviewed by staff. Please wait for their decision.")
         elif status != "stp_1" and status != "stp_2" and status != "stp_3":
@@ -332,7 +329,7 @@ async def dm_verify_react_handler(self, payload, user_data, user):
                 embed = embeds.verification_cancelled()
                 message = await user.fetch_message(user_data[usr_cols.verifyid])
                 await message.edit(embed=embed)
-                channel = self.client.get_channel(await get_guild(user_data[usr_cols.verifyguild])[
+                channel = self.client.get_channel(await get_guild(self.client.pool, user_data[usr_cols.verifyguild])[
                                                       gld_cols.verifylogchannel])  # unknown colum none in where clause
                 await channel.send(f"{user.mention} has cancelled the verification process.")
                 await update_user(self.client.pool, payload.user_id, "verifyguild", None)
@@ -402,17 +399,17 @@ async def dm_verify_react_handler(self, payload, user_data, user):
             msg = await channel.send(f"Manual verify UID: {payload.user_id}",
                 embed=embeds.verification_manual_verify(user.mention, user_data[usr_cols.ign],
                                                         key, fame_passed, alive_fame, fame_req, maxed_passed, n_maxed, n_maxed_req, stars_passed, n_stars, star_req, months_passed, round(months), months_req, private_passed))
-            await update_user(payload.user_id, "status", "deny_appeal")
-            await update_user(payload.user_id, "verifyid", msg.id)
+            await update_user(self.client.pool, payload.user_id, "status", "deny_appeal")
+            await update_user(self.client.pool, payload.user_id, "verifyid", msg.id)
             await user.send("Your application is being reviewed by staff. Please wait for their decision.")
             await msg.add_reaction('✅')
             await msg.add_reaction('❌')
         elif str(payload.emoji) == '❌':
             embed = embeds.verification_cancelled()
             await user.send(embed=embed)
-            await update_user(payload.user_id, "verifyguild", "")
-            await update_user(payload.user_id, "verifyid", "")
-            await update_user(payload.user_id, "status", "cancelled")
+            await update_user(self.client.pool, payload.user_id, "verifyguild", "")
+            await update_user(self.client.pool, payload.user_id, "verifyid", "")
+            await update_user(self.client.pool, payload.user_id, "status", "cancelled")
 
 ## Subverification
 async def subverify_react_handler(self, payload, num, guild_data, user, guild, subverify_msg_id):

@@ -369,7 +369,7 @@ def get_rcstate(guild, st):
 
 
 async def end_afk_check(pool, member, guild, auto):
-    if auto or await is_rl_or_higher(member, guild):
+    if auto or await is_rl_or_higher(pool, member, guild):
         state = get_state(guild, core.states)
         guild_db = await get_guild(pool, guild.id)
         # Lock VC
@@ -468,7 +468,7 @@ async def confirmed_raiding_reacts(payload, user):
         if user.id in s.vialreacts or user.id in s.keyreacts:
             state = s
 
-    if state == None:
+    if state is None:
         return
 
     embed = state.cpmessage.embeds[0]

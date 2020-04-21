@@ -46,7 +46,7 @@ class Core(commands.Cog):
         with open('data/prefixes.json', 'w') as file:
             json.dump(prefixes, file, indent=4)
 
-        await add_new_guild(guild.id, guild.name)
+        await add_new_guild(self.client.pool, guild.id, guild.name)
 
     @commands.Cog.listener()
     async def on_guild_leave(self, guild):
@@ -94,6 +94,7 @@ class Core(commands.Cog):
                     else:
                         await message.author.send("You are already verifying, react to the check to continue.", delete_after=10)
             else:
+                # user_data = await get_user(self.client.pool, message.author.id)
                 await message.author.send("You are not verified in any guilds this bot is in yet. Please verify "
                                           "before attempting to send modmail.")
 
@@ -132,10 +133,10 @@ class Core(commands.Cog):
                                         halp.add_field(name=c.usage, value=c.help, inline=False)
                                 found = True
                     if not found:
-                        halp = discord.Embed(title='Error!', description='Unknown Cog: "' + cog[0].capitalize() + '"',
+                        help = discord.Embed(title='Error!', description='Unknown Cog: "' + cog[0].capitalize() + '"',
                                              color=discord.Color.red())
 
-                    await ctx.send('', embed=halp)
+                    await ctx.send('', embed=help)
         except:
             pass
 
