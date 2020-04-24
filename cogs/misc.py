@@ -1,7 +1,6 @@
 import asyncio
 from os import listdir
 from os.path import isfile, join
-
 import discord
 import psutil
 import youtube_dl
@@ -96,7 +95,7 @@ class Misc(commands.Cog):
     @commands.check(is_dj)
     @commands.check(in_voice_channel)
     async def richard(self, ctx):
-        "RICHARD!"
+        """"RICHARD!"""
         voice = await connect_helper(self, ctx)
         client = ctx.guild.voice_client
         if not client.source:
@@ -113,6 +112,14 @@ class Misc(commands.Cog):
     @commands.check(is_rl_or_higher_check)
     async def oogabooga(self, ctx):
         await ctx.send(file=discord.File(open('files/oogabooga.png', 'rb')))
+        # with open('files/oogabooga.png', 'rb') as image_file:
+        #     binary_data = image_file.read()
+        #     image = b64encode(binary_data)
+        # payload = {'album_id': None, 'image': image, 'title': None, 'description': None}
+        # async with aiohttp.ClientSession() as cs:
+        #     async with cs.post("https://api.imgur.com/3/image", data=payload) as r:
+        #         res = await r.json()  # returns dict
+        #         await ctx.send(res['slideshow']['author'])
 
     @commands.command(usage="!whatthefuck")
     @commands.check(is_rl_or_higher_check)

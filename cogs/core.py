@@ -4,11 +4,10 @@ from datetime import datetime, timedelta
 import discord
 from discord.ext import commands
 
-from cogs.moderation import Moderation
 from sql import get_guild, get_user, add_new_guild, usr_cols, gld_cols
-from checks import is_rl_or_higher
+from checks import is_role_or_higher
 from cogs import verification, raiding, moderation
-from cogs.raiding import afk_check_reaction_handler, confirmed_raiding_reacts, end_afk_check, Raiding
+from cogs.raiding import afk_check_reaction_handler, confirmed_raiding_reacts, end_afk_check
 from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification, subverify_react_handler
 
 states = {}
@@ -46,7 +45,7 @@ class Core(commands.Cog):
         with open('data/prefixes.json', 'w') as file:
             json.dump(prefixes, file, indent=4)
 
-        await add_new_guild(guild.id, guild.name)
+        await add_new_guild(self.client.pool, guild.id, guild.name)
 
     @commands.Cog.listener()
     async def on_guild_leave(self, guild):
@@ -94,6 +93,7 @@ class Core(commands.Cog):
                     else:
                         await message.author.send("You are already verifying, react to the check to continue.", delete_after=10)
             else:
+                # user_data = await get_user(self.client.pool, message.author.id)
                 await message.author.send("You are not verified in any guilds this bot is in yet. Please verify "
                                           "before attempting to send modmail.")
 
@@ -125,17 +125,17 @@ class Core(commands.Cog):
                     for x in self.client.cogs:
                         for y in cog:
                             if x == y.capitalize():
-                                halp = discord.Embed(title=cog[0].capitalize() + ' Commands',
+                                help = discord.Embed(title=cog[0].capitalize() + ' Commands',
                                                      description=self.client.cogs[y.capitalize()].__doc__)
                                 for c in self.client.get_cog(y.capitalize()).get_commands():
                                     if not c.hidden:
-                                        halp.add_field(name=c.usage, value=c.help, inline=False)
+                                        help.add_field(name=c.usage, value=c.help, inline=False)
                                 found = True
                     if not found:
-                        halp = discord.Embed(title='Error!', description='Unknown Cog: "' + cog[0].capitalize() + '"',
+                        help = discord.Embed(title='Error!', description='Unknown Cog: "' + cog[0].capitalize() + '"',
                                              color=discord.Color.red())
 
-                    await ctx.send('', embed=halp)
+                    await ctx.send(embed=help)
         except:
             pass
 
@@ -166,7 +166,7 @@ class Core(commands.Cog):
                 return await subverify_react_handler(Verification(self.client), payload, 2, guild_data, user, guild, subverify_2_msg_id)
             elif payload.channel_id in [guild_data[gld_cols.raidhc1], guild_data[gld_cols.raidhc2],
                                         guild_data[gld_cols.raidhc3], guild_data[gld_cols.vethcid]]:
-                if str(payload.emoji) == '❌' and await is_rl_or_higher(self.client.pool, guild.get_member(user.id), guild):
+                if str(payload.emoji) == '❌' and await is_role_or_higher(guild.get_member(user.id), guild, guild_data[gld_cols.rlroleid]):
                     return await end_afk_check(self.client.pool, guild.get_member(user.id), guild, False)
                 return await afk_check_reaction_handler(self.client.pool, payload, guild.get_member(user.id), guild)
             elif payload.channel_id == guild_data[gld_cols.manualverifychannel]:

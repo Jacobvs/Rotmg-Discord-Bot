@@ -2,8 +2,9 @@ import json
 import logging
 import os
 import traceback
-
+import pyimgur
 import aiomysql
+import urllib3
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -12,6 +13,7 @@ logger.setLevel(logging.INFO)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
+urllib3.disable_warnings()
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -30,6 +32,7 @@ def get_prefix(client, message):
 bot = commands.Bot(command_prefix=get_prefix)
 bot.remove_command('help')
 bot.owner_id = 196282885601361920
+bot.imgur = pyimgur.Imgur(os.getenv('IMGUR_ID'))
 
 @bot.event
 async def on_ready():
@@ -126,13 +129,12 @@ with open('data/variables.json', 'r') as file:
     variables = json.load(file)
 
 
-@bot.check
-async def global_perms_check(ctx):
-    # if await bot.is_owner(ctx.author):
-    #     print(ctx.__dict__)
-    #     await ctx.invoke(ctx.command)
-    #     return False
-    return True
-
+# @bot.check
+# async def global_perms_check(ctx):
+#     # if await bot.is_owner(ctx.author):
+#     #     print(ctx.__dict__)
+#     #     await ctx.invoke(ctx.command)
+#     #     return False
+#     return True
 
 bot.run(token)

@@ -114,9 +114,9 @@ class Moderation(commands.Cog):
     @commands.command(usage="!manual_verify_deny [uid]")
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
-    async def manual_verify_deny(self, ctx, uid, ign=None):
+    async def manual_verify_deny(self, ctx, uid):
         await ctx.message.delete()
-        return await manual_verify_deny_ext(self.client.pool, ctx.guild, uid, ctx.author, ign)
+        return await manual_verify_deny_ext(self.client.pool, ctx.guild, uid, ctx.author)
 
 
 def setup(client):
@@ -184,7 +184,7 @@ async def manual_verify_deny_ext(pool, guild, uid, requester):
     else:
         guilds = guilds.split(",")
     guilds.append(guild.name)
-    await update_user(pool, member.id, "verifiedguilds", ','.join(guilds))
+    # await update_user(pool, member.id, "verifiedguilds", ','.join(guilds))
     await update_user(pool, member.id, "verifyguild", None)
     await update_user(pool, member.id, "verifykey", None)
     await update_user(pool, member.id, "verifyid", None)
