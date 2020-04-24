@@ -6,17 +6,21 @@ from sql import get_guild, gld_cols
 
 
 async def is_rl_or_higher_check(ctx):
-    return await is_rl_or_higher(ctx.bot.pool, ctx.message.author, ctx.message.guild)
+    guild_db = await get_guild(ctx.bot.pool, ctx.message.guild.id)
+    rl_id = guild_db[gld_cols.rlroleid]
+    return await is_role_or_higher(ctx.message.author, ctx.message.guild, rl_id)
 
+async def is_mm_or_higher_check(ctx):
+    guild_db = await get_guild(ctx.bot.pool, ctx.message.guild.id)
+    mm_id = guild_db[gld_cols.mmroleid]
+    return await is_role_or_higher(ctx.message.author, ctx.message.guild, mm_id)
 
-async def is_rl_or_higher(pool, member, guild):
+async def is_role_or_higher(member, guild, roleid):
     if member:
         if member.roles:
-            rl_id = await get_guild(pool, guild.id)
-            rl_id = rl_id[gld_cols.rlroleid]
             member_highest_role_id = member.roles[len(member.roles) - 1].id
             role_ids = list(map(lambda r: r.id, guild.roles))
-            index = role_ids.index(rl_id)
+            index = role_ids.index(roleid)
             if member_highest_role_id in role_ids[index:]:
                 return True
         return False

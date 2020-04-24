@@ -285,7 +285,7 @@ def afk_check_base(run_title, requester, keyed_run, emojis, location=None):
     return embed
 
 
-def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run, ):
+def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run):
     embed = discord.Embed(
         description=f"**[AFK Check]({msg_url}) control panel for `{run_title}`**",
         color=discord.Color.teal()
@@ -296,8 +296,9 @@ def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run, 
         embed.add_field(name="Vials:",
                         value=f"Main <:vial:682205784524062730>: None\nBackup <:vial:682205784524062730>: None",
                         inline=False)
-
     embed.add_field(name="Location of run:", value=location, inline=False)
+    if run_title == "Realm Clearing":
+        embed.add_field(name="Cleared Numbers:", value="`[None]`")
     embed.add_field(name="Nitro Boosters with location:", value=f"`None`", inline=False)
     embed.set_footer(text="AFK Check started ")
     embed.timestamp = datetime.utcnow()

@@ -1,11 +1,9 @@
 import json
 import random
 import string
-
+import aiohttp
 import discord
-import requests
 from discord.ext import commands
-
 import embeds
 
 from sql import get_guild, get_user, update_user, ign_exists, update_guild, add_new_user, usr_cols, gld_cols
@@ -47,14 +45,16 @@ class Verification(commands.Cog):
 
         embed = embeds.verification_checking_realmeye()
         msg = await member.send(embed=embed)
-        try:
-            data = requests.get('https://localhost/?player={}'.format(user_data[usr_cols.ign]), verify=False).json()
-        except requests.exceptions.HTTPError:
-            print("THIS IS BAD")
-            await update_user(self.client.pool, user_id, "status", "stp_1")
-            embed = embeds.verification_dm_start()
-            await member.send("There has been an issue with retrieving data from realmeye. Ensure your profile is public. If this problem persists contact the developer.")
-            return await member.send(embed=embed)
+        # try:
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get('https://localhost/?player={}'.format(user_data[usr_cols.ign]), ssl=False) as r:
+                data = await r.json()  # returns dict
+        # except aiohttp.client.Ec:
+        #     print("THIS IS BAD")
+        #     await update_user(self.client.pool, user_id, "status", "stp_1")
+        #     embed = embeds.verification_dm_start()
+        #     await member.send("There has been an issue with retrieving data from realmeye. Ensure your profile is public. If this problem persists contact the developer.")
+        #     return await member.send(embed=embed)
 
         if not data:
             await update_user(self.client.pool, user_id, "status", "stp_1")
@@ -269,6 +269,7 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
                 elif user_data[usr_cols.status] == "deny_appeal":
                     return await user.send(
                         "You do not meet the requirements of this server, appeal with the check above or contact a moderator+ if you think this is a mistake.")
+
                 verified = True
                 embed = embeds.verification_already_verified()
                 msg = await user.send(embed=embed)
@@ -293,11 +294,13 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
             msg = await user.send("You did not meet the requirements of the server, if you'd like to appeal re-react to the denied message above.")
         elif status == "deny_appeal":
             await user.send("Your application is being reviewed by staff. Please wait for their decision.")
-        elif status != "stp_1" and status != "stp_2" and status != "stp_3":
+        elif status != "stp_2" and status != "stp_3":
             embed = embeds.verification_dm_start()
             channel = self.client.get_channel(guild_data[gld_cols.verifylogchannel])
             await channel.send(f"{user.mention} has started the verification process.")
             msg = await user.send(embed=embed)
+        else:
+            await user.send("You have already started the verification process, scroll up to find the last message the bot sent regarding verification and continue from there.")
 
     else:
         embed = embeds.verification_dm_start()
@@ -329,8 +332,9 @@ async def dm_verify_react_handler(self, payload, user_data, user):
                 embed = embeds.verification_cancelled()
                 message = await user.fetch_message(user_data[usr_cols.verifyid])
                 await message.edit(embed=embed)
-                channel = self.client.get_channel(await get_guild(self.client.pool, user_data[usr_cols.verifyguild])[
-                                                      gld_cols.verifylogchannel])  # unknown colum none in where clause
+                vfy_log_channel_id = await get_guild(self.client.pool, user_data[usr_cols.verifyguild])
+                vfy_log_channel_id = vfy_log_channel_id[gld_cols.verifylogchannel]
+                channel = await self.client.get_channel(vfy_log_channel_id)
                 await channel.send(f"{user.mention} has cancelled the verification process.")
                 await update_user(self.client.pool, payload.user_id, "verifyguild", None)
                 await update_user(self.client.pool, payload.user_id, "status", "cancelled")
@@ -357,7 +361,9 @@ async def dm_verify_react_handler(self, payload, user_data, user):
             req_all = guild_data[gld_cols.reqall]
             private_loc = guild_data[gld_cols.privateloc]
 
-            data = requests.get('https://localhost/?player={}'.format(user_data[usr_cols.ign]), verify=False).json()
+            async with aiohttp.ClientSession() as cs:
+                async with cs.get('https://localhost/?player={}'.format(user_data[usr_cols.ign])) as r:
+                    data = await r.json()  # returns dict
 
             alive_fame = 0
             n_maxed = 0

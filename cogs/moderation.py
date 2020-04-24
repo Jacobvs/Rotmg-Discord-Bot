@@ -184,7 +184,7 @@ async def manual_verify_deny_ext(pool, guild, uid, requester):
     else:
         guilds = guilds.split(",")
     guilds.append(guild.name)
-    await update_user(pool, member.id, "verifiedguilds", ','.join(guilds))
+    # await update_user(pool, member.id, "verifiedguilds", ','.join(guilds))
     await update_user(pool, member.id, "verifyguild", None)
     await update_user(pool, member.id, "verifykey", None)
     await update_user(pool, member.id, "verifyid", None)

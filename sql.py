@@ -130,3 +130,4 @@ class gld_cols(enum.IntEnum):
     subverify2id = 29
     subverify2name = 30
     subverify2roleid = 31
+    mmroleid = 32

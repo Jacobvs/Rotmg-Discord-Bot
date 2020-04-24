@@ -1,7 +1,10 @@
 import io
+import os
 from datetime import datetime
 from difflib import get_close_matches
+import aiohttp
 import matplotlib.pyplot as plt
+from dotenv import load_dotenv
 from matplotlib.patches import Circle
 import json
 
@@ -11,10 +14,12 @@ from math import ceil
 
 import embeds
 
-from checks import is_rl_or_higher_check, is_rl_or_higher, is_vet_rl_or_higher
+from checks import is_rl_or_higher_check, is_vet_rl_or_higher, is_mm_or_higher_check, is_role_or_higher
 from cogs import core
 from sql import gld_cols, get_guild
 
+load_dotenv()
+imgurid = os.getenv('IMGUR_ID')
 
 class Raiding(commands.Cog):
 
@@ -202,7 +207,7 @@ class Raiding(commands.Cog):
 
     @commands.command(usage="!realmclear [world #] [hc_channel_num] [location]")
     @commands.guild_only()
-    #@commands.check(is_rl_or_higher)
+    @commands.check(is_rl_or_higher_check)
     async def realmclear(self, ctx, world_num, channel="1", *location):
         #TODO: Check world number
 
@@ -243,57 +248,37 @@ class Raiding(commands.Cog):
                                     embed=embed)
 
         embed = embeds.afk_check_control_panel(msg.jump_url, location, "Realm Clearing", emojis[1], False) # TODO: CHANGE TO ADD marked #'s
+        state = get_rcstate(ctx.guild, core.rcstates)
         cpmsg = await ctx.send(embed=embed)
         for e in emojis:
             await msg.add_reaction(e)
-        # await msg.add_reaction('<:shard:682365548465487965>')
+        await msg.add_reaction('<:shard:682365548465487965>')
         # await msg.add_reaction('❌')
-
         world_num = world_num.lower()
         if "w" in world_num:
             world_num = world_num.replace("w", "")
-
-        msg = await hc_channel.send("Current Map:", file=discord.File(open(f"world-maps/world_{world_num}.png", 'rb'), "current_map.png"))
-        state = get_rcstate(ctx.guild, core.rcstates)
-        state.worldnum = world_num
-        state.mapmsg = msg
-        state.hcchannel = hc_channel
-        state.cpmsg = cpmsg
+        #image = self.client.imgur.upload_image(f"world-maps/world_{world_num}.png")
+        img_data = await imgur_upload(open(f"world-maps/world_{world_num}.png", 'rb'))
+        embed = discord.Embed(
+            title="Current Map:",
+            description="`Spawns left: All -- 0% Cleared`",
+        )
+        embed.set_image(url=img_data["link"])
+        mapmsg = await hc_channel.send(embed=embed)
+        start_rc(state, world_num, mapmsg, hc_channel, cpmsg, msg, location)
         #TODO set in sql as well
-        #TODO: Create control panel
 
-    @commands.command(usage="!markmap [number(s)]", aliases=["mm"])
+    @commands.command(usage="!markmap/mm [number(s)]", aliases=["mm"])
     @commands.guild_only()
-    #@commands.check(is_rl_or_higher) #TODO: add map marker
+    @commands.check(is_mm_or_higher_check)
     async def markmap(self, ctx, *numbers):
-        # TODO: CHECK IF CLEARING IS HAPPENING ATM
-        #TODO: Check numbers for duplicates / range
-        state = get_rcstate(ctx.guild, core.rcstates)
-        for n in numbers:
-            n = int(n)
-            n -= 1
-            n = str(n)
-            state.markednums.append(n)
-        with open("data/world_data_clean.json") as file:
-            data = json.load(file)
-        img = plt.imread(f"world-maps/world_{state.worldnum}.png")
-        fig, ax = plt.subplots(1)
-        ax.set_aspect('equal')
-        ax.axis("off")
-        ax.imshow(img)
-        for n in state.markednums:
-            point = data[f"world_{state.worldnum}.png"][n]
-            circ = Circle((point["x"], point["y"]), 30, color='#0000FFC8')
-            ax.add_patch(circ)
-        file = io.BytesIO()
-        plt.savefig(file, transparent=True, bbox_inches='tight', pad_inches=0, format='png', dpi=500)
-        file.seek(0)
-        try:
-            await state.mapmsg.delete()
-        except discord.errors.NotFound:
-            print("Message not found")
-        msg = await state.hcchannel.send("Current Map:", file=discord.File(file, "current_map.png"))
-        state.mapmsg = msg
+        await mapmarkhelper(ctx, numbers, False)
+
+    @commands.command(usage="!unmarkmap/umm [number(s)]", aliases=["umm"])
+    @commands.guild_only()
+    @commands.check(is_mm_or_higher_check)
+    async def unmarkmap(self, ctx, *numbers):
+        await mapmarkhelper(ctx, numbers, True)
 
 
 def setup(client):
@@ -329,6 +314,9 @@ class GuildRealmClearState:
         self.mapmsg = None
         self.hcchannel = None
         self.cpmsg = None
+        self.msg = None
+        self.location = None
+        self.nitroboosters = []
 
 
 def start_run(state, title, keyed_run, emojis, vc, msg, cpmsg, location, loop):
@@ -350,6 +338,16 @@ def start_run(state, title, keyed_run, emojis, vc, msg, cpmsg, location, loop):
     state.nitroboosters = []
     state.loop = loop
 
+def start_rc(state, worldnum, mapmsg, hcchannel, cpmsg, msg, location):
+    state.markednums = []
+    state.worldnum = worldnum
+    state.mapmsg = mapmsg
+    state.hcchannel = hcchannel
+    state.cpmsg = cpmsg
+    state.msg = msg
+    state.location = location
+    state.nitroboosters = []
+
 #TODO : Add getter/setter state methods to manage sql queries
 
 def get_state(guild, st):
@@ -367,11 +365,67 @@ def get_rcstate(guild, st):
         st[guild.id] = GuildRealmClearState()
         return st[guild.id]
 
+async def mapmarkhelper(ctx, numbers, remove):
+    # TODO: CHECK IF CLEARING IS HAPPENING ATM
+    state = get_rcstate(ctx.guild, core.rcstates)
+    with open("data/world_data_clean.json") as file:
+        data = json.load(file)
+    badnumbers = []
+    limit = data[f"world_{state.worldnum}.png"]["range"]
+    for num in numbers:
+        if "-" in num:
+            lower = int(num.split("-")[0])
+            upper = int(num.split("-")[1])+1
+        else:
+            lower = int(num)
+            upper = int(num)+1
+        for n in range(lower, upper):
+            ismarked = n in state.markednums
+            if n-1 < 0 or n-1 > limit or (ismarked and not remove) or (not ismarked and remove):
+                badnumbers.append(n)
+            else:
+                if not remove:
+                    state.markednums.append(n)
+                else:
+                    state.markednums.remove(n)
+
+    if len(badnumbers) >= 1:
+        await ctx.send(f"Some of the numbers provided were out of range or already cleared. Bad numbers: `{badnumbers}`", delete_after=5)
+    img = plt.imread(f"world-maps/world_{state.worldnum}.png")
+    fig, ax = plt.subplots(1)
+    ax.set_aspect('equal')
+    ax.axis("off")
+    ax.imshow(img)
+    for n in state.markednums:
+        point = data[f"world_{state.worldnum}.png"][str(n-1)]
+        circ = Circle((point["x"], point["y"]), 30, color='#0000FFC8')
+        ax.add_patch(circ)
+    file = io.BytesIO()
+    plt.savefig(file, transparent=True, bbox_inches='tight', pad_inches=0, format='png', dpi=500)
+    file.seek(0)
+    try:
+        await ctx.message.delete()
+    except discord.errors.NotFound:
+        print("Message not found")
+    spawns_left = (limit+1) - len(state.markednums)
+    percent = len(state.markednums)/(limit+1)
+    embed = state.cpmsg.embeds[0]
+    embed.set_field_at(1, name="Cleared Numbers:", value=f"`{state.markednums.sort()}`", inline=False)
+    await state.cpmsg.edit(embed=embed)
+
+    img_data = await imgur_upload(file.read())
+    embed = state.mapmsg.embeds[0]
+    embed.set_image(url=img_data["link"])
+    embed.description = f"Current Map:\n`Spawns left: {spawns_left} -- {percent:.0%} Cleared`"
+    await state.mapmsg.edit(embed=embed)
+
 
 async def end_afk_check(pool, member, guild, auto):
-    if auto or await is_rl_or_higher(pool, member, guild):
+    guild_db = await get_guild(pool, guild.id)
+    rl_role = guild_db[gld_cols.rlroleid]
+    if auto or await is_role_or_higher(pool, member, guild, rl_role):
         state = get_state(guild, core.states)
-        guild_db = await get_guild(pool, guild.id)
+
         # Lock VC
         role = discord.utils.get(guild.roles, id=guild_db[gld_cols.verifiedroleid])
         if state.loop:
@@ -395,7 +449,7 @@ async def end_afk_check(pool, member, guild, auto):
         await state.msg.clear_reaction('❌')
         # Kick members who haven't reacted
         for m in state.vc.members:
-            if m.id not in state.raiders and not await is_rl_or_higher(pool, m, guild):
+            if m.id not in state.raiders and not await is_role_or_higher(pool, m, guild, rl_role):
                 try:
                     await m.edit(voice_channel=None)
                 except discord.errors.Forbidden:
@@ -421,7 +475,9 @@ async def post_afk_loop(state, guild_id):
 async def afk_check_reaction_handler(pool, payload, member, guild):
     emoji_id = payload.emoji.id
     state = get_state(guild, core.states)
-    if payload.message_id == state.msg.id:
+    guild_db = await get_guild(pool, guild.id)
+    rl_role = guild_db[gld_cols.rlroleid]
+    if state.msg is not None and payload.message_id == state.msg.id:
         if str(emoji_id) == state.emojis[0].split(":")[2].split(">")[0]:
             if member.id not in state.raiders:
                 state.raiders.append(member.id)
@@ -443,7 +499,7 @@ async def afk_check_reaction_handler(pool, payload, member, guild):
                 await msg.add_reaction(state.emojis[1])
 
         elif emoji_id == 682365548465487965:  # if react is nitro
-            if member.premium_since is not None or await is_rl_or_higher(pool, member, guild):
+            if member.premium_since is not None or await is_role_or_higher(pool, member, guild, rl_role):
                 if state.location != "No location specified.":
                     await member.send(f"The location for this run is: __{state.location}__")
                 else:
@@ -459,6 +515,32 @@ async def afk_check_reaction_handler(pool, payload, member, guild):
                     embed.set_field_at(index, name="Nitro Boosters with location:", value=f"`{state.nitroboosters}`",
                                        inline=False)
                     await state.cpmessage.edit(embed=embed)
+    else:
+        rcstate = get_rcstate(guild, core.rcstates)
+        if payload.message_id == rcstate.msg.id:
+            if emoji_id == 682365548465487965:  # if react is nitro
+                if member.premium_since is not None or await is_role_or_higher(pool, member, guild, rl_role):
+                    if rcstate.location != "No location specified.":
+                        await member.send(f"The location for this run is: __{rcstate.location}__")
+                    else:
+                        await member.send(
+                            f"The location has not been set yet. Wait for the rl to set the location, then re-react.")
+                    if member.nick not in rcstate.nitroboosters:
+                        rcstate.nitroboosters.append(member.nick)
+                    if rcstate.cpmsg is not None:
+                        embed = rcstate.cpmsg.embeds[0]
+                        embed.set_field_at(2, name="Nitro Boosters with location:", value=f"`{rcstate.nitroboosters}`",
+                                           inline=False)
+                        await rcstate.cpmsg.edit(embed=embed)
+
+
+async def imgur_upload(binary):
+    payload = {'image': binary, 'type': 'file'}
+    header = {"Authorization": f"Client-ID {imgurid}"}
+    async with aiohttp.ClientSession(headers=header) as cs:
+        async with cs.post("https://api.imgur.com/3/image", data=payload) as r:
+            res = await r.json()  # returns dict
+    return res["data"]
 
 
 async def confirmed_raiding_reacts(payload, user):
