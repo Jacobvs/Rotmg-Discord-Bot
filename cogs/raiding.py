@@ -1,4 +1,6 @@
+import bisect
 import io
+import logging
 import os
 from datetime import datetime
 from difflib import get_close_matches
@@ -7,19 +9,17 @@ import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 from matplotlib.patches import Circle
 import json
-
 import discord
 from discord.ext import tasks, commands
 from math import ceil
-
 import embeds
-
 from checks import is_rl_or_higher_check, is_vet_rl_or_higher, is_mm_or_higher_check, is_role_or_higher
 from cogs import core
 from sql import gld_cols, get_guild
 
 load_dotenv()
 imgurid = os.getenv('IMGUR_ID')
+header = {"Authorization": f"Client-ID {imgurid}"}
 
 class Raiding(commands.Cog):
 
@@ -257,28 +257,57 @@ class Raiding(commands.Cog):
         world_num = world_num.lower()
         if "w" in world_num:
             world_num = world_num.replace("w", "")
-        #image = self.client.imgur.upload_image(f"world-maps/world_{world_num}.png")
-        img_data = await imgur_upload(open(f"world-maps/world_{world_num}.png", 'rb'))
+        img_data = await imgur_upload(open(f"world-maps/world_{world_num}.jpg", 'rb'))
+        if not img_data:
+            return await ctx.send("There was an issue communicating with the imgur servers, try again and if the issue persists – contact the developer.")
+        img_data = img_data['data']
         embed = discord.Embed(
             title="Current Map:",
             description="`Spawns left: All -- 0% Cleared`",
         )
         embed.set_image(url=img_data["link"])
+        embed.add_field(name="Events Spawned:", value="No events currently spawned")
         mapmsg = await hc_channel.send(embed=embed)
         start_rc(state, world_num, mapmsg, hc_channel, cpmsg, msg, location)
         #TODO set in sql as well
 
     @commands.command(usage="!markmap/mm [number(s)]", aliases=["mm"])
+    @commands.cooldown(1, 70, commands.BucketType.guild)
     @commands.guild_only()
     @commands.check(is_mm_or_higher_check)
     async def markmap(self, ctx, *numbers):
         await mapmarkhelper(ctx, numbers, False)
 
     @commands.command(usage="!unmarkmap/umm [number(s)]", aliases=["umm"])
+    @commands.cooldown(1, 70, commands.BucketType.guild)
     @commands.guild_only()
     @commands.check(is_mm_or_higher_check)
     async def unmarkmap(self, ctx, *numbers):
         await mapmarkhelper(ctx, numbers, True)
+
+    @commands.command(usage="!eventspawn [event]", aliases=['es'])
+    @commands.guild_only()
+    @commands.check(is_mm_or_higher_check)
+    async def eventspawn(self, ctx, event):
+        state = get_rcstate(ctx.guild, core.rcstates)
+        if not state.mapmsg:
+            return await ctx.send("There's no running realm clearing at the moment.")
+        fixed_event = event_type(event)
+        if fixed_event is None:
+            return await ctx.send("The specified event type is not an option.")
+        if fixed_event[1] is True:
+            await ctx.send(f"A correction was made, `{event}` was changed to `{fixed_event[2]}`", delete_after=6)
+        embed = state.mapmsg.embeds[0]
+        events = ""
+        if fixed_event[0] in state.eventsspawned:
+            state.eventsspawned[fixed_event[0]] += 1
+        else:
+            state.eventsspawned[fixed_event[0]] = 1
+        for key, value in state.eventsspawned.items():
+            events += f"{key} x{value}\n"
+        embed.set_field_at(0, name="Events Spawned:", value=events)
+        await ctx.message.delete()
+        await state.mapmsg.edit(embed=embed)
 
 
 def setup(client):
@@ -317,6 +346,7 @@ class GuildRealmClearState:
         self.msg = None
         self.location = None
         self.nitroboosters = []
+        self.eventsspawned = {}
 
 
 def start_run(state, title, keyed_run, emojis, vc, msg, cpmsg, location, loop):
@@ -347,6 +377,7 @@ def start_rc(state, worldnum, mapmsg, hcchannel, cpmsg, msg, location):
     state.msg = msg
     state.location = location
     state.nitroboosters = []
+    state.eventsspawned = {}
 
 #TODO : Add getter/setter state methods to manage sql queries
 
@@ -368,6 +399,8 @@ def get_rcstate(guild, st):
 async def mapmarkhelper(ctx, numbers, remove):
     # TODO: CHECK IF CLEARING IS HAPPENING ATM
     state = get_rcstate(ctx.guild, core.rcstates)
+    if not state.mapmsg:
+        return await ctx.send("There's no running realm clearing at the moment.")
     with open("data/world_data_clean.json") as file:
         data = json.load(file)
     badnumbers = []
@@ -385,23 +418,24 @@ async def mapmarkhelper(ctx, numbers, remove):
                 badnumbers.append(n)
             else:
                 if not remove:
-                    state.markednums.append(n)
+                    bisect.insort_right(state.markednums, n)
                 else:
                     state.markednums.remove(n)
 
     if len(badnumbers) >= 1:
         await ctx.send(f"Some of the numbers provided were out of range or already cleared. Bad numbers: `{badnumbers}`", delete_after=5)
-    img = plt.imread(f"world-maps/world_{state.worldnum}.png")
+    img = plt.imread(f"world-maps/world_{state.worldnum}.jpg")
     fig, ax = plt.subplots(1)
     ax.set_aspect('equal')
     ax.axis("off")
     ax.imshow(img)
     for n in state.markednums:
         point = data[f"world_{state.worldnum}.png"][str(n-1)]
-        circ = Circle((point["x"], point["y"]), 30, color='#0000FFC8')
+        circ = Circle((point["x"]/2, point["y"]/2), 14, color='#0000FFAA')
         ax.add_patch(circ)
     file = io.BytesIO()
-    plt.savefig(file, transparent=True, bbox_inches='tight', pad_inches=0, format='png', dpi=500)
+    plt.savefig(file, transparent=True, bbox_inches='tight', pad_inches=0, format='jpg', dpi=300)
+    plt.close()
     file.seek(0)
     try:
         await ctx.message.delete()
@@ -410,13 +444,17 @@ async def mapmarkhelper(ctx, numbers, remove):
     spawns_left = (limit+1) - len(state.markednums)
     percent = len(state.markednums)/(limit+1)
     embed = state.cpmsg.embeds[0]
-    embed.set_field_at(1, name="Cleared Numbers:", value=f"`{state.markednums.sort()}`", inline=False)
+    embed.set_field_at(1, name="Cleared Numbers:", value=f"`{state.markednums}`", inline=False)
     await state.cpmsg.edit(embed=embed)
 
     img_data = await imgur_upload(file.read())
+    if not img_data:
+        return await ctx.send(
+            "There was an issue communicating with the imgur servers, try again and if the issue persists – contact the developer.")
+    img_data = img_data['data']
     embed = state.mapmsg.embeds[0]
     embed.set_image(url=img_data["link"])
-    embed.description = f"Current Map:\n`Spawns left: {spawns_left} -- {percent:.0%} Cleared`"
+    embed.description = f"`Spawns left: {spawns_left} -- {percent:.0%} Cleared`"
     await state.mapmsg.edit(embed=embed)
 
 
@@ -536,11 +574,14 @@ async def afk_check_reaction_handler(pool, payload, member, guild):
 
 async def imgur_upload(binary):
     payload = {'image': binary, 'type': 'file'}
-    header = {"Authorization": f"Client-ID {imgurid}"}
     async with aiohttp.ClientSession(headers=header) as cs:
         async with cs.post("https://api.imgur.com/3/image", data=payload) as r:
-            res = await r.json()  # returns dict
-    return res["data"]
+            res = await r.json(content_type=None)  # returns dict
+    if not res or 'error' in res['data']:
+        print(res)
+        logging.error("IMGUR UPLOAD ERROR", res)
+        return None
+    return res
 
 
 async def confirmed_raiding_reacts(payload, user):
@@ -606,6 +647,35 @@ def run_title(type):
         if len(matches) == 0:
             return None
         return (run_types.get(matches[0]), True, matches[0])
+    return (result, False)
+
+def event_type(type):
+    event_types = {'ava' : 'Avatar of the Forgotten King',
+                   'avatar': 'Avatar of the Forgotten King',
+                   'cube' : 'Cube God',
+                   'cubegod': 'Cube God',
+                   'gship' : 'Ghost Ship',
+                   'sphinx' : 'Grand Sphinx',
+                   'hermit' : 'Hermit God',
+                   'herm' : 'Hermit God',
+                   'lotll' : 'Lord of the Lost Lands',
+                   'lord' : 'Lord of the Lost Lands',
+                   'pent' : 'Pentaract',
+                   'drag' : 'Rock Dragon',
+                   'rock' : 'Rock Dragon',
+                   'skull' : 'Skull Shrine',
+                   'shrine' : 'Skull Shrine',
+                   'miner' : 'Dwarf Miner',
+                   'sentry' : 'Lost Sentry',
+                   'nest' : 'Killer Bee Nest',
+                   'statues' : 'Jade and Garnet Statues'
+                   }
+    result = event_types.get(type, None)
+    if result is None:
+        matches = get_close_matches(type, event_types.keys(), n=1, cutoff=0.8)
+        if len(matches) == 0:
+            return None
+        return (event_types.get(matches[0]), True, matches[0])
     return (result, False)
 
 
