@@ -5,24 +5,28 @@ from sql import get_guild, gld_cols
 
 
 async def is_vet_rl_or_higher_check(ctx):
+    """Check if user has vet rl or higher roles"""
     guild_db = await get_guild(ctx.bot.pool, ctx.message.guild.id)
     vet_rl_id = guild_db[gld_cols.vetrlroleid]
     return await is_role_or_higher(ctx.message.author, ctx.message.guild, vet_rl_id)
 
 
 async def is_rl_or_higher_check(ctx):
+    """Check if user has rl or higher roles"""
     guild_db = await get_guild(ctx.bot.pool, ctx.message.guild.id)
     rl_id = guild_db[gld_cols.rlroleid]
     return await is_role_or_higher(ctx.message.author, ctx.message.guild, rl_id)
 
 
 async def is_mm_or_higher_check(ctx):
+    """Check if user has map marker or higher roles"""
     guild_db = await get_guild(ctx.bot.pool, ctx.message.guild.id)
     mm_id = guild_db[gld_cols.mmroleid]
     return await is_role_or_higher(ctx.message.author, ctx.message.guild, mm_id)
 
 
 async def is_role_or_higher(member, guild, roleid):
+    """Base check for if user has a role or higher"""
     if member:
         if member.roles:
             member_highest_role_id = member.roles[len(member.roles) - 1].id
@@ -35,6 +39,7 @@ async def is_role_or_higher(member, guild, roleid):
 
 
 async def in_voice_channel(ctx):
+    """Check if user is in a voice channel"""
     if ctx.author.voice is None:
         await ctx.send("You have to be in a voice channel to use this command.")
         return False
@@ -42,6 +47,7 @@ async def in_voice_channel(ctx):
 
 
 async def is_dj(ctx):
+    """Check if user has a role named 'DJ'"""
     if ctx.message.author.guild_permissions.administrator:
         return True
     role = discord.utils.get(ctx.guild.roles, name="DJ")

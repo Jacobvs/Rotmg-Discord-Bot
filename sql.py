@@ -1,6 +1,7 @@
 import enum
 
 async def get_user(pool, uid):
+    """Return user data from rotmg.users table"""
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute("SELECT * from rotmg.users WHERE id = {}".format(uid))
@@ -9,6 +10,7 @@ async def get_user(pool, uid):
             return data
 
 async def get_num_verified(pool):
+    """Count number of verified raiders"""
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute("SELECT COUNT(*) FROM rotmg.users where status = 'verified'")
@@ -17,6 +19,7 @@ async def get_num_verified(pool):
             return data
 
 async def get_guild(pool, uid):
+    """Return guild data from rotmg.guilds"""
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute("SELECT * from rotmg.guilds WHERE id = {}".format(uid))
@@ -25,6 +28,7 @@ async def get_guild(pool, uid):
             return data
 
 async def ign_exists(pool, ign, id):
+    """Check if an IGN has been entered into the user table already"""
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute("SELECT * from rotmg.users WHERE ign = '{}' AND status = 'verified'".format(ign))
@@ -41,6 +45,7 @@ async def ign_exists(pool, ign, id):
 
 
 async def add_new_user(pool, user_id, guild_id, verify_id):
+    """Create record of user data in rotmg.users"""
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             sql = "INSERT INTO rotmg.users (id, status, verifyguild, verifyid) VALUES (%s, 'stp_1', %s, %s)"
@@ -50,6 +55,7 @@ async def add_new_user(pool, user_id, guild_id, verify_id):
 
 
 async def update_user(pool, id, column, change):
+    """Update user data entry in rotmg.users"""
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             sql = "UPDATE rotmg.users SET {} = %s WHERE id = {}".format(column, id)
@@ -58,6 +64,7 @@ async def update_user(pool, id, column, change):
 
 
 async def add_new_guild(pool, guild_id, guild_name):
+    """Add new guild to rotmg.guilds"""
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             sql = ("INSERT INTO rotmg.guilds (id, name, verificationid, nmaxed, nfame,"
@@ -65,20 +72,11 @@ async def add_new_guild(pool, guild_id, guild_name):
                    "verifylogchannel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
             data = (guild_id, guild_name, 0, 0, 0, 0, False, True, "", 0, 0, 0)
             await cursor.execute(sql, data)
-            # sql = (f"create table guild_tables.`{guild_id}_logs` (id int null, runcomplete int default"
-            #        " 0 null, keypop int default 0 null, runled int default 0 null, eventcomplete int"
-            #        " default 0 null, eventled int default 0 null, constraint"
-            #        f" `{guild_id}_logs_pk` primary key (id));")
-            # cursor.execute(sql)
-            # sql = (f"create table `{guild_id}_punishments`(id int not null, type VARCHAR(255) null,"
-            #        " expiry DATETIME null, reason VARCHAR(255) null, requester int null, "
-            #        f"constraint `{guild_id}_punishments_pk` primary key (id));")
-            # cursor.execute(sql)
             await conn.commit()
-            
 
 
 async def update_guild(pool, id, column, change):
+    """Update guild data in rotmg.guilds"""
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             sql = "UPDATE rotmg.guilds SET {} = %s WHERE id = {}".format(column, id)
@@ -88,6 +86,7 @@ async def update_guild(pool, id, column, change):
 
 
 class usr_cols(enum.IntEnum):
+    """Contains References to rotmg.users table for easy access"""
     id = 0  # Int
     ign = 1  # String
     status = 2  # String
@@ -98,6 +97,7 @@ class usr_cols(enum.IntEnum):
 
 
 class gld_cols(enum.IntEnum):
+    """Contains References to rotmg.guilds table for easy access"""
     id = 0  # Int
     name = 1  # String
     verificationid = 2  # Int

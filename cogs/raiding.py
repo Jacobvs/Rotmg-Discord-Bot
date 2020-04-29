@@ -21,9 +21,6 @@ from sql import gld_cols, get_guild
 load_dotenv()
 
 
-# imgurid = os.getenv('IMGUR_ID')
-# header = {"Authorization": f"Client-ID {imgurid}"}
-
 class Raiding(commands.Cog):
 
     def __init__(self, client):
