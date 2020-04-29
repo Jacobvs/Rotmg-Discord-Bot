@@ -5,7 +5,7 @@ Please contact me on discord (Darkmatter#7321) if you'd like the bot added to yo
 
 -----
 # Requirements
-- [Realmeye API](https://github.com/Jacobvs/RealmEye-API)
+- [github.com/Jacobvs/Realmeye-API](https://github.com/Jacobvs/RealmEye-API)
 - Discord.py
 - python3
 - MySQL
