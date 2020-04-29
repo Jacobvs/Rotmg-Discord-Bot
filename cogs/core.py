@@ -15,6 +15,8 @@ rcstates = {}
 
 
 class Core(commands.Cog):
+    """Houses core commands & listeners for the bot"""
+
 
     def __init__(self, client):
         self.client = client
@@ -33,14 +35,8 @@ class Core(commands.Cog):
 
     # Event listeners
     @commands.Cog.listener()
-    async def on_ready(self):
-        await self.client.change_presence(status=discord.Status.online, activity=discord.Game("boooga."))
-        print(f'{self.client.user.name} has connected to Discord!')
-
-
-    @commands.Cog.listener()
     async def on_guild_join(self, guild):
-        #
+        """Add prefix & entry in rotmg.guilds table on guild join"""
         with open('data/prefixes.json', 'r') as file:
             prefixes = json.load(file)
         prefixes.update({guild.id: '!'})
@@ -52,6 +48,7 @@ class Core(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_leave(self, guild):
+        """Remove guild from data"""
         with open('data/prefixes.json', 'r') as file:
             prefixes = json.load(file)
         prefixes.pop(str(guild.id))
@@ -63,9 +60,9 @@ class Core(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        # Is a dm to the bot (A. verification, B. Mod-mail)
+        # If msg is a dm to the bot (A. verification, B. Mod-mail)
         if message.guild is None and message.author != self.client.user:
-            # DM is a command
+            # If DM is a command
             if message.content[0] == '!':
                 # TODO: implement proper checks
                 if message.author.id not in self.variables.get('allowed_user_ids'):
@@ -74,7 +71,7 @@ class Core(commands.Cog):
 
             user_data = await get_user(self.client.pool, message.author.id)
 
-            if user_data is not None:  # TODO: implement modmail & check to ensure not verifying
+            if user_data is not None:  # TODO: implement modmail
                 if user_data[usr_cols.status] == 'verified' or (
                         user_data[usr_cols.status] == 'cancelled' and user_data[usr_cols.verifiedguilds] is not None):
                     msg = "What server would you like to send this modmail to?"
@@ -83,7 +80,7 @@ class Core(commands.Cog):
                 elif user_data[usr_cols.status] == 'stp_1':
                     if not message.content.isalpha():
                         return await message.author.send("Please provide your username only. No numbers or symbols", delete_after=10)
-                    # if ign_exists(message.content.strip()):
+                    # if ign_exists(message.content.strip()): TODO: Find a way to fix this
                     #     return await message.author.send(f"This username has already been taken.
                     #                                      "If you believe this is a bug DM the developer: __Darkmatter#7321__")
                     await verification.step_1_verify(self.client.pool, message.author, message.content.strip())
@@ -161,16 +158,18 @@ class Core(commands.Cog):
             if payload.message_id == verify_message_id and str(payload.emoji) == '✅':  # handles verification reacts
                 return await guild_verify_react_handler(Verification(self.client), payload, user_data, guild_data, user, guild,
                                                         verify_message_id)
-            elif payload.message_id == subverify_1_msg_id and (str(payload.emoji) == '✅' or str(payload.emoji) == '❌'):
+            elif payload.message_id == subverify_1_msg_id and (
+                    str(payload.emoji) == '✅' or str(payload.emoji) == '❌'):  # handles subverification 1
                 return await subverify_react_handler(Verification(self.client), payload, 1, guild_data, user, guild, subverify_1_msg_id)
-            elif payload.message_id == subverify_2_msg_id and (str(payload.emoji) == '✅' or str(payload.emoji) == '❌'):
+            elif payload.message_id == subverify_2_msg_id and (
+                    str(payload.emoji) == '✅' or str(payload.emoji) == '❌'):  # handles subverification 2
                 return await subverify_react_handler(Verification(self.client), payload, 2, guild_data, user, guild, subverify_2_msg_id)
             elif payload.channel_id in [guild_data[gld_cols.raidhc1], guild_data[gld_cols.raidhc2], guild_data[gld_cols.raidhc3],
-                                        guild_data[gld_cols.vethcid]]:
+                                        guild_data[gld_cols.vethcid]]:  # handles raiding emoji reactions
                 if str(payload.emoji) == '❌' and await is_role_or_higher(guild.get_member(user.id), guild, guild_data[gld_cols.rlroleid]):
                     return await end_afk_check(self.client.pool, guild.get_member(user.id), guild, False)
                 return await afk_check_reaction_handler(self.client.pool, payload, guild.get_member(user.id), guild)
-            elif payload.channel_id == guild_data[gld_cols.manualverifychannel]:
+            elif payload.channel_id == guild_data[gld_cols.manualverifychannel]:  # handles manual verificaions
                 if str(payload.emoji) == '✅':
                     channel = guild.get_channel(payload.channel_id)
                     msg = await channel.fetch_message(payload.message_id)
@@ -182,12 +181,12 @@ class Core(commands.Cog):
                     uid = int(msg.content.split(": ")[1])
                     return await moderation.manual_verify_deny_ext(self.client.pool, guild, uid, user)
 
-        elif str(payload.emoji) in ['✅', '👍', '❌']:
+        elif str(payload.emoji) in ['✅', '👍', '❌']:  # handles verification DM reactions
             if user_data is not None:
                 if payload.message_id == user_data[usr_cols.verifyid]:
                     return await dm_verify_react_handler(Verification(self.client), payload, user_data, user)
-        # elif str(payload.emoji) in ['✉️','🚫']:
-        elif payload.emoji.id in raiding.key_ids:
+        # elif str(payload.emoji) in ['✉️','🚫']: # handles modmail (FUTURE)
+        elif payload.emoji.id in raiding.key_ids:  # handles AFK check key reactions
             return await confirmed_raiding_reacts(payload, user)
 
 

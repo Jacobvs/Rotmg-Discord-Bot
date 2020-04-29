@@ -12,7 +12,7 @@ from cogs import verification
 
 
 class Moderation(commands.Cog):
-
+    """Commands for user/server management"""
     def __init__(self, client):
         self.client = client
 
@@ -38,7 +38,7 @@ class Moderation(commands.Cog):
         """Find a user by the specified nickname"""
         converter = discord.ext.commands.MemberConverter()
         try:
-            member = await converter.convert(ctx, mem)
+            member = await converter.convert(ctx, mem) # Convert parameter to discord.member
         except discord.ext.commands.BadArgument:
             if isinstance(mem, str):
                 try:
@@ -56,7 +56,7 @@ class Moderation(commands.Cog):
         else:
             vc = "#" + member.voice.channel.name
 
-        if member.nick and " | " in member.nick:
+        if member.nick and " | " in member.nick: # Check if user has an alt account
             names = member.nick.split(" | ")
             desc = f"Found {member.mention} with the ign's: "
             desc += " | ".join(['['+''.join([n for n in name if n.isalpha()])+'](https://www.realmeye.com/player/'+''.join([n for n in name if n.isalpha()])+")" for name in names])
@@ -129,7 +129,7 @@ async def manual_verify_ext(pool, guild, uid, requester, ign=None):
     member = guild.get_member(int(uid))
     user_data = await get_user(pool, int(uid))
 
-    if user_data is not None:
+    if user_data is not None: # check if user exists in DB
         name = user_data[usr_cols.ign]
         status = user_data[usr_cols.status]
         if status != 'verified':
