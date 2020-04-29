@@ -1,8 +1,13 @@
 import discord
 from discord.ext import commands
 
-
 from sql import get_guild, gld_cols
+
+
+async def is_vet_rl_or_higher_check(ctx):
+    guild_db = await get_guild(ctx.bot.pool, ctx.message.guild.id)
+    vet_rl_id = guild_db[gld_cols.vetrlroleid]
+    return await is_role_or_higher(ctx.message.author, ctx.message.guild, vet_rl_id)
 
 
 async def is_rl_or_higher_check(ctx):
@@ -10,10 +15,12 @@ async def is_rl_or_higher_check(ctx):
     rl_id = guild_db[gld_cols.rlroleid]
     return await is_role_or_higher(ctx.message.author, ctx.message.guild, rl_id)
 
+
 async def is_mm_or_higher_check(ctx):
     guild_db = await get_guild(ctx.bot.pool, ctx.message.guild.id)
     mm_id = guild_db[gld_cols.mmroleid]
     return await is_role_or_higher(ctx.message.author, ctx.message.guild, mm_id)
+
 
 async def is_role_or_higher(member, guild, roleid):
     if member:
@@ -21,22 +28,6 @@ async def is_role_or_higher(member, guild, roleid):
             member_highest_role_id = member.roles[len(member.roles) - 1].id
             role_ids = list(map(lambda r: r.id, guild.roles))
             index = role_ids.index(roleid)
-            if member_highest_role_id in role_ids[index:]:
-                return True
-        return False
-    return False
-
-async def is_vet_rl_or_higher_check(ctx):
-    return await is_vet_rl_or_higher(ctx.bot.pool, ctx.message.author, ctx.message.guild)
-
-async def is_vet_rl_or_higher(pool, member, guild):
-    if member:
-        if member.roles:
-            rl_id = await get_guild(pool, guild.id)
-            rl_id = rl_id[gld_cols.vetrlroleid]
-            member_highest_role_id = member.roles[len(member.roles) - 1].id
-            role_ids = list(map(lambda r: r.id, guild.roles))
-            index = role_ids.index(rl_id)
             if member_highest_role_id in role_ids[index:]:
                 return True
         return False
@@ -60,6 +51,7 @@ async def is_dj(ctx):
     await ctx.say("The 'DJ' Role is required to use this command.", delete_after=4)
     return False
 
+
 async def audio_playing(ctx):
     """Checks that audio is currently playing before continuing."""
     client = ctx.guild.voice_client
@@ -68,6 +60,7 @@ async def audio_playing(ctx):
     else:
         raise commands.CommandError("Not currently playing any audio.")
 
+
 async def in_same_voice_channel(ctx):
     """Checks that the command sender is in the same voice channel as the bot."""
     voice = ctx.author.voice
@@ -75,8 +68,8 @@ async def in_same_voice_channel(ctx):
     if voice and bot_voice and voice.channel and bot_voice.channel and voice.channel == bot_voice.channel:
         return True
     else:
-        raise commands.CommandError(
-            "You need to be in the same voice channel as the bot to use this command.")
+        raise commands.CommandError("You need to be in the same voice channel as the bot to use this command.")
+
 
 async def is_audio_requester(ctx):
     """Checks that the command sender is the song requester."""
@@ -86,6 +79,4 @@ async def is_audio_requester(ctx):
     if permissions.administrator or state.is_requester(ctx.author):
         return True
     else:
-        raise commands.CommandError(
-            "You need to be the song requester or an admin to use this command.")
-
+        raise commands.CommandError("You need to be the song requester or an admin to use this command.")

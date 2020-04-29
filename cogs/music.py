@@ -10,21 +10,14 @@ from discord.ext import commands
 
 from checks import audio_playing, in_same_voice_channel, is_audio_requester, is_dj
 
-YTDL_OPTS = {
-    "default_search": "ytsearch",
-    "format": "bestaudio/best",
-    "quiet": True,
-    "extract_flat": "in_playlist"
-}
+YTDL_OPTS = {"default_search": "ytsearch", "format": "bestaudio/best", "quiet": True, "extract_flat": "in_playlist"}
 
-ffmpeg_options = {
-    'options': '-vn',
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
-}
+ffmpeg_options = {'options': '-vn', 'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'}
 
 
 class Video:
     """Class containing information about a particular video."""
+
 
     def __init__(self, url_or_search, requested_by):
         """Plays audio from (or searches for) a URL."""
@@ -35,28 +28,26 @@ class Video:
             self.video_url = video["webpage_url"]
             self.title = video["title"]
             self.uploader = video["uploader"] if "uploader" in video else ""
-            self.thumbnail = video[
-                "thumbnail"] if "thumbnail" in video else None
+            self.thumbnail = video["thumbnail"] if "thumbnail" in video else None
             self.requested_by = requested_by
+
 
     def _get_info(self, video_url):
         with ytdl.YoutubeDL(YTDL_OPTS) as ydl:
             info = ydl.extract_info(video_url, download=False)
             video = None
             if "_type" in info and info["_type"] == "playlist":
-                return self._get_info(
-                    info["entries"][0]["url"])  # get info for first video
+                return self._get_info(info["entries"][0]["url"])  # get info for first video
             else:
                 video = info
             return video
 
+
     def get_embed(self):
         """Makes an embed out of this Video's information."""
-        embed = discord.Embed(
-            title="Now Playing:", description="["+self.title+ "](" + self.video_url + ")" + "\n\nChannel: " + self.uploader)
-        embed.set_footer(
-            text=f"Requested by {self.requested_by.nick}",
-            icon_url=self.requested_by.avatar_url)
+        embed = discord.Embed(title="Now Playing:",
+            description="[" + self.title + "](" + self.video_url + ")" + "\n\nChannel: " + self.uploader)
+        embed.set_footer(text=f"Requested by {self.requested_by.nick}", icon_url=self.requested_by.avatar_url)
         if self.thumbnail:
             embed.set_thumbnail(url=self.thumbnail)
         return embed
@@ -65,9 +56,11 @@ class Video:
 class Music(commands.Cog):
     """Music Commands"""
 
+
     def __init__(self, bot):
         self.bot = bot
         self.states = {}
+
 
     def get_state(self, guild):
         """Gets the state for `guild`, creating it if it does not exist."""
@@ -76,6 +69,7 @@ class Music(commands.Cog):
         else:
             self.states[guild.id] = GuildState()
             return self.states[guild.id]
+
 
     @commands.command(aliases=["stop"], usage="!leave")
     @commands.guild_only()
@@ -92,6 +86,7 @@ class Music(commands.Cog):
         else:
             raise commands.CommandError("Not in a voice channel.")
 
+
     @commands.command(aliases=["resume"], usage="!pause/!resume")
     @commands.guild_only()
     @commands.check(is_dj)
@@ -103,6 +98,7 @@ class Music(commands.Cog):
         client = ctx.guild.voice_client
         self._pause_audio(client, ctx.guild)
 
+
     def _pause_audio(self, client, guild):
         state = self.get_state(guild)
         embed = state.now_playing.get_embed()
@@ -113,6 +109,7 @@ class Music(commands.Cog):
             embed.title = "Paused"
             client.pause()
         asyncio.run_coroutine_threadsafe(state.message.edit(embed=embed), self.bot.loop)
+
 
     @commands.command(aliases=["vol", "v"], usage="!volume [0-250]")
     @commands.guild_only()
@@ -138,6 +135,7 @@ class Music(commands.Cog):
         client.source.volume = state.volume  # update the AudioSource's volume to match
         await ctx.send(f"The volume has been set to: `{volume}`.")
 
+
     @commands.command(aliases=["s"], usage="!skip")
     @commands.guild_only()
     @commands.check(is_dj)
@@ -147,8 +145,7 @@ class Music(commands.Cog):
         """Skips the currently playing song, or votes to skip it."""
         state = self.get_state(ctx.guild)
         client = ctx.guild.voice_client
-        if ctx.channel.permissions_for(
-                ctx.author).administrator or state.is_requester(ctx.author):
+        if ctx.channel.permissions_for(ctx.author).administrator or state.is_requester(ctx.author):
             # immediately skip if requester or admin
             # await state.message.edit(embed=state.playlist[0].get_embed())
             client.stop()
@@ -157,29 +154,23 @@ class Music(commands.Cog):
             channel = client.channel
             await self._vote_skip(channel, ctx.author)
             # announce vote
-            users_in_channel = len([
-                member for member in channel.members if not member.bot
-            ])  # don't count bots
-            required_votes = math.ceil(
-                0.5 * users_in_channel)
-            await ctx.send(
-                f"{ctx.author.mention} voted to skip ({len(state.skip_votes)}/{required_votes} votes)"
-            )
+            users_in_channel = len([member for member in channel.members if not member.bot])  # don't count bots
+            required_votes = math.ceil(0.5 * users_in_channel)
+            await ctx.send(f"{ctx.author.mention} voted to skip ({len(state.skip_votes)}/{required_votes} votes)")
+
 
     async def _vote_skip(self, channel, member):
         """Register a vote for `member` to skip the song playing."""
         logging.info(f"{member.name} votes to skip")
         state = self.get_state(channel.guild)
         state.skip_votes.add(member)
-        users_in_channel = len([
-            member for member in channel.members if not member.bot
-        ])  # don't count bots
-        if (float(len(state.skip_votes)) /
-            users_in_channel) >= 0.5:
+        users_in_channel = len([member for member in channel.members if not member.bot])  # don't count bots
+        if (float(len(state.skip_votes)) / users_in_channel) >= 0.5:
             # enough members have voted to skip, so skip the song
             logging.info(f"Enough votes, skipping...")
             # await state.message.edit(embed=state.playlist[0].get_embed())
             channel.guild.voice_client.stop()
+
 
     def _play_song(self, client, state, song):
         state.now_playing = song
@@ -187,17 +178,20 @@ class Music(commands.Cog):
         if state.message is not None:
             asyncio.run_coroutine_threadsafe(state.message.edit(embed=song.get_embed()), self.bot.loop)
         source = discord.PCMVolumeTransformer(
-            discord.FFmpegPCMAudio(song.stream_url, options=ffmpeg_options['options'], before_options=ffmpeg_options['before_options']), volume=state.volume)
+            discord.FFmpegPCMAudio(song.stream_url, options=ffmpeg_options['options'], before_options=ffmpeg_options['before_options']),
+            volume=state.volume)
+
 
         def after_playing(err):
             if len(state.playlist) > 0:
                 next_song = state.playlist.pop(0)
                 self._play_song(client, state, next_song)
             else:
-                asyncio.run_coroutine_threadsafe(client.disconnect(),
-                                                 self.bot.loop)
+                asyncio.run_coroutine_threadsafe(client.disconnect(), self.bot.loop)
+
 
         client.play(source, after=after_playing)
+
 
     @commands.command(aliases=["np", "playing"], usage="!nowplaying")
     @commands.guild_only()
@@ -210,6 +204,7 @@ class Music(commands.Cog):
         state.message = message
         await self._add_reaction_controls(message)
 
+
     @commands.command(aliases=["q", "playlist"], usage="!queue")
     @commands.guild_only()
     @commands.check(is_dj)
@@ -219,17 +214,17 @@ class Music(commands.Cog):
         state = self.get_state(ctx.guild)
         await ctx.send(self._queue_text(state.playlist))
 
+
     def _queue_text(self, queue):
         """Returns a block of text describing a given song queue."""
         if len(queue) > 0:
             message = [f"{len(queue)} songs in queue:"]
-            message += [
-                f"  {index + 1}. **{song.title}** (requested by **{song.requested_by.name}**)"
-                for (index, song) in enumerate(queue)
-            ]  # add individual songs
+            message += [f"  {index + 1}. **{song.title}** (requested by **{song.requested_by.name}**)" for (index, song) in
+                enumerate(queue)]  # add individual songs
             return "\n".join(message)
         else:
             return "The play queue is empty."
+
 
     @commands.command(aliases=["cq", "clear"], usage="!clearqueue")
     @commands.guild_only()
@@ -239,6 +234,7 @@ class Music(commands.Cog):
         """Clears the play queue without leaving the channel."""
         state = self.get_state(ctx.guild)
         state.playlist = []
+
 
     @commands.command(aliases=["jq"], usage="!jumpqueue [index] [new_index]")
     @commands.guild_only()
@@ -254,6 +250,7 @@ class Music(commands.Cog):
             await ctx.send(self._queue_text(state.playlist))
         else:
             raise commands.CommandError("You must use a valid index.")
+
 
     @commands.command(brief="Plays audio from <url>.", aliases=["p"], usage="!play [url or search term]")
     @commands.guild_only()
@@ -277,8 +274,7 @@ class Music(commands.Cog):
                     video = Video(link, ctx.author)
                 except ytdl.DownloadError as e:
                     logging.warning(f"Error downloading video: {e}")
-                    await ctx.send(
-                        "There was an error downloading your video, sorry.")
+                    await ctx.send("There was an error downloading your video, sorry.")
                     return
                 state.playlist.append(video)
                 if i == 1:
@@ -308,8 +304,7 @@ class Music(commands.Cog):
                 video = Video(url, ctx.author)
             except ytdl.DownloadError as e:
                 logging.warning(f"Error downloading video: {e}")
-                await ctx.send(
-                    "There was an error downloading your video, sorry.")
+                await ctx.send("There was an error downloading your video, sorry.")
                 return
             state.playlist.append(video)
 
@@ -358,9 +353,7 @@ class Music(commands.Cog):
                         # skip audio
                         client.stop()
                     elif reaction.emoji == "⏮":
-                        state.playlist.insert(
-                            0, state.now_playing
-                        )  # insert current song at beginning of playlist
+                        state.playlist.insert(0, state.now_playing)  # insert current song at beginning of playlist
                         client.stop()  # skip ahead
                 elif reaction.emoji == "⏭" and user_in_channel and message.guild.voice_client and message.guild.voice_client.channel:
                     # ensure that skip was pressed, that vote skipping is enabled, the user is in the channel, and that the bot is in a voice channel
@@ -368,15 +361,10 @@ class Music(commands.Cog):
                     await self._vote_skip(voice_channel, user)
                     # announce vote
                     channel = message.channel
-                    users_in_channel = len([
-                        member for member in voice_channel.members
-                        if not member.bot
-                    ])  # don't count bots
-                    required_votes = math.ceil(
-                        0.5 * users_in_channel)
-                    await channel.send(
-                        f"{user.mention} voted to skip ({len(state.skip_votes)}/{required_votes} votes)"
-                    )
+                    users_in_channel = len([member for member in voice_channel.members if not member.bot])  # don't count bots
+                    required_votes = math.ceil(0.5 * users_in_channel)
+                    await channel.send(f"{user.mention} voted to skip ({len(state.skip_votes)}/{required_votes} votes)")
+
 
     async def _add_reaction_controls(self, message):
         """Adds a 'control-panel' of reactions to a message that can be used to control the bot."""
@@ -392,12 +380,14 @@ def setup(client):
 class GuildState:
     """Helper class managing per-guild state."""
 
+
     def __init__(self):
         self.volume = 1.0
         self.playlist = []
         self.skip_votes = set()
         self.now_playing = None
         self.message = None
+
 
     def is_requester(self, user):
         return self.now_playing.requested_by == user
