@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import traceback
-import pyimgur
 import aiomysql
 import urllib3
 from discord.ext import commands
@@ -23,8 +22,8 @@ def get_prefix(client, message):
     if message.guild is None:
         return "!"
 
-    with open('data/prefixes.json', 'r') as file:
-        prefixes = json.load(file)
+    with open('data/prefixes.json', 'r') as f:
+        prefixes = json.load(f)
 
     return prefixes[str(message.guild.id)]
 
@@ -32,7 +31,7 @@ def get_prefix(client, message):
 bot = commands.Bot(command_prefix=get_prefix)
 bot.remove_command('help')
 bot.owner_id = 196282885601361920
-bot.imgur = pyimgur.Imgur(os.getenv('IMGUR_ID'))
+#bot.imgur = pyimgur.Imgur(os.getenv('IMGUR_ID'))
 
 @bot.event
 async def on_ready():

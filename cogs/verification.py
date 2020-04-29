@@ -1,4 +1,4 @@
-import json
+import logging
 import random
 import string
 import aiohttp
@@ -12,8 +12,10 @@ from sql import get_guild, get_user, update_user, ign_exists, update_guild, add_
 class Verification(commands.Cog):
     """"Verification Commands"""
 
+
     def __init__(self, client):
         self.client = client
+
 
     async def step_2_verify(self, user_id):
         user = self.client.get_user(user_id)
@@ -27,6 +29,7 @@ class Verification(commands.Cog):
         channel = self.client.get_channel(guild_data[gld_cols.verifylogchannel])
         await channel.send(f"{user.mention} is on step 3 of verification.")
         await update_user(self.client.pool, user_id, "status", "stp_3")
+
 
     async def step_3_verify(self, user_id, reverify):
         user_data = await get_user(self.client.pool, user_id)
@@ -45,16 +48,10 @@ class Verification(commands.Cog):
 
         embed = embeds.verification_checking_realmeye()
         msg = await member.send(embed=embed)
-        # try:
+
         async with aiohttp.ClientSession() as cs:
-            async with cs.get('https://localhost/?player={}'.format(user_data[usr_cols.ign]), ssl=False) as r:
+            async with cs.get('https://rotmg-discord-bot.wm.r.appspot.com/?player={}'.format(user_data[usr_cols.ign]), ssl=False) as r:
                 data = await r.json()  # returns dict
-        # except aiohttp.client.Ec:
-        #     print("THIS IS BAD")
-        #     await update_user(self.client.pool, user_id, "status", "stp_1")
-        #     embed = embeds.verification_dm_start()
-        #     await member.send("There has been an issue with retrieving data from realmeye. Ensure your profile is public. If this problem persists contact the developer.")
-        #     return await member.send(embed=embed)
 
         if not data:
             await update_user(self.client.pool, user_id, "status", "stp_1")
@@ -79,7 +76,6 @@ class Verification(commands.Cog):
         location = data["player_last_seen"]
 
         if data["characters_hidden"]:
-            print(4.5)
             embed = embeds.verification_private_chars()
             await member.send(embed=embed)
             return await channel.send(f"{member.mention} has private characters")
@@ -104,14 +100,14 @@ class Verification(commands.Cog):
             days = 0
             if "years" in time or "year" in time:
                 if "years" in time:
-                    days += int(time.split(" years")[0].split("~")[1])*365
+                    days += int(time.split(" years")[0].split("~")[1]) * 365
                 else:
                     days += 365
                 if "days" in time:
                     days += int(time.split("and ")[1].split(" days")[0])
             elif "days" in time:
                 days += int(time.split(" days")[0].split("~")[1])
-            months = int(days/30)
+            months = int(days / 30)
         else:
             embed = embeds.verification_private_time()
             await member.send(embed=embed)
@@ -128,7 +124,6 @@ class Verification(commands.Cog):
         except discord.errors.DiscordException:
             print("Unable to delete checking realmeye message")
 
-
         if reverify or user_data[usr_cols.verifykey] in description:
             if private_passed:
                 verified = False
@@ -142,7 +137,8 @@ class Verification(commands.Cog):
                     await complete_verification(self.client.pool, guild, guild_data, member, name, user_data, reverify)
                     await channel.send(f"{member.mention} has completed verification.")
                 else:
-                    embed = embeds.verification_bad_reqs(guild_data[gld_cols.reqsmsg], fame_passed, maxed_passed, stars_passed, months_passed, private_passed)
+                    embed = embeds.verification_bad_reqs(guild_data[gld_cols.reqsmsg], fame_passed, maxed_passed, stars_passed,
+                                                         months_passed, private_passed)
                     await update_user(self.client.pool, user_id, "status", "denied")
                     await update_user(self.client.pool, user_id, "ign", name)
                     message = await member.fetch_message(user_data[usr_cols.verifyid])
@@ -158,7 +154,6 @@ class Verification(commands.Cog):
             await channel.send(f"{member.mention} is missing their realmeye code (or api is down).")
 
 
-    # TODO: add support for multiple servers w/ independent reqs
     @commands.command(usage="!add_verify_msg")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
@@ -174,43 +169,40 @@ class Verification(commands.Cog):
         # Save verification message id for later to check reacts with
         await update_guild(self.client.pool, ctx.guild.id, "verificationid", message.id)
 
+
     @commands.command(usage="!add_first_subverify")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def add_first_subverify(self, ctx):
         """Add the verification message to channel"""
+        await subverify_helper(self, ctx, 1)
 
-        guild_db = await get_guild(self.client.pool, ctx.guild.id)
-        embed = embeds.subverify_msg(guild_db[gld_cols.subverify1name], guild_db[gld_cols.supportchannelname])
-        message = await ctx.send(embed=embed)
-        await message.add_reaction("✅")
-        await message.add_reaction("❌")
-        await ctx.message.delete()
-
-        # Save verification message id for later to check reacts with
-        await update_guild(self.client.pool, ctx.guild.id, "subverify1id", message.id)
 
     @commands.command(usage="!add_second_subverify")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def add_second_subverify(self, ctx):
         """Add the verification message to channel"""
-
-        guild_db = await get_guild(self.client.pool, ctx.guild.id)
-        embed = embeds.subverify_msg(guild_db[gld_cols.subverify2name], guild_db[gld_cols.supportchannelname])
-        message = await ctx.send(embed=embed)
-        await message.add_reaction("✅")
-        await message.add_reaction("❌")
-        await ctx.message.delete()
-
-        # Save verification message id for later to check reacts with
-        await update_guild(self.client.pool, ctx.guild.id, "subverify2id", message.id)
-
-
+        await subverify_helper(self, ctx, 2)
 
 
 def setup(client):
     client.add_cog(Verification(client))
+
+
+async def subverify_helper(self, ctx, n):
+    guild_db = await get_guild(self.client.pool, ctx.guild.id)
+    if n == 1:
+        embed = embeds.subverify_msg(guild_db[gld_cols.subverify1name], guild_db[gld_cols.supportchannelname])
+    else:
+        embed = embeds.subverify_msg(guild_db[gld_cols.subverify2name], guild_db[gld_cols.supportchannelname])
+    message = await ctx.send(embed=embed)
+    await message.add_reaction("✅")
+    await message.add_reaction("❌")
+    await ctx.message.delete()
+
+    # Save verification message id for later to check reacts with
+    await update_guild(self.client.pool, ctx.guild.id, f"subverify{n}id", message.id)
 
 
 async def step_1_verify(pool, user, ign):
@@ -256,6 +248,7 @@ async def complete_verification(pool, guild, guild_data, member, name, user_data
 async def guild_verify_react_handler(self, payload, user_data, guild_data, user, guild, verify_msg_id):
     verified = False
     vfy_msg = await self.client.get_channel(payload.channel_id).fetch_message(verify_msg_id)
+    channel = self.client.get_channel(guild_data[gld_cols.verifylogchannel])
     await vfy_msg.remove_reaction('✅', user)
 
     if user_data is not None:
@@ -265,46 +258,57 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
             verified_guilds = verified_guilds.split(",")
             if guild.name in verified_guilds:
                 if status == "appeal_denied":
-                    return await user.send("You have been denied from verifying in this server. Contact a moderator+ if you think this is a mistake.")
+                    return await user.send(
+                        "You have been denied from verifying in this server. Contact a moderator+ if you think this is a mistake.")
                 elif user_data[usr_cols.status] == "deny_appeal":
                     return await user.send(
-                        "You do not meet the requirements of this server, appeal with the check above or contact a moderator+ if you think this is a mistake.")
+                        "You do not meet the requirements of this server, appeal with the check above or contact a moderator+ if you "
+                        "think this is a mistake.")
 
                 verified = True
+                role = discord.utils.get(guild.roles, id=guild_data[gld_cols.verifiedroleid])
+                tag = payload.member.name
+                name = user_data[usr_cols.ign]
+                try:
+                    await payload.member.add_roles(role)
+                    if tag.lower() == name.lower():
+                        await payload.member.edit(nick=f"{name} .")
+                    else:
+                        await payload.member.edit(nick=name)
+                except discord.errors.Forbidden:
+                    await channel.send("Missing permissions for: {}".format(payload.member.mention, guild.name))
+                    logging.warning("Missing permissions for: {} in guild: {}".format(payload.member.name, guild.name))
                 embed = embeds.verification_already_verified()
                 msg = await user.send(embed=embed)
             elif status == "cancelled":
                 await update_user(self.client.pool, user.id, "status", "stp_1")
                 embed = embeds.verification_dm_start()
-                channel = self.client.get_channel(guild_data[gld_cols.verifylogchannel])
                 await channel.send(f"{user.mention} is re-verifying after cancelling.")
                 msg = await user.send(embed=embed)
             else:
-                embed = embeds.verification_already_verified_complete(verified_guilds,
-                                                                      user_data[usr_cols.ign])
+                embed = embeds.verification_already_verified_complete(verified_guilds, user_data[usr_cols.ign])
                 msg = await user.send(embed=embed)
                 await msg.add_reaction('👍')
-                await msg.add_reaction('❌')  # TODO: test cancel
+                await msg.add_reaction('❌')
                 await update_user(self.client.pool, user.id, "verifyid", msg.id)
                 await update_user(self.client.pool, user.id, "verifyguild", guild.id)
-                channel = self.client.get_channel(guild_data[gld_cols.verifylogchannel])
                 await channel.send(f"{user.mention} is re-verifying for this guild.")
                 return
         elif status == "denied":
-            msg = await user.send("You did not meet the requirements of the server, if you'd like to appeal re-react to the denied message above.")
+            msg = await user.send(
+                "You did not meet the requirements of the server, if you'd like to appeal re-react to the denied message above.")
         elif status == "deny_appeal":
             await user.send("Your application is being reviewed by staff. Please wait for their decision.")
         elif status != "stp_2" and status != "stp_3":
             embed = embeds.verification_dm_start()
-            channel = self.client.get_channel(guild_data[gld_cols.verifylogchannel])
             await channel.send(f"{user.mention} has started the verification process.")
             msg = await user.send(embed=embed)
         else:
-            await user.send("You have already started the verification process, scroll up to find the last message the bot sent regarding verification and continue from there.")
+            await user.send("You have already started the verification process, scroll up to find the last message the bot sent regarding "
+                            "verification and continue from there.")
 
     else:
         embed = embeds.verification_dm_start()
-        channel = self.client.get_channel(guild_data[gld_cols.verifylogchannel])
         await channel.send(f"{user.mention} has started the verification process.")
         msg = await user.send(embed=embed)
 
@@ -332,16 +336,15 @@ async def dm_verify_react_handler(self, payload, user_data, user):
                 embed = embeds.verification_cancelled()
                 message = await user.fetch_message(user_data[usr_cols.verifyid])
                 await message.edit(embed=embed)
-                vfy_log_channel_id = await get_guild(self.client.pool, user_data[usr_cols.verifyguild])
-                vfy_log_channel_id = vfy_log_channel_id[gld_cols.verifylogchannel]
+                guild_db = await get_guild(self.client.pool, user_data[usr_cols.verifyguild])
+                vfy_log_channel_id = guild_db[gld_cols.verifylogchannel]
                 channel = await self.client.get_channel(vfy_log_channel_id)
                 await channel.send(f"{user.mention} has cancelled the verification process.")
                 await update_user(self.client.pool, payload.user_id, "verifyguild", None)
                 await update_user(self.client.pool, payload.user_id, "status", "cancelled")
             elif str(payload.emoji) == '👍':
-                await self.step_3_verify(payload.user_id, reverify=True)
-        # if str(payload.emoji) == '👍':
-        #     await step_1_verify(self.client.pool, )
+                await self.step_3_verify(payload.user_id,
+                                         reverify=True)  # if str(payload.emoji) == '👍':  #     await step_1_verify(self.client.pool, )
     else:
         if str(payload.emoji) == '✅' or str(payload.emoji) == '👍':
             guild_data = await get_guild(self.client.pool, user_data[usr_cols.verifyguild])
@@ -351,23 +354,18 @@ async def dm_verify_react_handler(self, payload, user_data, user):
             if not key:
                 key = "`N/A: Re-verification`"
 
-            with open('data/prefixes.json', 'r') as file:
-                prefixes = json.load(file)
-
             fame_req = guild_data[gld_cols.nfame]
             n_maxed_req = guild_data[gld_cols.nmaxed]
             star_req = guild_data[gld_cols.nstars]
             months_req = guild_data[gld_cols.creationmonths]
-            req_all = guild_data[gld_cols.reqall]
             private_loc = guild_data[gld_cols.privateloc]
 
             async with aiohttp.ClientSession() as cs:
-                async with cs.get('https://localhost/?player={}'.format(user_data[usr_cols.ign])) as r:
+                async with cs.get('https://rotmg-discord-bot.wm.r.appspot.com/?player={}'.format(user_data[usr_cols.ign])) as r:
                     data = await r.json()  # returns dict
 
             alive_fame = 0
             n_maxed = 0
-            name = str(data["player"])
             n_stars = int(data["rank"])
             location = data["player_last_seen"]
 
@@ -403,8 +401,10 @@ async def dm_verify_react_handler(self, payload, user_data, user):
             private_passed = not private_loc or location == "hidden"
 
             msg = await channel.send(f"Manual verify UID: {payload.user_id}",
-                embed=embeds.verification_manual_verify(user.mention, user_data[usr_cols.ign],
-                                                        key, fame_passed, alive_fame, fame_req, maxed_passed, n_maxed, n_maxed_req, stars_passed, n_stars, star_req, months_passed, round(months), months_req, private_passed))
+                                     embed=embeds.verification_manual_verify(user.mention, user_data[usr_cols.ign], key, fame_passed,
+                                                                             alive_fame, fame_req, maxed_passed, n_maxed, n_maxed_req,
+                                                                             stars_passed, n_stars, star_req, months_passed, round(months),
+                                                                             months_req, private_passed))
             await update_user(self.client.pool, payload.user_id, "status", "deny_appeal")
             await update_user(self.client.pool, payload.user_id, "verifyid", msg.id)
             await user.send("Your application is being reviewed by staff. Please wait for their decision.")
@@ -416,6 +416,7 @@ async def dm_verify_react_handler(self, payload, user_data, user):
             await update_user(self.client.pool, payload.user_id, "verifyguild", "")
             await update_user(self.client.pool, payload.user_id, "verifyid", "")
             await update_user(self.client.pool, payload.user_id, "status", "cancelled")
+
 
 ## Subverification
 async def subverify_react_handler(self, payload, num, guild_data, user, guild, subverify_msg_id):
@@ -436,8 +437,9 @@ async def subverify_react_handler(self, payload, num, guild_data, user, guild, s
         try:
             await member.add_roles(role)
             embed = discord.Embed(title="Success!",
-                description=f"You have been given access to {category_name} in {guild.name}. To remove access, use the ❌ in the category verification message.",
-                color=discord.Color.green())
+                                  description=f"You have been given access to {category_name} in {guild.name}. To remove access, "
+                                              "use the ❌ in the category verification message.",
+                                  color=discord.Color.green())
             await user.send(embed=embed)
             await logchannel.send(f"{user.mention} was verified for the category: `{category_name}`")
         except discord.errors.Forbidden:
@@ -445,15 +447,17 @@ async def subverify_react_handler(self, payload, num, guild_data, user, guild, s
     else:
         await vfy_msg.remove_reaction('❌', user)
         if role not in member.roles:
-            await user.send("You don't yet have the role for this category! To gain access please use the ✅ emoji. If this is an error, contact: `@Darkmatter#7321`")
-            return await logchannel.send(f"{user.mention} tried to remove their verification for `{category_name}` but doesn't have the role.")
+            await user.send(
+                "You don't yet have the role for this category! To gain access please use the ✅ emoji. If this is an error, "
+                "contact: `@Darkmatter#7321`")
+            return await logchannel.send(
+                f"{user.mention} tried to remove their verification for `{category_name}` but doesn't have the role.")
         try:
             await member.remove_roles(role)
-            embed = discord.Embed(
-                title="Success!",
-                description=f"Your access to {category_name} in {guild.name} has been removed. To regain access, use the ✅ in the category verification message.",
-                color=discord.Color.red()
-            )
+            embed = discord.Embed(title="Success!",
+                                  description=f"Your access to {category_name} in {guild.name} has been removed. To regain access, "
+                                              "use the ✅ in the category verification message.",
+                                  color=discord.Color.red())
             await user.send(embed=embed)
             await logchannel.send(f"{user.mention} has removed their verification for the category: `{category_name}`")
         except discord.errors.Forbidden:
