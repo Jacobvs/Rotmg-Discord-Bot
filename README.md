@@ -4,6 +4,14 @@ Discord bot for ROTMG Verification &amp; AFK Checks
 Please contact me on discord (Darkmatter#7321) if you'd like the bot added to your server.
 
 -----
+# Requirements
+[Realmeye API](https://github.com/Jacobvs/RealmEye-API)
+Discord.py
+python3
+MySQL
+Cloudinary
+
+-----
 # Verification
 Examples of verifying with the bot
 Features:
