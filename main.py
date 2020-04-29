@@ -102,12 +102,17 @@ async def on_command_error(ctx, error):
         return await ctx.send("This command cannot be used in a DM.")
 
     if isinstance(error, commands.CheckFailure):
-        await ctx.message.delete()
-        return
+        await ctx.send("You do not have permission to use this command.", delete_after=10)
+        return await ctx.message.delete()
+
+    if isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(f"To prevent API overload, this command is on cooldown for: ***{round(error.retry_after)}*** more seconds. Retry the command then.", delete_after=5)
+        return await ctx.message.delete()
 
     if isinstance(error, commands.CommandError):
         return await ctx.send(
             f"Error executing command `{ctx.command.name}`: {str(error)}")
+
 
     await ctx.send("An unexpected error occurred while running that command.")
     logging.warning("Ignoring exception in command {}:".format(ctx.command))
