@@ -151,6 +151,8 @@ class Raiding(commands.Cog):
 
         guild_db = await get_guild(self.client.pool, ctx.guild.id)
         hc_channel, vc, role = await get_raid_info(self, ctx, channel, guild_db)
+        if ctx.channel == hc_channel:
+            return await ctx.send("This command cannot be used in an AFK check channel. Please use it in the appropriate bot-commands channel.")
 
         if " <-- Join!" not in vc.name:
             await vc.edit(name=vc.name + " <-- Join!")
@@ -172,11 +174,18 @@ class Raiding(commands.Cog):
         if not img_data:
             return await ctx.send("There was an issue communicating with the image server, try again and if the issue "
                                   "persists – contact the developer.", delete_after=10)
-        embed = discord.Embed(title="Current Map:", description="`Spawns left: All -- 0% Cleared`", )
+        embed = discord.Embed(title="Current Map:", description="`Spawns left: All -- 0% Cleared`‏‏‎", )
         embed.set_image(url=img_data["secure_url"])
         embed.add_field(name="Events Spawned:", value="No events currently spawned")
+        embed.add_field(name='b',value='b',inline=True)
+        embed.add_field(name='b',value='b',inline=True)
+        embed.add_field(name='b', value='b', inline=True)
+        embed.add_field(name='b', value='b', inline=True)
+        embed.add_field(name='b', value='b', inline=True)
+        embed.add_field(name='b', value='b', inline=True)
         mapmsg = await hc_channel.send(embed=embed)
-        start_rc(state, world_num, mapmsg, hc_channel, cpmsg, msg, location, img_data["public_id"])  # TODO set in sql as well
+        cpmap = await ctx.send(embed=embed)
+        start_rc(state, world_num, mapmsg, hc_channel, cpmsg, cpmap, msg, location, img_data["public_id"])  # TODO set in sql as well
 
 
     @commands.command(usage="!markmap/mm [number(s)]", aliases=["mm"])
@@ -218,6 +227,7 @@ class Raiding(commands.Cog):
         embed.set_field_at(0, name="Events Spawned:", value=events)
         await ctx.message.delete()
         await state.mapmsg.edit(embed=embed)
+        await state.cpmap.edit(embed=embed)
 
 
 def setup(client):
@@ -255,6 +265,7 @@ class GuildRealmClearState:
         self.mapmsg = None
         self.hcchannel = None
         self.cpmsg = None
+        self.cpmap = None
         self.msg = None
         self.location = None
         self.nitroboosters = []
@@ -282,12 +293,13 @@ def start_run(state, title, keyed_run, emojis, vc, msg, cpmsg, location, loop):
     state.loop = loop
 
 
-def start_rc(state, worldnum, mapmsg, hcchannel, cpmsg, msg, location, mapimgid):
+def start_rc(state, worldnum, mapmsg, hcchannel, cpmsg, cpmap, msg, location, mapimgid):
     state.markednums = []
     state.worldnum = worldnum
     state.mapmsg = mapmsg
     state.hcchannel = hcchannel
     state.cpmsg = cpmsg
+    state.cpmap = cpmap
     state.msg = msg
     state.location = location
     state.nitroboosters = []
@@ -373,6 +385,7 @@ async def mapmarkhelper(ctx, numbers, remove):
     embed.set_image(url=img_data["secure_url"])
     embed.description = f"`Spawns left: {spawns_left} -- {percent:.0%} Cleared`"
     await state.mapmsg.edit(embed=embed)
+    await state.cpmap.edit(embed=embed)
 
 
 async def end_afk_check(pool, member, guild, auto):
@@ -483,11 +496,11 @@ async def afk_check_reaction_handler(pool, payload, member, guild):
                         embed = rcstate.cpmsg.embeds[0]
                         embed.set_field_at(2, name="Nitro Boosters with location:", value=f"`{rcstate.nitroboosters}`", inline=False)
                         await rcstate.cpmsg.edit(embed=embed)
-#async with cs.post("https://api.cloudinary.com/v1_1/darkmattr/image/upload", data=payload) as r:
-# res = await r.json(content_type=None)  # returns dict
+
+
 async def image_upload(binary):
     payload = {'file': binary, 'upload_preset': 'rotmg-rc-maps'}
-    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(5), ) as cs:
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10), ) as cs:
         async with cs.request("POST", "https://api.cloudinary.com/v1_1/darkmattr/image/upload", data=payload) as r:
             if not r:
                 print(r)
@@ -591,7 +604,7 @@ def event_type(run_type):
     event_types = {'ava': 'Avatar of the Forgotten King', 'avatar': 'Avatar of the Forgotten King', 'cube': 'Cube God',
                    'cubegod': 'Cube God', 'gship': 'Ghost Ship', 'sphinx': 'Grand Sphinx', 'hermit': 'Hermit God', 'herm': 'Hermit God',
                    'lotll': 'Lord of the Lost Lands', 'lord': 'Lord of the Lost Lands', 'pent': 'Pentaract', 'penta': 'Pentaract', 'drag': 'Rock Dragon',
-                   'rock': 'Rock Dragon', 'skull': 'Skull Shrine', 'shrine': 'Skull Shrine', 'miner': 'Dwarf Miner',
+                   'rock': 'Rock Dragon', 'skull': 'Skull Shrine', 'shrine': 'Skull Shrine', 'skullshrine': 'Skull Shrine', 'miner': 'Dwarf Miner',
                    'sentry': 'Lost Sentry', 'nest': 'Killer Bee Nest', 'statues': 'Jade and Garnet Statues'}
     result = event_types.get(run_type, None)
     if result is None:
