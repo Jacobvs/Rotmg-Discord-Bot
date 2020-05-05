@@ -37,6 +37,15 @@ async def is_role_or_higher(member, guild, roleid):
         return False
     return False
 
+@commands.check
+async def manual_verify_channel(ctx):
+    guild_db = await get_guild(ctx.bot.pool, ctx.message.guild.id)
+    mv_id = guild_db[gld_cols.manualverifychannel]
+    return ctx.channel.id == mv_id
+
+@commands.check
+async def has_manage_roles(ctx):
+    return ctx.author.guild_permissions.manage_roles
 
 async def in_voice_channel(ctx):
     """Check if user is in a voice channel"""

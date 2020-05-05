@@ -7,7 +7,7 @@ class CommandErrorHandler(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-
+    @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         """Handles command errors"""
         if hasattr(ctx.command, "on_error"):
@@ -18,22 +18,21 @@ class CommandErrorHandler(commands.Cog):
         if isinstance(error, commands.CommandNotFound):
             await ctx.message.delete()
             return await ctx.send(f"That command does not exist. Please use `{await bot.get_prefix(ctx.message)}help` for "
-                                  f"a list of commands.", delete_after=4)
+                                  f"a list of commands.")
 
         if isinstance(error, commands.MissingPermissions):
             await ctx.message.delete()
-            return await ctx.send(f'{ctx.author.mention} Does not have the perms to use this: `{ctx.command.name}` command.',
-                                  delete_after=4)
+            return await ctx.send(f'{ctx.author.mention} Does not have the perms to use this: `{ctx.command.name}` command.')
 
         if isinstance(error, commands.MissingRole):
             await ctx.message.delete()
-            return await ctx.send(f'{ctx.author.mention}: ' + str(error), delete_after=4)
+            return await ctx.send(f'{ctx.author.mention}: ' + str(error))
 
         if isinstance(error, commands.NoPrivateMessage):
             return await ctx.send("This command cannot be used in a DM.")
 
-        if isinstance(error, commands.CheckFailure):
-            await ctx.send("You do not have permission to use this command.", delete_after=10)
+        if isinstance(error, commands.CheckFailure) or isinstance(error, commands.CheckAnyFailure):
+            await ctx.send("You do not have permission to use this command.")
             return await ctx.message.delete()
 
         if isinstance(error, commands.CommandOnCooldown):

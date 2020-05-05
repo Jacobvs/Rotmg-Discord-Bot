@@ -1,3 +1,4 @@
+import asyncio
 import bisect
 import io
 import json
@@ -10,15 +11,12 @@ import aiohttp
 import discord
 import matplotlib.pyplot as plt
 from discord.ext import tasks, commands
-from dotenv import load_dotenv
 from matplotlib.patches import Circle
 
 import embeds
 from checks import is_rl_or_higher_check, is_mm_or_higher_check, is_role_or_higher, is_vet_rl_or_higher_check
 from cogs import core
 from sql import gld_cols, get_guild
-
-load_dotenv()
 
 
 class Raiding(commands.Cog):
@@ -89,8 +87,7 @@ class Raiding(commands.Cog):
     @commands.guild_only()
     @commands.check(is_rl_or_higher_check)
     async def headcount(self, ctx, run_type, hc_channel_num='1'):
-        """Starts a headcount for the type of run specified. Valid run types are: ```realmclear, fametrain, void,
-        fskipvoid, cult``` """
+        """Starts a headcount for the type of run specified. Valid run types are: ```realmclear, fametrain, void, fskipvoid, cult, nest``` """
 
         guild_db = await get_guild(self.client.pool, ctx.guild.id)
         (hc_channel, vc, role, title) = await get_raid_info(self, ctx, hc_channel_num, guild_db, run_type)
@@ -170,19 +167,13 @@ class Raiding(commands.Cog):
         await msg.add_reaction('<:shard:682365548465487965>')
         # await msg.add_reaction('❌') # TODO: implement ending RC clearing
 
-        img_data = await image_upload(open(f"world-maps/world_{world_num}.jpg", 'rb'))
+        img_data = await image_upload(open(f"world-maps/world_{world_num}.jpg", 'rb'), ctx)
         if not img_data:
             return await ctx.send("There was an issue communicating with the image server, try again and if the issue "
                                   "persists – contact the developer.", delete_after=10)
         embed = discord.Embed(title="Current Map:", description="`Spawns left: All -- 0% Cleared`‏‏‎", )
         embed.set_image(url=img_data["secure_url"])
         embed.add_field(name="Events Spawned:", value="No events currently spawned")
-        embed.add_field(name='b',value='b',inline=True)
-        embed.add_field(name='b',value='b',inline=True)
-        embed.add_field(name='b', value='b', inline=True)
-        embed.add_field(name='b', value='b', inline=True)
-        embed.add_field(name='b', value='b', inline=True)
-        embed.add_field(name='b', value='b', inline=True)
         mapmsg = await hc_channel.send(embed=embed)
         cpmap = await ctx.send(embed=embed)
         start_rc(state, world_num, mapmsg, hc_channel, cpmsg, cpmap, msg, location, img_data["public_id"])  # TODO set in sql as well
@@ -376,7 +367,7 @@ async def mapmarkhelper(ctx, numbers, remove):
     embed.set_field_at(1, name="Cleared Numbers:", value=f"`{state.markednums}`", inline=False)
     await state.cpmsg.edit(embed=embed)
 
-    img_data = await image_upload(file.read())
+    img_data = await image_upload(file.read(), ctx)
     if not img_data:
         return await ctx.send(
             "There was an issue communicating with the image server, try again and if the issue persists – contact the developer.",
@@ -498,16 +489,29 @@ async def afk_check_reaction_handler(pool, payload, member, guild):
                         await rcstate.cpmsg.edit(embed=embed)
 
 
-async def image_upload(binary):
+async def image_upload(binary, ctx):
     payload = {'file': binary, 'upload_preset': 'rotmg-rc-maps'}
-    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10), ) as cs:
-        async with cs.request("POST", "https://api.cloudinary.com/v1_1/darkmattr/image/upload", data=payload) as r:
-            if not r:
-                print(r)
-                logging.error("IMAGE UPLOAD ERROR")
-                return None
-            else:
-                res = await r.json()
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
+                async with cs.request("POST", "https://api.cloudinary.com/v1_1/darkmattr/image/upload", data=payload) as r:
+                    if not r:
+                        print(r)
+                        logging.error("IMAGE UPLOAD ERROR")
+                        return None
+                    else:
+                        res = await r.json()
+    except asyncio.TimeoutError:
+            try:
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
+                    async with cs.request("POST", "https://api.cloudinary.com/v1_1/darkmattr/image/upload", data=payload) as r:
+                        if not r:
+                            print(r)
+                            logging.error("IMAGE UPLOAD ERROR")
+                            return None
+                        else:
+                            res = await r.json()
+            except asyncio.TimeoutError:
+                return await ctx.send("There was an issue uploading the image, please retry the command.", delete_after=5)
     return res
 
 
@@ -590,7 +594,7 @@ async def get_raid_info(self, ctx, channel, guild_db, run_type=None):
 
 def run_title(run_type):
     run_types = {'realmclear': "Realm Clearing", 'fametrain': "Fame Train", 'void': "Void", 'fskipvoid': "Full-Skip Void", 'cult': "Cult",
-                 'eventdungeon': "Event Dungeon"}
+                 'eventdungeon': "Event Dungeon", "nest": "The Nest"}
     result = run_types.get(run_type, None)
     if result is None:
         matches = get_close_matches(run_type, run_types.keys(), n=1, cutoff=0.8)
@@ -605,7 +609,7 @@ def event_type(run_type):
                    'cubegod': 'Cube God', 'gship': 'Ghost Ship', 'sphinx': 'Grand Sphinx', 'hermit': 'Hermit God', 'herm': 'Hermit God',
                    'lotll': 'Lord of the Lost Lands', 'lord': 'Lord of the Lost Lands', 'pent': 'Pentaract', 'penta': 'Pentaract', 'drag': 'Rock Dragon',
                    'rock': 'Rock Dragon', 'skull': 'Skull Shrine', 'shrine': 'Skull Shrine', 'skullshrine': 'Skull Shrine', 'miner': 'Dwarf Miner',
-                   'sentry': 'Lost Sentry', 'nest': 'Killer Bee Nest', 'statues': 'Jade and Garnet Statues'}
+                   'dwarf': 'Dwarf Miner', 'sentry': 'Lost Sentry', 'nest': 'Killer Bee Nest', 'statues': 'Jade and Garnet Statues'}
     result = event_types.get(run_type, None)
     if result is None:
         matches = get_close_matches(run_type, event_types.keys(), n=1, cutoff=0.8)
@@ -630,11 +634,14 @@ def run_emojis(run_type):
                                default_emojis[2], default_emojis[3], default_emojis[4], "<:mseal:682205755754938409>",
                                "<:puri:682205769973760001>", "<:brainofthegolem:682205737492938762>", "<:mystic:682205700918607969>"],
             'Cult': ["<:cult:682205832879800388>", "<:lhkey:682205801728835656>", default_emojis[2], default_emojis[3], default_emojis[4],
-                     "<:puri:682205769973760001>", "<:planewalker:682212363889279091>"], 'Event Dungeon': default_emojis}.get(run_type,
-                                                                                                                              default_emojis)
+                     "<:puri:682205769973760001>", "<:planewalker:682212363889279091>"],
+            'The Nest': ["<:Nest:585617025909653524>", "<:NestKey:585617056192266240>", "<:QuiverofThunder:585616162176630784>",
+                        default_emojis[2], default_emojis[3], default_emojis[4], "<:mystic:682205700918607969>",
+                         "<:puri:682205769973760001>", "<:slow_icon:678792068965072906>"],
+            'Event Dungeon': default_emojis}.get(run_type, default_emojis)
 
 
 main_run_emojis = ["<:whitebag:682208350481547267>", "<:fame:682209281722024044>", "<:void:682205817424183346>",
                    "<:fskipvoid:682206558075224145>", "<:cult:682205832879800388>"]
-key_emojis = ["<:lhkey:682205801728835656>", "<:vial:682205784524062730>", "<:eventkey:682212349641621506>"]
-key_ids = [682205801728835656, 682205784524062730, 682212349641621506]
+key_emojis = ["<:lhkey:682205801728835656>", "<:vial:682205784524062730>", "<:eventkey:682212349641621506>", "<:NestKey:585617056192266240>"]
+key_ids = [682205801728835656, 682205784524062730, 682212349641621506, 585617056192266240]

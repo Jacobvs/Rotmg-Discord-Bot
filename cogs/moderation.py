@@ -1,14 +1,20 @@
+import asyncio
 import datetime
 import json
+import logging
 
 import discord
 from discord.ext import commands
+from discord.utils import escape_markdown
 
 import embeds
+from utils import Duration
 
 from sql import get_guild, get_user, update_user, add_new_user, gld_cols, usr_cols
-from checks import is_rl_or_higher_check
+from checks import is_rl_or_higher_check, manual_verify_channel, has_manage_roles
 from cogs import verification
+
+logger = logging.getLogger('discord')
 
 
 class Moderation(commands.Cog):
@@ -106,17 +112,85 @@ class Moderation(commands.Cog):
 
     @commands.command(usage="!manual_verify [uid] {optional: ign}")
     @commands.guild_only()
-    @commands.has_permissions(manage_roles=True)
+    @commands.check_any(manual_verify_channel, has_manage_roles)
     async def manual_verify(self, ctx, uid, ign=None):
         await ctx.message.delete()
         return await manual_verify_ext(self.client.pool, ctx.guild, uid, ctx.author, ign)
 
     @commands.command(usage="!manual_verify_deny [uid]")
     @commands.guild_only()
-    @commands.has_permissions(manage_roles=True)
+    @commands.check_any(manual_verify_channel, has_manage_roles)
     async def manual_verify_deny(self, ctx, uid):
         await ctx.message.delete()
         return await manual_verify_deny_ext(self.client.pool, ctx.guild, uid, ctx.author)
+
+
+    @commands.command(usage="!mute [member] [time] [reason]")
+    @commands.has_permissions(kick_members=True)
+    async def mute(self, ctx, member: discord.Member, time: Duration = None, *, reason=None):
+        """Prevent the member to send messages and add reactions.
+        Syntax is '!mute <member> [time] [reason]'. time defaults to
+        15 minutes ('15m'). The reason is optional and added to the Audit Log.
+        """
+        guild_permissions = member.guild_permissions
+        if time is None:
+            wait_time = datetime.timedelta(minutes=15)
+        else:
+            wait_time = time - datetime.datetime.utcnow()
+        # Because sometimes members have nicknames with markdown
+        escaped_name = escape_markdown(member.display_name)
+
+        if guild_permissions.kick_members:
+            # do not mute someone who has permissions to kick members
+            await ctx.send(f'Cannot mute {escaped_name} due to roles.')
+
+        elif member.bot:
+            # do not mute bots
+            await ctx.send(f'Cannot mute {escaped_name} (is a bot).')
+
+        else:
+            overwrite = discord.PermissionOverwrite(add_reactions=False, send_messages=False, )
+            stime = "15m" if time is None else time
+            log_str = (f'{ctx.author.display_name} has muted '
+                       f'member {member} (<@{member.id}>) for {stime}.')
+            logger.info(log_str)
+
+            for channel in ctx.guild.text_channels:
+                permissions = channel.permissions_for(member)
+
+                if permissions.read_messages:
+                    await channel.set_permissions(member, overwrite=overwrite, reason=reason)
+
+            await ctx.send(log_str)
+            await asyncio.sleep(wait_time.total_seconds())
+            await ctx.invoke(self.unmute, member)
+
+
+    @commands.command(usage="!unmute [member]")
+    @commands.has_permissions(kick_members=True)
+    async def unmute(self, ctx, member: discord.Member):
+        """Remove the mute on member."""
+
+        for channel in ctx.guild.text_channels:
+            permissions = channel.permissions_for(member)
+
+            if permissions.read_messages:
+                # This removes the PermissionOverwrite on the channel, it
+                # does not grant send_messages=True
+                await channel.set_permissions(member, overwrite=None)
+
+        await ctx.send(f"{member.mention} has been unmuted.")
+
+
+    @mute.error
+    async def mute_error(self, ctx, error):
+        """Handle errors."""
+
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send('You need to provide someone to mute.')
+
+        elif isinstance(error, commands.BadArgument):
+            await ctx.send('Unknown member.')
 
 
 def setup(client):

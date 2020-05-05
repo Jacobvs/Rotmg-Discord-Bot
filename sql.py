@@ -84,6 +84,13 @@ async def update_guild(pool, id, column, change):
             await conn.commit()
             
 
+class casino_cols(enum.IntEnum):
+    id = 0
+    balance = 1
+    dailycooldown = 2
+    workcooldown = 3
+    searchcooldown = 4
+    
 
 class usr_cols(enum.IntEnum):
     """Contains References to rotmg.users table for easy access"""

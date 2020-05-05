@@ -162,7 +162,7 @@ class Misc(commands.Cog):
                         inline=False)
         embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.", inline=False)
         embed.add_field(name="Lines of Code:",
-                        value=(f"**`{line_count('/home/jacobvs2/Rotmg-Bot/')+line_count('/home/jacobvs2/Rotmg-Bot/cogs')}"
+                        value=(f"**`{line_count('/home/pi/Rotmg-Bot/')+line_count('/home/pi/Rotmg-Bot/cogs')}"
                                "`** lines of code."), inline=False)
         embed.add_field(name="Server Status:",
                         value=(f"```yaml\nServer: Google Cloud Compute (US East)\nCPU: {psutil.cpu_percent()}% utilization."

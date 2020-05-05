@@ -7,7 +7,6 @@ from discord.ext import commands
 from sql import get_guild, get_user, add_new_guild, usr_cols, gld_cols
 from checks import is_role_or_higher
 from cogs import verification, raiding, moderation
-from cogs.raiding import afk_check_reaction_handler, confirmed_raiding_reacts, end_afk_check
 from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification, subverify_react_handler
 
 states = {}
@@ -167,8 +166,10 @@ class Core(commands.Cog):
             elif payload.channel_id in [guild_data[gld_cols.raidhc1], guild_data[gld_cols.raidhc2], guild_data[gld_cols.raidhc3],
                                         guild_data[gld_cols.vethcid]]:  # handles raiding emoji reactions
                 if str(payload.emoji) == '❌' and await is_role_or_higher(guild.get_member(user.id), guild, guild_data[gld_cols.rlroleid]):
-                    return await end_afk_check(self.client.pool, guild.get_member(user.id), guild, False)
-                return await afk_check_reaction_handler(self.client.pool, payload, guild.get_member(user.id), guild)
+                    #from cogs.raiding import end_afk_check
+                    return await raiding.end_afk_check(self.client.pool, guild.get_member(user.id), guild, False)
+                #from cogs.raiding import afk_check_reaction_handler
+                return await raiding.afk_check_reaction_handler(self.client.pool, payload, guild.get_member(user.id), guild)
             elif payload.channel_id == guild_data[gld_cols.manualverifychannel]:  # handles manual verificaions
                 if str(payload.emoji) == '✅':
                     channel = guild.get_channel(payload.channel_id)
@@ -187,7 +188,7 @@ class Core(commands.Cog):
                     return await dm_verify_react_handler(Verification(self.client), payload, user_data, user)
         # elif str(payload.emoji) in ['✉️','🚫']: # handles modmail (FUTURE)
         elif payload.emoji.id in raiding.key_ids:  # handles AFK check key reactions
-            return await confirmed_raiding_reacts(payload, user)
+            return await raiding.confirmed_raiding_reacts(payload, user)
 
 
 def setup(client):
