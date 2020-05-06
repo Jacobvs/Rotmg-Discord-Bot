@@ -28,6 +28,7 @@ class Blackjack:
         self.push = False
         self.balance = balance
         self.player_can_double_down = can_double
+        self.timeout = False
         if can_double:
             self.moves.append(Alphabet.D.value)
 
@@ -76,11 +77,12 @@ class Blackjack:
 
             # ask player input
             try:
-                reaction, user = await self.bot.wait_for('reaction_add', timeout=5 * 60,  # 5 minutes
+                reaction, user = await self.bot.wait_for('reaction_add', timeout=3 * 60,  # 3 minutes
                     check=check, )
             except asyncio.TimeoutError as e:
                 # should probably stand if timeout
                 self.playing = False
+                self.timeout = True
                 break
 
             move = reaction.emoji
@@ -159,19 +161,22 @@ class Blackjack:
 
                 self.playing = False
 
+        if self.timeout:
+            self.update_embed(hint_message="You took to long to choose - so your credits have been refunded.",
+                              money=0, win="+", color=discord.Color.light_grey())
+        else:
+            credits_won = 0
+            if self.player_busted or not self.player_won and not self.push and not self.dealer_busted:
+                credits_won -= self.bet
+                self.update_embed(hint_message=hint_message, money=credits_won, color=discord.Color.red())
+            elif self.player_won or self.dealer_busted:
+                credits_won += self.bet
+                self.update_embed(hint_message=hint_message, money=credits_won, win="+", color=discord.Color.green())
+            elif self.push:
+                self.update_embed(hint_message=hint_message, money=0, win="+", color=discord.Color.teal())
 
-        credits_won = 0
-        if self.player_busted or not self.player_won and not self.push and not self.dealer_busted:
-            credits_won -= self.bet
-            self.update_embed(hint_message=hint_message, money=credits_won, color=discord.Color.red())
-        elif self.player_won or self.dealer_busted:
-            credits_won += self.bet
-            self.update_embed(hint_message=hint_message, money=credits_won, win="+", color=discord.Color.green())
-        elif self.push:
-            self.update_embed(hint_message=hint_message, money=0, win="+", color=discord.Color.teal())
-
-        if self.bet > 0 and not self.push:
-            await sql.change_balance(self.bot.pool, self.ctx.author.id, self.balance+credits_won)
+            if self.bet > 0 and not self.push:
+                await sql.change_balance(self.bot.pool, self.ctx.author.id, self.balance+credits_won)
         await self.message_game.edit(embed=self.embed)
         await self.message_game.clear_reactions()
 

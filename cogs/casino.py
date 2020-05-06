@@ -6,7 +6,9 @@ from discord.ext import commands
 
 import sql
 from cogs.Minigames.blackjack import Blackjack
+from cogs.Minigames.coinflip import Coinflip
 
+players_in_game = []
 
 class Casino(commands.Cog):
 
@@ -19,6 +21,10 @@ class Casino(commands.Cog):
         """A single hand of Blackjack.
         The player plays against the dealer (bot) for one hand.
         """
+        if ctx.author.id in players_in_game:
+            await ctx.message.delete()
+            return await ctx.send("You're already in a game! "
+                                  "Finish that game or wait for it to expire to start a new one.", delete_after=10)
         if bet > 0:
             data = await sql.get_casino_player(self.client.pool, ctx.author.id)
             balance = data[sql.casino_cols.balance]
@@ -30,7 +36,36 @@ class Casino(commands.Cog):
                 game = Blackjack(ctx, self.client, bet, balance, False)
         else:
             game = Blackjack(ctx, self.client, 0, 0, False)
+        players_in_game.append(ctx.author.id)
         await game.play()
+        players_in_game.remove(ctx.author.id)
+
+    @commands.command(usage="!coinflip [member] [bet]")
+    async def coinflip(self, ctx, member: discord.Member, bet: int):
+        """Bet against someone in a classic 50/50"""
+        if ctx.author.id in players_in_game:
+            await ctx.message.delete()
+            return await ctx.send("You're already in a game! "
+                                  "Finish that game or wait for it to expire to start a new one.", delete_after=10)
+        if member.bot or member == ctx.author:
+            raise commands.BadArgument('Cannot play a game against that member.')
+        if bet > 0:
+            data = await sql.get_casino_player(self.client.pool, ctx.author.id)
+            balance1 = data[sql.casino_cols.balance]
+            if balance1 < bet:
+                return await ctx.send(f"You don't have enough credits! Available balance: {balance1}")
+            data = await sql.get_casino_player(self.client.pool, member.id)
+            balance2 = data[sql.casino_cols.balance]
+            if balance2 < bet:
+                return await ctx.send(f"{member.display_name} doesn't have enough credits to play.")
+            game = Coinflip(ctx, self.client, bet, balance1, balance2, member)
+            players_in_game.append(ctx.author.id)
+            await game.play()
+            players_in_game.remove(ctx.author.id)
+        else:
+            await ctx.message.delete()
+            await ctx.send("You have to place a bet higher than 0!")
+
 
     @commands.command(usage="!balance {optional: member}", aliases=['bal'])
     async def balance(self, ctx, member: discord.Member=None):
@@ -45,6 +80,7 @@ class Casino(commands.Cog):
         embed.add_field(name="Credits", value=f"**{data[sql.casino_cols.balance]:,}** credits.")
         embed.set_footer(text="Use !daily, !work, and !search to get credits.")
         await ctx.send(embed=embed)
+
 
     @commands.command(usage="!cooldowns")
     async def cooldowns(self, ctx):
@@ -84,6 +120,7 @@ class Casino(commands.Cog):
 
     @commands.command(usage="!work")
     async def work(self, ctx):
+        """Do something...?"""
         data = await sql.get_casino_player(self.client.pool, ctx.author.id)
         cooldown = data[sql.casino_cols.workcooldown]
         embed = discord.Embed()
@@ -105,6 +142,7 @@ class Casino(commands.Cog):
 
     @commands.command(usage="!search")
     async def search(self, ctx):
+        """Look around for money"""
         data = await sql.get_casino_player(self.client.pool, ctx.author.id)
         cooldown = data[sql.casino_cols.searchcooldown]
         embed = discord.Embed()
