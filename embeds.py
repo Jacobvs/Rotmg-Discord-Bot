@@ -231,3 +231,6 @@ def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run):
     embed.set_footer(text="AFK Check started ")
     embed.timestamp = datetime.utcnow()
     return embed
+
+
+# CASINO
