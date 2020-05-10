@@ -679,7 +679,6 @@ sock
 soft
 solid
 some
-
 son
 song
 sort
@@ -849,6 +848,6 @@ yes
 yesterday
 you
 young
-Bernhard
-Breytenbach
+bernhard
+breytenbach
 Android

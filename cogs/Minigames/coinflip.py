@@ -5,6 +5,7 @@ import discord
 from discord.ext import tasks
 
 import sql
+from cogs import casino
 
 
 class Coinflip:
@@ -58,9 +59,18 @@ class Coinflip:
         await self.game_msg.clear_reactions()
 
         if resp == '✅':
+            if user.id in casino.players_in_game:
+                await self.ctx.send("You're already in a game! "
+                                    "Finish that game or wait for it to expire to start a new one.", delete_after=10)
+                self.gameembed.color = discord.Color.red()
+                self.gameembed.clear_fields()
+                self.gameembed.add_field(name="Error",
+                                         value=f"{user.mention} was already in a game and tried to join this one. Credits have been refunded.")
+                await self.game_msg.edit(embed=self.gameembed)
+                return await self.game_msg.clear_reactions()
             await self.game_msg.edit(embed=self.gameembed)
             self.p1coin = random.choice([True, False])
-            self.countdown.start()
+            await self.countdown()
         elif resp == '❌':
             self.gameembed.color = discord.Color.red()
             self.gameembed.clear_fields()
@@ -68,14 +78,15 @@ class Coinflip:
             self.gameembed.add_field(name="Cancelled", value=f"{mention} did not want to play. Credits have been refunded.")
             await self.game_msg.edit(embed=self.gameembed)
 
-
-    @tasks.loop(seconds=1.0, count=3)
     async def countdown(self):
-        self.gameembed.set_field_at(2, name="Coin", value=f"Flipping in **{3-self.countdown.current_loop}**", inline=False)
-        await self.game_msg.edit(embed=self.gameembed)
+        count = 0
+        while count < 3:
+            count += 1
+            self.gameembed.set_field_at(2, name="Coin", value=f"Flipping in **{3-count}**", inline=False)
+            await self.game_msg.edit(embed=self.gameembed)
+            await asyncio.sleep(1)
+        await self.finish_game()
 
-
-    @countdown.after_loop
     async def finish_game(self):
         await asyncio.sleep(0.3)
         await self.game_msg.edit(embed=self.flipembed)
@@ -83,14 +94,14 @@ class Coinflip:
         self.gameembed.color = discord.Color.green()
         self.gameembed.clear_fields()
         if self.p1coin:
-            await sql.change_balance(self.client.pool, self.player1.id, self.p1balance + self.bet)
-            await sql.change_balance(self.client.pool, self.player2.id, self.p2balance - self.bet)
+            await sql.change_balance(self.client.pool, self.ctx.guild.id, self.player1.id, self.p1balance + self.bet)
+            await sql.change_balance(self.client.pool, self.ctx.guild.id, self.player2.id, self.p2balance - self.bet)
             self.gameembed.add_field(name="Coin", value=f"\n{self.player1.mention} won **{self.bet}** credits!", inline=False)
             self.gameembed.add_field(name="Balances", value=f"{self.player1.mention} - **{self.p1balance+(self.bet)}**\n"
                                                                   f"{self.player2.mention} - **{self.p2balance-(self.bet)}**")
         else:
-            await sql.change_balance(self.client.pool, self.player1.id, self.p1balance - self.bet)
-            await sql.change_balance(self.client.pool, self.player2.id, self.p2balance + self.bet)
+            await sql.change_balance(self.client.pool, self.ctx.guild.id, self.player1.id, self.p1balance - self.bet)
+            await sql.change_balance(self.client.pool, self.ctx.guild.id, self.player2.id, self.p2balance + self.bet)
             self.gameembed.add_field(name="Coin", value=f"{self.player2.mention} won **{self.bet}** credits!", inline=False)
             self.gameembed.add_field(name="Balances", value=f"{self.player1.mention} - **{self.p1balance-(self.bet)}**\n"
                                                                   f"{self.player2.mention} - **{self.p2balance+(self.bet)}**")

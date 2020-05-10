@@ -176,7 +176,7 @@ class Blackjack:
                 self.update_embed(hint_message=hint_message, money=0, win="+", color=discord.Color.teal())
 
             if self.bet > 0 and not self.push:
-                await sql.change_balance(self.bot.pool, self.ctx.author.id, self.balance+credits_won)
+                await sql.change_balance(self.bot.pool, self.ctx.guild.id, self.ctx.author.id, self.balance+credits_won)
         await self.message_game.edit(embed=self.embed)
         await self.message_game.clear_reactions()
 

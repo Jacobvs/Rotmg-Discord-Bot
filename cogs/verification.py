@@ -222,7 +222,7 @@ async def complete_verification(pool, guild, guild_data, member, name, user_data
     try:
         await member.add_roles(role)
         if tag.lower() == name.lower():
-            await member.edit(nick=f"{name} .")
+            await member.edit(nick=f"{name}.")
         else:
             await member.edit(nick=name)
     except discord.errors.Forbidden:
@@ -322,29 +322,28 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
 
 
 async def dm_verify_react_handler(self, payload, user_data, user):
-    if user_data[usr_cols.status] != "denied":
-        if user_data[usr_cols.status] != "cancelled":
-            if str(payload.emoji) == '✅':
-                status = user_data[usr_cols.status]
-                if status == 'stp_2':
-                    await self.step_2_verify(payload.user_id)
-                    return
-                elif status == 'stp_3':
-                    await self.step_3_verify(payload.user_id, reverify=False)
-                    return
-            elif str(payload.emoji) == '❌':
-                embed = embeds.verification_cancelled()
-                message = await user.fetch_message(user_data[usr_cols.verifyid])
-                await message.edit(embed=embed)
-                guild_db = await get_guild(self.client.pool, user_data[usr_cols.verifyguild])
-                vfy_log_channel_id = guild_db[gld_cols.verifylogchannel]
-                channel = await self.client.get_channel(vfy_log_channel_id)
-                await channel.send(f"{user.mention} has cancelled the verification process.")
-                await update_user(self.client.pool, payload.user_id, "verifyguild", None)
-                await update_user(self.client.pool, payload.user_id, "status", "cancelled")
-            elif str(payload.emoji) == '👍':
-                await self.step_3_verify(payload.user_id,
-                                         reverify=True)  # if str(payload.emoji) == '👍':  #     await step_1_verify(self.client.pool, )
+    if user_data[usr_cols.status] != "cancelled":
+        if str(payload.emoji) == '✅':
+            status = user_data[usr_cols.status]
+            if status == 'stp_2':
+                await self.step_2_verify(payload.user_id)
+                return
+            elif status == 'stp_3':
+                await self.step_3_verify(payload.user_id, reverify=False)
+                return
+        elif str(payload.emoji) == '❌':
+            embed = embeds.verification_cancelled()
+            message = await user.fetch_message(user_data[usr_cols.verifyid])
+            await message.edit(embed=embed)
+            guild_db = await get_guild(self.client.pool, user_data[usr_cols.verifyguild])
+            vfy_log_channel_id = guild_db[gld_cols.verifylogchannel]
+            channel = await self.client.get_channel(vfy_log_channel_id)
+            await channel.send(f"{user.mention} has cancelled the verification process.")
+            await update_user(self.client.pool, payload.user_id, "verifyguild", None)
+            await update_user(self.client.pool, payload.user_id, "status", "cancelled")
+        elif str(payload.emoji) == '👍':
+            await self.step_3_verify(payload.user_id,
+                                     reverify=True)  # if str(payload.emoji) == '👍':  #     await step_1_verify(self.client.pool, )
     else:
         if str(payload.emoji) == '✅' or str(payload.emoji) == '👍':
             guild_data = await get_guild(self.client.pool, user_data[usr_cols.verifyguild])

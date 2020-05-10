@@ -8,7 +8,7 @@ import youtube_dl as ytdl
 from bs4 import BeautifulSoup as bs
 from discord.ext import commands
 
-from checks import audio_playing, in_same_voice_channel, is_audio_requester, is_dj
+from checks import audio_playing, in_same_voice_channel, is_audio_requester, is_dj, is_bot_owner
 
 YTDL_OPTS = {"default_search": "ytsearch", "format": "bestaudio/best", "quiet": True, "extract_flat": "in_playlist"}
 
@@ -73,7 +73,7 @@ class Music(commands.Cog):
 
     @commands.command(aliases=["stop"], usage="!leave")
     @commands.guild_only()
-    @commands.check(is_dj)
+    @commands.check_any(is_dj, is_bot_owner)
     @commands.check(in_same_voice_channel)
     async def leave(self, ctx):
         """Leaves the voice channel, if currently in one."""
@@ -89,7 +89,7 @@ class Music(commands.Cog):
 
     @commands.command(aliases=["resume"], usage="!pause/!resume")
     @commands.guild_only()
-    @commands.check(is_dj)
+    @commands.check_any(is_dj, is_bot_owner)
     @commands.check(audio_playing)
     @commands.check(in_same_voice_channel)
     @commands.check(is_audio_requester)
@@ -138,7 +138,7 @@ class Music(commands.Cog):
 
     @commands.command(aliases=["s"], usage="!skip")
     @commands.guild_only()
-    @commands.check(is_dj)
+    @commands.check_any(is_dj, is_bot_owner)
     @commands.check(audio_playing)
     @commands.check(in_same_voice_channel)
     async def skip(self, ctx):
@@ -195,7 +195,7 @@ class Music(commands.Cog):
 
     @commands.command(aliases=["np", "playing"], usage="!nowplaying")
     @commands.guild_only()
-    @commands.check(is_dj)
+    @commands.check_any(is_dj, is_bot_owner)
     @commands.check(audio_playing)
     async def nowplaying(self, ctx):
         """Displays information about the current song."""
@@ -207,7 +207,7 @@ class Music(commands.Cog):
 
     @commands.command(aliases=["q", "playlist"], usage="!queue")
     @commands.guild_only()
-    @commands.check(is_dj)
+    @commands.check_any(is_dj, is_bot_owner)
     @commands.check(audio_playing)
     async def queue(self, ctx):
         """Display the current play queue."""
@@ -228,7 +228,7 @@ class Music(commands.Cog):
 
     @commands.command(aliases=["cq", "clear"], usage="!clearqueue")
     @commands.guild_only()
-    @commands.check(is_dj)
+    @commands.check_any(is_dj, is_bot_owner)
     @commands.check(audio_playing)
     async def clearqueue(self, ctx):
         """Clears the play queue without leaving the channel."""
@@ -238,7 +238,7 @@ class Music(commands.Cog):
 
     @commands.command(aliases=["jq"], usage="!jumpqueue [index] [new_index]")
     @commands.guild_only()
-    @commands.check(is_dj)
+    @commands.check_any(is_dj, is_bot_owner)
     @commands.check(audio_playing)
     async def jumpqueue(self, ctx, song: int, new_index: int):
         """Moves song at an index to new_index in queue."""
@@ -254,7 +254,7 @@ class Music(commands.Cog):
 
     @commands.command(brief="Plays audio from <url>.", aliases=["p"], usage="!play [url or search term]")
     @commands.guild_only()
-    @commands.check(is_dj)
+    @commands.check_any(is_dj, is_bot_owner)
     async def play(self, ctx, *, url):
         """Plays audio hosted at <url> (or performs a search for <url> and plays the first result)."""
 
