@@ -118,17 +118,19 @@ async def change_balance(pool, guild_id, id, new_bal):
         async with conn.cursor() as cursor:
             await cursor.execute(f"SELECT * FROM rotmg.casino_top where guildid = {guild_id}")
             data = list(await cursor.fetchone())
-
-
+            leaderboard_size = 10
             if bals[-1] < new_bal:
+                # Split the data out into relevant parts
                 g_id = data[0]
                 data = data[1:]
-
                 uids = data[::2]
                 bals = data[1::2]
+                # Build balance uid pairs
                 data = [(u, b) for u, b in zip(uids, bals)]
+
                 uid_loc = None
 
+                # Index throws up when not found
                 try:
                     uid_loc = uids.index(id)
                 except:
@@ -139,14 +141,27 @@ async def change_balance(pool, guild_id, id, new_bal):
                 else:
                     data.append((id, new_bal))
 
+                # Remove any entry with None
+                data = list(filter(lambda x: x[0] is not None and x[1] is not None, data))
+                # Sort by balance
                 data = sorted(data, key=lambda x: x[1], reverse=True)
-                data = data[:10]
+                # Append so data is 10 long
+                if len(data) < leaderboard_size:
+                    data = [*data, *[(None, None)]  * (leaderboard_size - len(data))]
+                # Chop to 10
+                data = data[:leaderboard_size]
+                # De-interleave data
+                write_data = list(range(len(data)))
+                write_data[::2] = [pair[0] for pair in data]
+                write_data[1::2] = [pair[1] for pair in data]
 
-                data = [g_id, *data]
+                # Add guild id back
+                write_data = [g_id, *data]
+
 
                 await cursor.execute("REPLACE INTO rotmg.casino_top (guildid, 1_id, 1_bal, 2_id, 2_bal, 3_id, 3_bal, 4_id, 4_bal, 5_id, "
                                      "5_bal, 6_id, 6_bal, 7_id, 7_bal, 8_id, 8_bal, 9_id, 9_bal, 10_id, 10_bal) "
-                                     "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", data)
+                                     "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", write_data)
             await cursor.execute(f"UPDATE rotmg.casino SET balance = {new_bal} WHERE id = {id}")
             await conn.commit()
 
