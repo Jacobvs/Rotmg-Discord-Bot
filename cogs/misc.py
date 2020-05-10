@@ -10,7 +10,7 @@ from discord.utils import get
 
 import embeds
 from sql import get_num_verified
-from checks import in_voice_channel, is_dj, is_rl_or_higher_check
+from checks import in_voice_channel, is_dj, is_rl_or_higher_check, is_bot_owner
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -62,7 +62,7 @@ class Misc(commands.Cog):
 
     @commands.command(aliases=["ahhaha"], usage="!laugh [1 or 2]")
     @commands.guild_only()
-    @commands.check(is_dj)
+    @commands.check_any(is_dj, is_bot_owner)
     @commands.check(in_voice_channel)
     async def laugh(self, ctx, option=1):
         """Ah-Ha-hA"""
@@ -82,7 +82,7 @@ class Misc(commands.Cog):
 
     @commands.command(usage="!richard")
     @commands.guild_only()
-    @commands.check(is_dj)
+    @commands.check_any(is_dj, is_bot_owner)
     @commands.check(in_voice_channel)
     async def richard(self, ctx):
         """"RICHARD!"""
@@ -98,7 +98,7 @@ class Misc(commands.Cog):
 
 
     @commands.command(usage="!oogabooga")
-    @commands.check(is_rl_or_higher_check)
+    @commands.check_any(is_rl_or_higher_check, is_bot_owner)
     async def oogabooga(self, ctx):
         """The only command you ever need."""
         await ctx.message.delete()
@@ -109,7 +109,7 @@ class Misc(commands.Cog):
 
 
     @commands.command(usage="!whatthefuck")
-    @commands.check(is_rl_or_higher_check)
+    @commands.check_any(is_rl_or_higher_check, is_bot_owner)
     async def whatthefuck(self, ctx):
         """????"""
         await ctx.message.delete()
@@ -119,7 +119,7 @@ class Misc(commands.Cog):
 
 
     @commands.command(usage="!isitgone")
-    @commands.check(is_rl_or_higher_check)
+    @commands.check_any(is_rl_or_higher_check, is_bot_owner)
     async def isitgone(self, ctx):
         """Spooky"""
         await ctx.message.delete()
@@ -130,7 +130,7 @@ class Misc(commands.Cog):
 
     @commands.command(usage='!poll "[title]" [option 1] [option 2]...')
     @commands.guild_only()
-    @commands.check(is_rl_or_higher_check)
+    @commands.check_any(is_rl_or_higher_check, is_bot_owner)
     async def poll(self, ctx, title, *options):
         """Creates a poll with up to 2-10 options"""
         if len(options) < 2:
@@ -162,7 +162,7 @@ class Misc(commands.Cog):
                         inline=False)
         embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.", inline=False)
         embed.add_field(name="Lines of Code:",
-                        value=(f"**`{line_count('/home/jacobvs2/Rotmg-Bot/')+line_count('/home/jacobvs2/Rotmg-Bot/cogs')}"
+                        value=(f"**`{line_count('/home/pi/Rotmg-Bot/')+line_count('/home/pi/Rotmg-Bot/cogs')}"
                                "`** lines of code."), inline=False)
         embed.add_field(name="Server Status:",
                         value=(f"```yaml\nServer: Google Cloud Compute (US East)\nCPU: {psutil.cpu_percent()}% utilization."

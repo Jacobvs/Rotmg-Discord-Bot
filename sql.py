@@ -1,4 +1,6 @@
 import enum
+from datetime import datetime, timedelta
+
 
 async def get_user(pool, uid):
     """Return user data from rotmg.users table"""
@@ -9,6 +11,7 @@ async def get_user(pool, uid):
             await conn.commit()
             return data
 
+
 async def get_num_verified(pool):
     """Count number of verified raiders"""
     async with pool.acquire() as conn:
@@ -18,6 +21,7 @@ async def get_num_verified(pool):
             await conn.commit()
             return data
 
+
 async def get_guild(pool, uid):
     """Return guild data from rotmg.guilds"""
     async with pool.acquire() as conn:
@@ -26,6 +30,7 @@ async def get_guild(pool, uid):
             data = await cursor.fetchone()
             await conn.commit()
             return data
+
 
 async def ign_exists(pool, ign, id):
     """Check if an IGN has been entered into the user table already"""
@@ -37,6 +42,7 @@ async def ign_exists(pool, ign, id):
             if not user or user[0] == id:
                 return False
             return True
+
 
 # async def user_exists(uid):
 #     if await get_user(uid) is None:
@@ -63,6 +69,8 @@ async def update_user(pool, id, column, change):
             await conn.commit()
 
 
+## GUILD Functions
+
 async def add_new_guild(pool, guild_id, guild_name):
     """Add new guild to rotmg.guilds"""
     async with pool.acquire() as conn:
@@ -82,7 +90,87 @@ async def update_guild(pool, id, column, change):
             sql = "UPDATE rotmg.guilds SET {} = %s WHERE id = {}".format(column, id)
             await cursor.execute(sql, (change,))
             await conn.commit()
-            
+
+
+# CASINO Functions
+
+async def get_casino_player(pool, id):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(f"SELECT * from rotmg.casino WHERE id = {id}")
+            data = await cursor.fetchone()
+            await conn.commit()
+            if not data:
+                now = datetime.utcnow()
+                now = now.strftime('%Y-%m-%d %H:%M:%S')
+                sql = ("INSERT INTO rotmg.casino (id, balance, dailycooldown, workcooldown, searchcooldown) VALUES (%s, %s, %s, %s, %s)")
+                data = [id, 7500, now, now, now]
+                await cursor.execute(sql, data)
+                await conn.commit()
+                for i, d in enumerate(data):
+                    if i > 1:
+                        data[i] = datetime.strptime(d, '%Y-%m-%d %H:%M:%S')
+            return data
+
+
+async def change_balance(pool, guild_id, id, new_bal):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(f"SELECT * FROM rotmg.casino_top where guildid = {guild_id}")
+            data = list(await cursor.fetchone())
+            if data[20] < new_bal:
+                i = 20
+                while i > 2 and new_bal > data[i]:
+                    i -= 2
+                if id in data:
+                    index = data.index(id)
+                    del data[index]
+                    del data[index]
+                else:
+                    del data[19]
+                    del data[19]
+                data.insert(i-1, new_bal)
+                data.insert(i-1, id)
+                await cursor.execute("REPLACE INTO rotmg.casino_top (guildid, 1_id, 1_bal, 2_id, 2_bal, 3_id, 3_bal, 4_id, 4_bal, 5_id, "
+                                     "5_bal, 6_id, 6_bal, 7_id, 7_bal, 8_id, 8_bal, 9_id, 9_bal, 10_id, 10_bal) "
+                                     "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", data)
+            await cursor.execute(f"UPDATE rotmg.casino SET balance = {new_bal} WHERE id = {id}")
+            await conn.commit()
+
+async def update_cooldown(pool, id, column):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            time = datetime.utcnow()
+            if column == 2:
+                column = "dailycooldown"
+                time = time + timedelta(days=1)
+            elif column == 3:
+                column = "workcooldown"
+                time = time + timedelta(hours=8)
+            elif column == 4:
+                column = "searchcooldown"
+                time = time + timedelta(minutes=30)
+            else:
+                return
+            time = time.strftime('%Y-%m-%d %H:%M:%S')
+            await cursor.execute(f"UPDATE rotmg.casino SET {column} = '{time}' WHERE id = {id}")
+            await conn.commit()
+
+async def get_top_balances(pool, guild_id):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(f"SELECT * from rotmg.casino_top WHERE guildid = {guild_id}")
+            data = await cursor.fetchone()
+            await conn.commit()
+            return data
+
+
+class casino_cols(enum.IntEnum):
+    id = 0
+    balance = 1
+    dailycooldown = 2
+    workcooldown = 3
+    searchcooldown = 4
 
 
 class usr_cols(enum.IntEnum):

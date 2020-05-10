@@ -3,21 +3,25 @@ from discord.ext import commands
 
 from sql import get_guild, gld_cols
 
+@commands.check
+async def is_bot_owner(ctx):
+    return ctx.author.id == ctx.bot.owner_id
 
+@commands.check
 async def is_vet_rl_or_higher_check(ctx):
     """Check if user has vet rl or higher roles"""
     guild_db = await get_guild(ctx.bot.pool, ctx.message.guild.id)
     vet_rl_id = guild_db[gld_cols.vetrlroleid]
     return await is_role_or_higher(ctx.message.author, ctx.message.guild, vet_rl_id)
 
-
+@commands.check
 async def is_rl_or_higher_check(ctx):
     """Check if user has rl or higher roles"""
     guild_db = await get_guild(ctx.bot.pool, ctx.message.guild.id)
     rl_id = guild_db[gld_cols.rlroleid]
     return await is_role_or_higher(ctx.message.author, ctx.message.guild, rl_id)
 
-
+@commands.check
 async def is_mm_or_higher_check(ctx):
     """Check if user has map marker or higher roles"""
     guild_db = await get_guild(ctx.bot.pool, ctx.message.guild.id)
@@ -37,7 +41,17 @@ async def is_role_or_higher(member, guild, roleid):
         return False
     return False
 
+@commands.check
+async def manual_verify_channel(ctx):
+    guild_db = await get_guild(ctx.bot.pool, ctx.message.guild.id)
+    mv_id = guild_db[gld_cols.manualverifychannel]
+    return ctx.channel.id == mv_id
 
+@commands.check
+async def has_manage_roles(ctx):
+    return ctx.author.guild_permissions.manage_roles
+
+@commands.check
 async def in_voice_channel(ctx):
     """Check if user is in a voice channel"""
     if ctx.author.voice is None:
@@ -45,7 +59,7 @@ async def in_voice_channel(ctx):
         return False
     return True
 
-
+@commands.check
 async def is_dj(ctx):
     """Check if user has a role named 'DJ'"""
     if ctx.message.author.guild_permissions.administrator:
@@ -54,10 +68,10 @@ async def is_dj(ctx):
     if role in ctx.author.roles:
         return True
     await ctx.message.delete()
-    await ctx.say("The 'DJ' Role is required to use this command.", delete_after=4)
+    #await ctx.say("The 'DJ' Role is required to use this command.", delete_after=4)
     return False
 
-
+@commands.check
 async def audio_playing(ctx):
     """Checks that audio is currently playing before continuing."""
     client = ctx.guild.voice_client
@@ -66,7 +80,7 @@ async def audio_playing(ctx):
     else:
         raise commands.CommandError("Not currently playing any audio.")
 
-
+@commands.check
 async def in_same_voice_channel(ctx):
     """Checks that the command sender is in the same voice channel as the bot."""
     voice = ctx.author.voice
@@ -76,7 +90,7 @@ async def in_same_voice_channel(ctx):
     else:
         raise commands.CommandError("You need to be in the same voice channel as the bot to use this command.")
 
-
+@commands.check
 async def is_audio_requester(ctx):
     """Checks that the command sender is the song requester."""
     music = ctx.bot.get_cog("Music")

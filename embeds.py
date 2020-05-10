@@ -7,9 +7,10 @@ import discord
 
 def verification_check_msg(reqs, support_channel_name):
     embed = discord.Embed(title='Verification Steps',
-        description="__If you meet the requirements of this server, follow these steps to be verified:__\n1. Enable "
-                    "DM's from server members\n2. Set **everything** on Realmeye to public except last known "
-                    "location\n3. React to the ✅ below\n4. Follow all the directions the bot DM's you.", color=discord.Color.green())
+                          description="__If you meet the requirements of this server, follow these steps to be verified:__\n1. Enable "
+                                      "DM's from server members\n2. Set **everything** on Realmeye to public except last known "
+                                      "location\n3. React to the ✅ below\n4. Follow all the directions the bot DM's you.",
+                          color=discord.Color.green())
     embed.add_field(name="Server Requirements", value=f"```yaml\n{reqs}```")
     embed.add_field(name="Troubleshooting", value=f"If you're having trouble verifying, post in #{support_channel_name}!", inline=False)
     return embed
@@ -35,7 +36,7 @@ def verification_step_1(ign):
 
 def verification_step_2(ign, key):
     embed = discord.Embed(title="You're almost done!", description="You have chosen `{}` to be your IGN.".format(ign),
-        color=discord.Color.teal())
+                          color=discord.Color.teal())
     embed.add_field(name="\a", value="Please paste the code below into any line of your [realmeye]("
                                      "https://www.realmeye.com/player/{}) description.\n```{}```\n\nOnce you are done, "
                                      "un-react to the check emoji and re-react to finish!".format(ign, key))
@@ -44,14 +45,14 @@ def verification_step_2(ign, key):
 
 def verification_success(guild_name, mention):
     embed = discord.Embed(title="Success!", description="{} is now a verified member of __{}__!".format(mention, guild_name),
-        color=discord.Color.green())
+                          color=discord.Color.green())
     return embed
 
 
 def verification_denied(mention, denier_mention):
     embed = discord.Embed(title="Verification Denied",
-        description=f"{mention} - Your verification appeal has been denied by: {denier_mention}\n If you truly think this is an error please contact a moderator+.",
-        color=discord.Color.red())
+                          description=f"{mention} - Your verification appeal has been denied by: {denier_mention}\n If you truly think this is an error please contact a moderator+.",
+                          color=discord.Color.red())
     return embed
 
 
@@ -81,8 +82,8 @@ def verification_checking_realmeye():
 def verification_manual_verify(user, ign, code, fame, nfame, nfamereq, maxed, nmaxed, nmaxedreq, stars, nstars, nstarsreq, months, nmonths,
                                nmonthsreq, private):
     embed = discord.Embed(title="Manual Verification",
-        description=f"{user} with the ign: {ign} - ([Realmeye Link](https://www.realmeye.com/player/{ign})) failed to meet the requirements and would like "
-                    f"to be manually verified.\nThe code they were provided is: `{code}`")
+                          description=f"{user} with the ign: {ign} - ([Realmeye Link](https://www.realmeye.com/player/{ign})) failed to meet the requirements and would like "
+                                      f"to be manually verified.\nThe code they were provided is: `{code}`")
     embed.add_field(name="Fame", value=bool_to_emoji(fame) + f" ({nfame}/{nfamereq} fame)", inline=True)
     embed.add_field(name="Maxed Characters", value=bool_to_emoji(maxed) + f" ({nmaxed}/{nmaxedreq} maxed)", inline=True)
     embed.add_field(name="Stars", value=bool_to_emoji(stars) + f" ({nstars}/{nstarsreq} stars)", inline=True)
@@ -148,15 +149,15 @@ def verification_bad_reqs(requirements, fame, maxed, stars, months, private):
 
 def verification_bad_username():
     embed = discord.Embed(title="Error!",
-        description="The username you provided is invalid or has been taken. Please re-submit your username __as it is spelled in-game.__",
-        color=discord.Color.red())
+                          description="The username you provided is invalid or has been taken. Please re-submit your username __as it is spelled in-game.__",
+                          color=discord.Color.red())
     return embed
 
 
 def verification_cancelled():
     embed = discord.Embed(title="Verification Cancelled.",
-        description="You have cancelled the verification process.\nIf you would like to restart, re-react to the "
-                    "verification message in the server.", color=discord.Color.red())
+                          description="You have cancelled the verification process.\nIf you would like to restart, re-react to the "
+                                      "verification message in the server.", color=discord.Color.red())
     return embed
 
 
@@ -164,7 +165,8 @@ def verification_cancelled():
 
 def subverify_msg(name, support_channel_name):
     embed = discord.Embed(title=f"Verification for {name}",
-        description="Click the ✅ emoji below to gain access to this category, or the ❌ to remove it.", color=discord.Color.green())
+                          description="Click the ✅ emoji below to gain access to this category, or the ❌ to remove it.",
+                          color=discord.Color.green())
     embed.add_field(name="Troubleshooting", value=f"If you're having trouble verifying, post in #{support_channel_name}!", inline=False)
     return embed
 
@@ -230,4 +232,18 @@ def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run):
     embed.add_field(name="Nitro Boosters with location:", value=f"`None`", inline=False)
     embed.set_footer(text="AFK Check started ")
     embed.timestamp = datetime.utcnow()
+    return embed
+
+
+# CASINO
+
+def roulette_help_embed():
+    embed = discord.Embed(title="Roulette", color=discord.Color.orange()).add_field(name="Bet Types",
+                                                                                    value="black/red/green/high/low/even/odd, 0-36", inline=False)\
+        .add_field(
+        name="Winnings", value="**Black/Red** - x2\n**Green** - x14\n**0-36** - x35\n**High/Low** - x2\n**Even/Odd** - x2", inline=False).add_field(
+        name="Numbers",
+        value="Green: **0, 0** (2x the chance)\nBlack: **2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35**\n"
+              "Red: **1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36**\nLow: **1-18**\nHigh: **19-36**", inline=False).add_field(
+        name="Usage", value="!roulette [bet_type] [bet]", inline=False)
     return embed

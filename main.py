@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import traceback
 import aiomysql
 import urllib3
 import discord
