@@ -142,12 +142,12 @@ async def change_balance(pool, guild_id, id, new_bal):
                     data.append((id, new_bal))
 
                 # Remove any entry with None
-                data = list(filter(lambda x: x[0] is not None and x[1] is not None, data))
+                data = list(filter(lambda x: x[0] is not None, data))
                 # Sort by balance
                 data = sorted(data, key=lambda x: x[1], reverse=True)
                 # Append so data is 10 long
                 if len(data) < leaderboard_size:
-                    data = [*data, *[(None, None)]  * (leaderboard_size - len(data))]
+                    data = [*data, *[(None, 0)]  * (leaderboard_size - len(data))]
                 # Chop to 10
                 data = data[:leaderboard_size]
                 # De-interleave data
