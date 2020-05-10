@@ -145,20 +145,24 @@ async def change_balance(pool, guild_id, id, new_bal):
                 data = list(filter(lambda x: x[0] is not None, data))
                 # Sort by balance
                 data = sorted(data, key=lambda x: x[1], reverse=True)
+
                 # Append so data is 10 long
                 if len(data) < leaderboard_size:
                     data = [*data, *[(None, 0)]  * (leaderboard_size - len(data))]
                 # Chop to 10
                 data = data[:leaderboard_size]
+
                 # De-interleave data
-                write_data = list(range(len(data)))
+                # Build list
+                write_data = list(range(leaderboard_size * 2))
+                # Put user ids in even indexes
                 write_data[::2] = [pair[0] for pair in data]
+                # Put balances in odd indexes
                 write_data[1::2] = [pair[1] for pair in data]
 
-                # Add guild id back
+                # Add guild id to front
                 write_data = [g_id, *data]
-
-
+                # Write to database
                 await cursor.execute("REPLACE INTO rotmg.casino_top (guildid, 1_id, 1_bal, 2_id, 2_bal, 3_id, 3_bal, 4_id, 4_bal, 5_id, "
                                      "5_bal, 6_id, 6_bal, 7_id, 7_bal, 8_id, 8_bal, 9_id, 9_bal, 10_id, 10_bal) "
                                      "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", write_data)
