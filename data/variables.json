@@ -1,5 +1,3 @@
 {
-    "allowed_user_ids": [
-        196282885601361920
-    ]
+    "maintenance_mode" : false
 }

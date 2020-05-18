@@ -2,8 +2,9 @@ from datetime import datetime
 
 import discord
 
-
 # Verification
+import utils
+
 
 def verification_check_msg(reqs, support_channel_name):
     embed = discord.Embed(title='Verification Steps',
@@ -140,7 +141,8 @@ def verification_bad_reqs(requirements, fame, maxed, stars, months, private):
     embed.add_field(name="Account Creation Date", value=bool_to_emoji(months), inline=True)
     embed.add_field(name="Private Location", value=bool_to_emoji(private), inline=True)
     embed.add_field(name='\a', value='\a', inline=True)
-    embed.add_field(name="\a", value="**If you would like to appeal the verification to a mod, *re-react to the ""check emoji.***",
+    embed.add_field(name="\a", value="**If you would like to appeal the verification to a mod, __re-react to the check or thumbs-up emoji "
+                                     "in this message.__**",
                     inline=False)
     embed.set_footer(
         text="React to the 'X' to cancel verification (if you would like to retry - cancel then react to the message in the server again.")
@@ -198,52 +200,107 @@ def headcount_base(run_title, requester, keyed_run, emojis):
     return embed
 
 
-def afk_check_base(run_title, requester, keyed_run, emojis, location=None):
+def afk_check_base(run_title, requester, keyed_run: bool, emojis, thumbnail=None):
     if keyed_run:
         desc = (f"To join, **connect to the raiding channel by clicking its name** and react to: {emojis[0]}\n"
                 f"If you have a key, react to {emojis[1]}\n"
                 "To indicate your class or gear choices, react to the appropriate emoji's below\n"
-                "To end the AFK check as a leader, react to ❌")
-    elif run_title == "Fame Train":
-        desc = (f"The location of the fame train is `{location}`\n"
-                "To indicate your class or gear choices, react to the appropriate emoji's below\n"
-                "Listen to the conductor for faster fame!\n"
                 "To end the AFK check as a leader, react to ❌")
     else:
         desc = (f"To join, **connect to the raiding channel by clicking its name** and react to: {emojis[0]}\n"
                 "To indicate your class or gear choices, react to the appropriate emoji's below\n"
                 "To end the AFK check as a leader, react to ❌")
     embed = discord.Embed(description=desc, color=discord.Color.teal())
-    embed.set_author(name=f"{run_title} started by {requester.nick}", icon_url=requester.avatar_url)
-    embed.set_footer(text="Time remaining: 6 Minutes and 0 seconds | Raiders accounted for: 0")
+    if thumbnail:
+        embed.set_thumbnail(url=thumbnail)
+    embed.set_author(name=f"{run_title} started by {requester.display_name}", icon_url=requester.avatar_url)
+    embed.set_footer(text="Time remaining: 6 minutes and 0 seconds | Raiders accounted for: 1")
     return embed
 
 
 def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run):
     embed = discord.Embed(description=f"**[AFK Check]({msg_url}) control panel for `{run_title}`**", color=discord.Color.teal())
-    if keyed_run:
-        embed.add_field(name="Current Keys:", value=f"Main {key_emoji}: None\nBackup {key_emoji}: None")
-    if run_title == "Void" or run_title == "Full-Skip Void":
-        embed.add_field(name="Vials:", value=f"Main <:vial:682205784524062730>: None\nBackup <:vial:682205784524062730>: None",
-                        inline=False)
     embed.add_field(name="Location of run:", value=location, inline=False)
+    embed.add_field(name="Nitro Boosters:", value=f"`None`", inline=True)
+    if keyed_run:
+        embed.add_field(name="Current Keys:", value=f"Main {key_emoji}: None\nBackup {key_emoji}: None", inline=False)
+    if run_title == "Void" or run_title == "Full-Skip Void":
+        embed.add_field(name="Vials:", value="Main <:vial:682205784524062730>: None\nBackup <:vial:682205784524062730>: None",
+                        inline=False)
+    elif run_title == "Oryx 3":
+        embed.add_field(name="Sword Rune", value="Main <:SwordRune:708191783405879378>: \nBackup <:SwordRune:708191783405879378>: ",
+                        inline=True)
+        embed.add_field(name="Shield Rune", value="Main <:ShieldRune:708191783674314814>: \nBackup <:ShieldRune:708191783674314814>: "
+                       , inline=True)
+        embed.add_field(name="Helm Rune", value="Main <:HelmRune:708191783825178674>: \nBackup <:HelmRune:708191783825178674>: ",
+                        inline=True)
     if run_title == "Realm Clearing":
         embed.add_field(name="Cleared Numbers:", value="`[None]`")
-    embed.add_field(name="Nitro Boosters with location:", value=f"`None`", inline=False)
     embed.set_footer(text="AFK Check started ")
     embed.timestamp = datetime.utcnow()
     return embed
 
 
+def fame_train_afk(user, vc, world_num):
+    embed=discord.Embed(title=f"World {world_num}", description="Join the train channel and react with <:fame:682209281722024044> "
+                        "to not be moved out.\nTo indicate your class or gear choices, react with <:sorcerer:682214487490560010>"
+                        "<:necromancer:682214503106215966><:sseal:683815374403141651><:puri:682205769973760001>\nIf you are Nitro Boosting "
+                        "the server, react to <:nitro:706246225200152656>\nTo end the fame train as a conductor, react to :x:",
+                        url=world_move_urls(world_num), color=discord.Color.orange())
+    embed.set_author(name=f"Fame Train started by {user.display_name} in {vc.name}", icon_url=user.avatar_url)
+    embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/679309966128971797/696452960825376788/fame2.png")
+    embed.set_footer(text="Trainers Accounted for: 1")
+    embed.timestamp = datetime.utcnow()
+    return embed
+
+def world_move_urls(num):
+    return "https://cdn.discordapp.com/attachments/705911989334966362/710364667364638730/W12_Pfeil_gif.gif" if num == 12 \
+    else "https://cdn.discordapp.com/attachments/705911989334966362/710362677997862952/W10_pfeil_gif.gif" if num == 10 \
+    else "https://cdn.discordapp.com/attachments/705911989334966362/706960033728036944/Weg_Gif_Pfeil.gif" if num == 3 \
+    else "https://cdn.discordapp.com/attachments/705911989334966362/710360114346983424/W1_Pfeil_gif.gif"
 # CASINO
 
 def roulette_help_embed():
     embed = discord.Embed(title="Roulette", color=discord.Color.orange()).add_field(name="Bet Types",
                                                                                     value="black/red/green/high/low/even/odd, 0-36", inline=False)\
         .add_field(
-        name="Winnings", value="**Black/Red** - x2\n**Green** - x14\n**0-36** - x35\n**High/Low** - x2\n**Even/Odd** - x2", inline=False).add_field(
+        name="Winnings", value="**Black/Red** - x2\n**Green** - x14\n**1-36** - x35\n**High/Low** - x2\n**Even/Odd** - x2", inline=False).add_field(
         name="Numbers",
         value="Green: **0, 0** (2x the chance)\nBlack: **2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35**\n"
               "Red: **1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36**\nLow: **1-18**\nHigh: **19-36**", inline=False).add_field(
         name="Usage", value="!roulette [bet_type] [bet]", inline=False)
+    return embed
+
+
+def dungeon_select():
+    embed = discord.Embed(title="Dungeon Selection", description="Please select a dungeon type by typing the number corresponding to the "
+                                                                 "dungeon for which you would like to start a raid.",
+                          color=discord.Color.orange())
+    dungeons = utils.dungeon_info()
+    endgame = ""
+    realmrelated = ""
+    midtier = ""
+    lowtier = ""
+    other = ""
+    mini = ""
+    for i, d in enumerate(dungeons.values(), 1):
+        if i < 8:
+            endgame += f"`({i})` {d[1][0]} {d[0]}\n"
+        elif i < 17:
+            realmrelated += f"`({i})` {d[1][0]} {d[0]}\n"
+        elif i < 27:
+            midtier += f"`({i})` {d[1][0]} {d[0]}\n"
+        elif i < 37:
+            lowtier += f"`({i})` {d[1][0]} {d[0]}\n"
+        elif i < 45:
+            other += f"`({i})` {d[1][0]} {d[0]}\n"
+        else:
+            mini += f"`({i})` {d[1][0]} {d[0]}\n"
+
+    embed.add_field(name="Endgame Dungeons", value=endgame, inline=True)
+    embed.add_field(name="Realm-Related Dungeons", value=realmrelated, inline=True)
+    embed.add_field(name="Mid-Tier Dungeons", value=midtier, inline=True)
+    embed.add_field(name="Low-Tier Dungeons", value=lowtier, inline=True)
+    embed.add_field(name="Misc. Dungeons", value=other, inline=True)
+    embed.add_field(name="Mini Dungeons", value=mini, inline=True)
     return embed
