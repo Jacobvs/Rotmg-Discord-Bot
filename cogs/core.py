@@ -4,10 +4,10 @@ from datetime import datetime, timedelta
 import discord
 from discord.ext import commands
 
-from sql import get_guild, get_user, add_new_guild, usr_cols, gld_cols
 from checks import is_role_or_higher
 from cogs import verification, raiding, moderation
 from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification, subverify_react_handler
+from sql import get_guild, get_user, add_new_guild, usr_cols, gld_cols
 
 states = {}
 rcstates = {}
@@ -20,8 +20,6 @@ class Core(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.start_time = datetime.now()
-        with open('data/variables.json', 'r') as file:
-            self.variables = json.load(file)
 
 
     @commands.command(usage="!uptime")
@@ -31,6 +29,11 @@ class Core(commands.Cog):
         uptime_seconds = round((datetime.now() - self.start_time).total_seconds())
         await ctx.send(f"Current Uptime: {'{:0>8}'.format(str(timedelta(seconds=uptime_seconds)))}")
 
+
+    @commands.command(usage="!rolecount <role>")
+    async def rolecount(self, ctx, role: discord.Role):
+        embed = discord.Embed(color=role.color).add_field(name=f"Members in {role.name}", value=str(len(role.members)))
+        await ctx.send(embed=embed)
 
     # Event listeners
     @commands.Cog.listener()
@@ -64,7 +67,7 @@ class Core(commands.Cog):
             # If DM is a command
             if message.content[0] == '!':
                 # TODO: implement proper checks
-                if message.author.id not in self.variables.get('allowed_user_ids'):
+                if message.author.id not in self.client.variables.get('allowed_user_ids'):
                     await message.author.send('You do not have the permissions to use this command.')
                 return
 
@@ -114,7 +117,7 @@ class Core(commands.Cog):
             for y in self.client.walk_commands():
                 if not y.cog_name and not y.hidden:
                     cmds_desc += ('{} - {}'.format(y.usage, y.help) + '\n')
-            halp.add_field(name='Uncatergorized Commands', value=cmds_desc[0:len(cmds_desc) - 1], inline=False)
+            halp.add_field(name='Developer Commands', value=cmds_desc[0:len(cmds_desc) - 1], inline=False)
             await ctx.send('', embed=halp)
         else:
             if len(cog) > 1:
@@ -164,7 +167,7 @@ class Core(commands.Cog):
                     str(payload.emoji) == '✅' or str(payload.emoji) == '❌'):  # handles subverification 2
                 return await subverify_react_handler(Verification(self.client), payload, 2, guild_data, user, guild, subverify_2_msg_id)
             elif payload.channel_id in [guild_data[gld_cols.raidhc1], guild_data[gld_cols.raidhc2], guild_data[gld_cols.raidhc3],
-                                        guild_data[gld_cols.vethcid]]:  # handles raiding emoji reactions
+                                        guild_data[gld_cols.vethc1]]:  # handles raiding emoji reactions
                 if str(payload.emoji) == '❌' and await is_role_or_higher(guild.get_member(user.id), guild, guild_data[gld_cols.rlroleid]):
                     #from cogs.raiding import end_afk_check
                     return await raiding.end_afk_check(self.client.pool, guild.get_member(user.id), guild, False)

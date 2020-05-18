@@ -226,7 +226,7 @@ class Music(commands.Cog):
             return "The play queue is empty."
 
 
-    @commands.command(aliases=["cq", "clear"], usage="!clearqueue")
+    @commands.command(aliases=["clear"], usage="!clearqueue")
     @commands.guild_only()
     @commands.check_any(is_dj, is_bot_owner)
     @commands.check(audio_playing)

@@ -57,7 +57,8 @@ class RussianRoulette:
             except asyncio.TimeoutError as e:
                 if len(self.players) == 1:
                     self.task.cancel()
-                    casino.players_in_game.remove(self.player1.id)
+                    if self.player1.id in casino.players_in_game:  ##Temp bugfix for players not appending properly
+                        casino.players_in_game.remove(self.player1.id)
                     await self.game_msg.edit(embed=self.cancelembed)
                     return await self.game_msg.clear_reactions()
                 else:
@@ -69,7 +70,8 @@ class RussianRoulette:
             if str(reaction.emoji) == "▶":
                 if len(self.players) == 1:
                     self.task.cancel()
-                    casino.players_in_game.remove(self.player1.id)
+                    if self.player1.id in casino.players_in_game:  ##Temp bugfix for players not appending properly
+                        casino.players_in_game.remove(self.player1.id)
                     await self.game_msg.edit(embed=self.cancelembed)
                     return await self.game_msg.clear_reactions()
                 else:

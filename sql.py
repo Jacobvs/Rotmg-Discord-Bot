@@ -21,17 +21,6 @@ async def get_num_verified(pool):
             await conn.commit()
             return data
 
-
-async def get_guild(pool, uid):
-    """Return guild data from rotmg.guilds"""
-    async with pool.acquire() as conn:
-        async with conn.cursor() as cursor:
-            await cursor.execute("SELECT * from rotmg.guilds WHERE id = {}".format(uid))
-            data = await cursor.fetchone()
-            await conn.commit()
-            return data
-
-
 async def ign_exists(pool, ign, id):
     """Check if an IGN has been entered into the user table already"""
     async with pool.acquire() as conn:
@@ -91,6 +80,41 @@ async def update_guild(pool, id, column, change):
             await cursor.execute(sql, (change,))
             await conn.commit()
 
+async def get_guild(pool, uid):
+    """Return guild data from rotmg.guilds"""
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute("SELECT * from rotmg.guilds WHERE id = {}".format(uid))
+            data = await cursor.fetchone()
+            await conn.commit()
+            return data
+
+async def get_all_guilds(pool):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute("SELECT * from rotmg.guilds")
+            data = await cursor.fetchall()
+            await conn.commit()
+            return data
+
+
+async def construct_guild_database(pool, client):
+    guilds = await get_all_guilds(pool)
+    guild_db = {}
+    for i, g in enumerate(guilds):
+        db = {}
+        guild = client.get_guild(g[0])
+        if guild:
+            for j, r in enumerate(g):
+                if r:
+                    if j in gdb_channels:
+                        db[j] = guild.get_channel(r)
+                    elif j in gdb_roles:
+                        db[j] = guild.get_role(r)
+                    else:
+                        db[j] = r
+            guild_db[g[0]] = db
+    return guild_db
 
 # CASINO Functions
 
@@ -119,15 +143,14 @@ async def change_balance(pool, guild_id, id, new_bal):
             await cursor.execute(f"SELECT * FROM rotmg.casino_top where guildid = {guild_id}")
             data = list(await cursor.fetchone())
             leaderboard_size = 10
-            if bals[-1] < new_bal:
+            if data[-1] <= new_bal:
                 # Split the data out into relevant parts
                 g_id = data[0]
                 data = data[1:]
                 uids = data[::2]
                 bals = data[1::2]
                 # Build balance uid pairs
-                data = [(u, b) for u, b in zip(uids, bals)]
-
+                data = [[u, b] for u, b in zip(uids, bals)]
                 uid_loc = None
 
                 # Index throws up when not found
@@ -148,7 +171,7 @@ async def change_balance(pool, guild_id, id, new_bal):
 
                 # Append so data is 10 long
                 if len(data) < leaderboard_size:
-                    data = [*data, *[(None, 0)]  * (leaderboard_size - len(data))]
+                    data = [*data, *[[None, 0]] * (leaderboard_size - len(data))]
                 # Chop to 10
                 data = data[:leaderboard_size]
 
@@ -161,13 +184,33 @@ async def change_balance(pool, guild_id, id, new_bal):
                 write_data[1::2] = [pair[1] for pair in data]
 
                 # Add guild id to front
-                write_data = [g_id, *data]
+                write_data = [g_id, *write_data]
                 # Write to database
                 await cursor.execute("REPLACE INTO rotmg.casino_top (guildid, 1_id, 1_bal, 2_id, 2_bal, 3_id, 3_bal, 4_id, 4_bal, 5_id, "
                                      "5_bal, 6_id, 6_bal, 7_id, 7_bal, 8_id, 8_bal, 9_id, 9_bal, 10_id, 10_bal) "
                                      "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", write_data)
+
+            elif id in data and new_bal < data[-1]:
+                # Index throws up when not found
+                uid_loc = None
+                try:
+                    uid_loc = data.index(id)
+                except:
+                    pass
+
+                if uid_loc:
+                    del data[uid_loc]
+                    del data[uid_loc]
+                    data.append(None)
+                    data.append(0)
+                    await cursor.execute(
+                        "REPLACE INTO rotmg.casino_top (guildid, 1_id, 1_bal, 2_id, 2_bal, 3_id, 3_bal, 4_id, 4_bal, 5_id, "
+                        "5_bal, 6_id, 6_bal, 7_id, 7_bal, 8_id, 8_bal, 9_id, 9_bal, 10_id, 10_bal) "
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", data)
+
             await cursor.execute(f"UPDATE rotmg.casino SET balance = {new_bal} WHERE id = {id}")
             await conn.commit()
+
 
 async def update_cooldown(pool, id, column):
     async with pool.acquire() as conn:
@@ -182,6 +225,9 @@ async def update_cooldown(pool, id, column):
             elif column == 4:
                 column = "searchcooldown"
                 time = time + timedelta(minutes=30)
+            elif column == 5:
+                column = "stealcooldown"
+                time = time + timedelta(hours=8)
             else:
                 return
             time = time.strftime('%Y-%m-%d %H:%M:%S')
@@ -203,6 +249,7 @@ class casino_cols(enum.IntEnum):
     dailycooldown = 2
     workcooldown = 3
     searchcooldown = 4
+    stealcooldown = 5
 
 
 class usr_cols(enum.IntEnum):
@@ -216,6 +263,8 @@ class usr_cols(enum.IntEnum):
     verifiedguilds = 6  # String (CSV)
 
 
+gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42]
+gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37]
 class gld_cols(enum.IntEnum):
     """Contains References to rotmg.guilds table for easy access"""
     id = 0  # Int
@@ -238,8 +287,8 @@ class gld_cols(enum.IntEnum):
     raidvc2 = 17
     raidvc3 = 18
     rlroleid = 19
-    vethcid = 20
-    vetvcid = 21
+    vethc1 = 20
+    vetvc1 = 21
     vetroleid = 22
     vetrlroleid = 23
     creationmonths = 24
@@ -251,3 +300,13 @@ class gld_cols(enum.IntEnum):
     subverify2name = 30
     subverify2roleid = 31
     mmroleid = 32
+    raidcommandschannel = 33
+    vetcommandschannel = 34
+    vethc2 = 35
+    vetvc2 = 36
+    eventrlid = 37
+    eventcommandschannel = 38
+    eventhc1 = 39
+    eventvc1 = 40
+    eventhc2 = 41
+    eventvc2 = 42
