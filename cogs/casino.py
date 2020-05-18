@@ -11,6 +11,7 @@ from cogs.Minigames.blackjack import Blackjack
 from cogs.Minigames.coinflip import Coinflip
 from cogs.Minigames.roulette import Roulette
 from cogs.Minigames.russianroulette import RussianRoulette
+from cogs.Minigames.slots import Slots
 
 players_in_game = []
 
@@ -49,6 +50,7 @@ class Casino(commands.Cog):
 
     @commands.command(usage="!roulette [bet_type] [bet]")
     async def roulette(self, ctx, bet_type: str=None, bet: int=None):
+        """A classic game of roulette"""
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -70,6 +72,32 @@ class Casino(commands.Cog):
                 return await ctx.send(f"You don't have enough credits! Available balance: {balance}")
 
             game = Roulette(ctx, self.client, bet, ctx.author, balance, bet_type)
+        else:
+            return await ctx.send("You have to bet more than 0 credits on this game!", delete_after=10)
+        players_in_game.append(ctx.author.id)
+        await game.play()
+        players_in_game.remove(ctx.author.id)
+
+
+    @commands.command(usage="!slots [bet]", aliases=['slot'])
+    async def slots(self, ctx, bet: int = None):
+        """Test your luck on the slot machine"""
+        try:
+            await ctx.message.delete()
+        except discord.NotFound:
+            pass
+        if not bet:
+            return await ctx.send(embed=embeds.slots_help_embed())
+        if ctx.author.id in players_in_game:
+            return await ctx.send("You're already in a game! "
+                                  "Finish that game or wait for it to expire to start a new one.", delete_after=10)
+        if bet > 0:
+            data = await sql.get_casino_player(self.client.pool, ctx.author.id)
+            balance = data[sql.casino_cols.balance]
+            if balance < bet:
+                return await ctx.send(f"You don't have enough credits! Available balance: {balance}")
+
+            game = Slots(self.client, ctx, bet, ctx.author, balance)
         else:
             return await ctx.send("You have to bet more than 0 credits on this game!", delete_after=10)
         players_in_game.append(ctx.author.id)

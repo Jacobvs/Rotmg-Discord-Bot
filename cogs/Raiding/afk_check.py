@@ -198,16 +198,17 @@ class AfkCheck:
         self.afkmsg = await self.hcchannel.send(f"@here `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} "
                                                 f"in {self.vcchannel.name}", embed=embeds.
                                                 afk_check_base(self.dungeontitle, self.ctx.author, True, self.emojis, dungeon_info[2]))
-        for emoji in self.emojis:
-            await self.afkmsg.add_reaction(emoji)
-        await self.afkmsg.add_reaction('<:shard:682365548465487965>')
-        await self.afkmsg.add_reaction('❌')
+        # for emoji in self.emojis:
+        #     await self.afkmsg.add_reaction(emoji)
+
+        asyncio.get_event_loop().create_task(self.add_emojis())
 
         cp = embeds.afk_check_control_panel(self.afkmsg.jump_url, self.location, self.dungeontitle, self.emojis[1], True)
         self.cpmsg = await self.ctx.send(embed=cp)
 
         starttime = datetime.utcnow()
         timeleft = 300 # 300 seconds = 5 mins
+
         while True:
             def check(react, usr):
                 return not usr.bot and react.message.id == self.afkmsg.id or (not react.message.guild and str(react.emoji) == '👍')
@@ -234,7 +235,7 @@ class AfkCheck:
             elif reaction.emoji == "❌" and user.top_role >= self.rlrole:
                 return await self.end_afk(False, user)
             elif str(reaction.emoji) == self.emojis[1]:
-                if uid not in self.keyreacts and uid not in self.potentialkeys:
+                if uid not in self.keyreacts and uid not in self.potentialkeys and reaction.message.guild:
                     if len(self.keyreacts) == 2:
                         await user.send("There are already enough keys for this run. Wait until the next run to use yours.")
                     else:
@@ -399,3 +400,10 @@ class AfkCheck:
             vc_name = vc_name.split(" <")[0]
             await self.vcchannel.edit(name=vc_name)
         await self.vcchannel.set_permissions(self.raiderrole, connect=False, view_channel=True, speak=False)
+
+
+    async def add_emojis(self):
+        for e in self.emojis:
+            await self.afkmsg.add_reaction(e)
+        await self.afkmsg.add_reaction('<:shard:682365548465487965>')
+        await self.afkmsg.add_reaction('❌')

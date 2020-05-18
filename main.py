@@ -32,7 +32,7 @@ def get_prefix(client, message):
     return prefixes[str(message.guild.id)]
 
 
-bot = commands.Bot(command_prefix=get_prefix)
+bot = commands.Bot(command_prefix='!')
 bot.remove_command('help')
 bot.owner_id = 196282885601361920
 with open('data/variables.json', 'r') as file:

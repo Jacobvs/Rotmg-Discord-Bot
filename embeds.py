@@ -271,6 +271,19 @@ def roulette_help_embed():
         name="Usage", value="!roulette [bet_type] [bet]", inline=False)
     return embed
 
+def slots_help_embed():
+    embed = discord.Embed(title="Slots", color=discord.Color.orange()).add_field(name="Info", value="Roll the slot machine and watch the "
+                        "credits pour in!\nTo win, match three symbols in the middle row.", inline=False)\
+                        .add_field(name="Winnings", value=":lemon: Lemon - **2x**\n:watermelon: Melon - **5x**\n:banana: Banana - **10x**"
+                                                          "\n:cherries: Cherry - **20x**\n:gem: Diamond - **40x**\n"
+                                                          "<:slot7:711843601369530458> 7's - **100x**", inline=False)\
+                        .add_field(name="Odds", value=":x: Lose - **73%** (Tickets 1-729)\n:lemon: Lemon - **10%** (730-829)"
+                                                      "\n:watermelon: Melon - **7%** (830-899)\n:banana: Banana - **5%** (900-949)"
+                                                          "\n:cherries: Cherry - **3%** (950-979)\n:gem: Diamond - **1.5%** (980-994)\n"
+                                                          "<:slot7:711843601369530458> 7's - **0.5%** (995-1000)", inline=False)\
+                        .add_field(name="Usage", value="!slots <bet>", inline=False)
+    return embed
+
 
 def dungeon_select():
     embed = discord.Embed(title="Dungeon Selection", description="Please select a dungeon type by typing the number corresponding to the "
