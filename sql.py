@@ -221,7 +221,7 @@ async def update_cooldown(pool, id, column):
                 time = time + timedelta(days=1)
             elif column == 3:
                 column = "workcooldown"
-                time = time + timedelta(hours=8)
+                time = time + timedelta(hours=4)
             elif column == 4:
                 column = "searchcooldown"
                 time = time + timedelta(minutes=30)

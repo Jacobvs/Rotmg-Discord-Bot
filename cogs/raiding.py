@@ -24,8 +24,12 @@ class Raiding(commands.Cog):
     async def afk(self, ctx, *, location):
         """Starts an AFK check for the type of run specified. \nValid channel types are: ```1, 2, 3,
         vet/veteran```Valid run types are: ```realmclear, fametrain, void, fskipvoid, cult, nest``` """
+        if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
+            return await ctx.send("You cannot start another AFK while an AFK check is still up.")
+        self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
         afk = AfkCheck(self.client, ctx, location)
         await afk.start()
+        self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
 
     @commands.command(usage="!headcount [type of run] [hc_channel_num]", aliases=["hc"])
@@ -78,15 +82,23 @@ class Raiding(commands.Cog):
     @commands.guild_only()
     @commands.check(is_rl_or_higher_check)
     async def fametrain(self, ctx, *, location):
+        if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
+            return await ctx.send("You cannot start another AFK while an AFK check is still up.")
+        self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
         ft = FameTrain(self.client, ctx, location)
         await ft.start()
+        self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
     @commands.command(usage="!realmclear [location]", aliases=["rc"])
     @commands.guild_only()
     @commands.check(is_rl_or_higher_check)
     async def realmclear(self, ctx, *, location):  #world_num, channel="1", *location):
+        if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
+            return await ctx.send("You cannot start another AFK while an AFK check is still up.")
+        self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
         rc = RealmClear(self.client, ctx, location)
         await rc.start()
+        self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
     @commands.command(usage="!markmap/mm [number(s)]", aliases=["mm"])
     # @commands.cooldown(1, 70, commands.BucketType.guild)
@@ -94,7 +106,7 @@ class Raiding(commands.Cog):
     @commands.check(is_mm_or_higher_check)
     async def markmap(self, ctx, *numbers):
         await ctx.message.delete()
-        if ctx.author.id in self.client.mapmarkers.keys():
+        if ctx.author.id in self.client.mapmarkers:
             rc = self.client.mapmarkers[ctx.author.id]
             if rc:
                 await rc.markmap(ctx, False, numbers)
@@ -109,7 +121,7 @@ class Raiding(commands.Cog):
     @commands.check(is_mm_or_higher_check)
     async def unmarkmap(self, ctx, *numbers):
         await ctx.message.delete()
-        if ctx.author.id in self.client.mapmarkers.keys():
+        if ctx.author.id in self.client.mapmarkers:
             rc = self.client.mapmarkers[ctx.author.id]
             if rc:
                 await rc.markmap(ctx, True, numbers)
@@ -124,7 +136,7 @@ class Raiding(commands.Cog):
     @commands.check(is_mm_or_higher_check)
     async def eventspawn(self, ctx, event):
         await ctx.message.delete()
-        if ctx.author.id in self.client.mapmarkers.keys():
+        if ctx.author.id in self.client.mapmarkers:
             rc = self.client.mapmarkers[ctx.author.id]
             if rc:
                 await rc.eventspawn(ctx, False, event)
@@ -139,7 +151,7 @@ class Raiding(commands.Cog):
     @commands.check(is_mm_or_higher_check)
     async def uneventspawn(self, ctx, event):
         await ctx.message.delete()
-        if ctx.author.id in self.client.mapmarkers.keys():
+        if ctx.author.id in self.client.mapmarkers:
             rc = self.client.mapmarkers[ctx.author.id]
             if rc:
                 await rc.eventspawn(ctx, True, event)

@@ -48,7 +48,7 @@ class Casino(commands.Cog):
         await game.play()
         players_in_game.remove(ctx.author.id)
 
-    @commands.command(usage="!roulette [bet_type] [bet]")
+    @commands.command(usage="!roulette [bet_type] [bet]", aliases=['r'])
     async def roulette(self, ctx, bet_type: str=None, bet: int=None):
         """A classic game of roulette"""
         try:
@@ -79,7 +79,7 @@ class Casino(commands.Cog):
         players_in_game.remove(ctx.author.id)
 
 
-    @commands.command(usage="!slots [bet]", aliases=['slot'])
+    @commands.command(usage="!slots [bet]", aliases=['slot', 's'])
     async def slots(self, ctx, bet: int = None):
         """Test your luck on the slot machine"""
         try:
@@ -114,6 +114,9 @@ class Casino(commands.Cog):
         if ctx.author.id in players_in_game:
             return await ctx.send("You're already in a game! "
                                   "Finish that game or wait for it to expire to start a new one.", delete_after=10)
+        if member.id in players_in_game:
+            return await ctx.send(f"{member.mention} is in a game. Wait for them to finish their game before starting a new one!",
+                                  delete_after=10)
         if member.bot or member == ctx.author:
             raise commands.BadArgument('Cannot play a game against that member.')
         if bet > 0:

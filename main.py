@@ -47,8 +47,8 @@ async def on_ready():
     bot.guild_db = await sql.construct_guild_database(bot.pool, bot)
     bot.raid_db = {}
     bot.mapmarkers = {}
-    for g in bot.guild_db.keys():
-        bot.raid_db[g] = {"raiding":{0:None, 1:None, 2:None}, "vet":{0:None, 1:None}, "events":{0:None, 1:None}}
+    for g in bot.guild_db:
+        bot.raid_db[g] = {"raiding":{0:None, 1:None, 2:None}, "vet":{0:None, 1:None}, "events":{0:None, 1:None}, "leaders": []}
     await bot.change_presence(status=discord.Status.online, activity=discord.Game("boooga."))
     print(f'{bot.user.name} has connected to Discord!')
 
@@ -97,7 +97,9 @@ async def maintenance(ctx):
     with open("data/variables.json", 'r+') as f:
         data = json.load(f)
         data["maintenance_mode"] = bot.maintenance_mode
+        f.seek(0)
         json.dump(data, f)
+        f.truncate()
 
 for filename in os.listdir('./cogs/'):
     if filename.endswith('.py'):

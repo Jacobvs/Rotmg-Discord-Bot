@@ -31,8 +31,7 @@ class RealmClear:
         self.invet = False
         self.inevents = False
         self.markers = []
-        self.markers.append(ctx.author.mention)
-        self.client.mapmarkers[ctx.author.id] = self
+        self.markers.append(ctx.author.id)
         self.guild_db = self.client.guild_db.get(self.ctx.guild.id)
         self.raiderids = []
         self.raiderids.append(ctx.author.id)
@@ -52,6 +51,7 @@ class RealmClear:
 
 
     async def start(self):
+        self.client.mapmarkers[self.ctx.author.id] = self
         await self.ctx.message.delete()
 
         if self.ctx.channel == self.guild_db.get(sql.gld_cols.raidcommandschannel):
@@ -205,7 +205,7 @@ class RealmClear:
                                   "persists – contact the developer.", delete_after=10)
 
         cp = embeds.afk_check_control_panel(self.afkmsg.jump_url, self.location, "Realm Clearing", self.emojis[1], False)
-        cp.add_field(name="Markers", value=str(self.markers) + ".", inline=True)
+        cp.add_field(name="Markers", value="".join("<@"+str(m)+">" for m in self.markers)+".", inline=True)
         cp.add_field(name="Events Spawned:", value="No events currently spawned", inline=False)
         cp.set_image(url=img_data["secure_url"])
         self.cpmsg = await self.ctx.send("React with :pencil: to toggle map marking for this session",
@@ -242,14 +242,15 @@ class RealmClear:
             elif reaction.emoji == "❌" and user.top_role >= self.rlrole:
                 return await self.end_afk(False, user)
             elif reaction.message.id == self.cpmsg.id:
-                if user.mention in self.markers:
-                    del self.client.mapmarkers[user.id]
-                    self.markers.remove(user.mention)
+                if user.id in self.markers:
+                    if user.id in self.client.mapmarkers:
+                        del self.client.mapmarkers[user.id]
+                    self.markers.remove(user.id)
                 else:
                     self.client.mapmarkers[user.id] = self
-                    self.markers.append(user.mention)
+                    self.markers.append(user.id)
                 cp = self.cpmsg.embeds[0]
-                cp.set_field_at(3, name="Markers", value=str(self.markers)+".", inline=True)
+                cp.set_field_at(3, name="Markers", value="".join("<@"+str(m)+">" for m in self.markers)+".", inline=True)
                 await self.cpmsg.edit(embed=cp)
 
     async def end_afk(self, automatic: bool, ended:discord.Member=None):
@@ -294,12 +295,8 @@ class RealmClear:
         await self.vcchannel.set_permissions(self.raiderrole, connect=False, view_channel=True, speak=False)
 
         for m in self.markers:
-            print(m)
-            m = m.split("!")[1]
-            m = m.split(">")[0]
-            uid = int(m)
-            if uid in self.client.mapmarkers.keys():
-                del self.client.mapmarkers[uid]
+            if m in self.client.mapmarkers:
+                del self.client.mapmarkers[m]
 
     async def markmap(self, context, remove: bool, numbers):
         if not self.mapmsg:

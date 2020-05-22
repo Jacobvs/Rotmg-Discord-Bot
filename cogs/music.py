@@ -136,7 +136,7 @@ class Music(commands.Cog):
         await ctx.send(f"The volume has been set to: `{volume}`.")
 
 
-    @commands.command(aliases=["s"], usage="!skip")
+    @commands.command(usage="!skip")
     @commands.guild_only()
     @commands.check_any(is_dj, is_bot_owner)
     @commands.check(audio_playing)
