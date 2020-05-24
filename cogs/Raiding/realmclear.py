@@ -6,11 +6,11 @@ from datetime import datetime
 from difflib import get_close_matches
 
 import discord
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 
 import embeds
-import sql
 import utils
 
 
@@ -20,23 +20,25 @@ class RealmClear:
     emojis = ["<:defaultdungeon:682212333182910503>", "<:trickster:682214467483861023>", "<:Warrior_1:585616162407186433>",
               "<:ninja_3:585616162151202817>"]
 
-    def __init__(self, client, ctx, location):
+    def __init__(self, client, ctx, location, raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg):
         self.client = client
         self.ctx = ctx
         self.location = location
-        self.setting_up = True
-        self.world_chosen = False
-        self.channel_chosen = False
-        self.inraiding = False
-        self.invet = False
-        self.inevents = False
+        self.raidnum = raidnum
+        self.inraiding = inraiding
+        self.invet = invet
+        self.inevents = inevents
+        self.raiderrole = raiderrole
+        self.rlrole = rlrole
+        self.hcchannel = hcchannel
+        self.vcchannel = vcchannel
+        self.setup_msg = setup_msg
         self.markers = []
         self.markers.append(ctx.author.id)
         self.guild_db = self.client.guild_db.get(self.ctx.guild.id)
         self.raiderids = []
         self.raiderids.append(ctx.author.id)
         self.markednums = []
-        self.raidnum = 0
         self.events = {}
         self.nitroboosters = []
         with open("data/world_data_clean.json") as file:
@@ -48,127 +50,11 @@ class RealmClear:
         self.locationembed = discord.Embed(title="Realm Clearing AFK",
                                         description="Please choose what channel you'd like to start this afk check in.",
                                         color=discord.Color.green())
+        matplotlib.use('agg')
 
 
     async def start(self):
         self.client.mapmarkers[self.ctx.author.id] = self
-        await self.ctx.message.delete()
-
-        if self.ctx.channel == self.guild_db.get(sql.gld_cols.raidcommandschannel):
-            s = ""
-            emojis = []
-            one = self.guild_db.get(sql.gld_cols.raidvc1)
-            if one:
-                s += "1️⃣ - " + one.name + "\n"
-                emojis.append("1️⃣")
-            two = self.guild_db.get(sql.gld_cols.raidvc2)
-            if two:
-                s += "2️⃣ - " + two.name + "\n"
-                emojis.append("2️⃣")
-            three = self.guild_db.get(sql.gld_cols.raidvc3)
-            if three:
-                s += "3️⃣ - " + three.name + "\n"
-                emojis.append("3️⃣")
-            if one or two or three:
-                self.inraiding = True
-
-            self.locationembed.add_field(name="Available Channels:", value=s)
-            self.setup_msg = await self.ctx.send(embed=self.locationembed)
-            for e in emojis:
-                await self.setup_msg.add_reaction(e)
-        elif self.ctx.channel == self.guild_db.get(sql.gld_cols.vetcommandschannel):
-            s = ""
-            emojis = []
-            one = self.guild_db.get(sql.gld_cols.vetvc1)
-            if one:
-                s += "1️⃣ - " + one.name + "\n"
-                emojis.append("1️⃣")
-                self.invet = True
-            two = self.guild_db.get(sql.gld_cols.raidvc2)
-            if two:
-                s += "2️⃣ - " + two.name + "\n"
-                emojis.append("2️⃣")
-                self.invet = True
-            self.locationembed.add_field(name="Available Channels:", value=s)
-            self.setup_msg = await self.ctx.send(embed=self.locationembed)
-            for e in emojis:
-                await self.setup_msg.add_reaction(e)
-        elif self.ctx.channel == self.guild_db.get(sql.gld_cols.eventcommandschannel):
-            s = ""
-            emojis = []
-            one = self.guild_db.get(sql.gld_cols.eventvc1)
-            if one:
-                s += "1️⃣ - " + one.name + "\n"
-                emojis.append("1️⃣")
-                self.inevents = True
-            two = self.guild_db.get(sql.gld_cols.eventvc2)
-            if two:
-                s += "2️⃣ - " + two.name + "\n"
-                emojis.append("2️⃣")
-                self.inevents = True
-            self.locationembed.add_field(name="Available Channels:", value=s)
-            self.setup_msg = await self.ctx.send(embed=self.locationembed)
-            for e in emojis:
-                await self.setup_msg.add_reaction(e)
-        else:
-            return await self.ctx.send("You need to use this command in a proper bot-commands channel!", delete_after=5)
-
-        def location_check(react, usr):
-            return usr == self.ctx.author and react.message.id == self.setup_msg.id and react.emoji in ['1️⃣','2️⃣','3️⃣']
-
-        try:
-            reaction, user = await self.client.wait_for('reaction_add', timeout=60, check=location_check)
-        except asyncio.TimeoutError:
-            mapembed = discord.Embed(title="Timed out!", description="You didn't choose a channel in time!", color=discord.Color.red())
-            await self.setup_msg.clear_reactions()
-            return await self.setup_msg.edit(embed=mapembed)
-
-        if self.inraiding:
-            self.raiderrole = self.guild_db.get(sql.gld_cols.verifiedroleid)
-            self.rlrole = self.guild_db.get(sql.gld_cols.rlroleid)
-            if reaction.emoji == "1️⃣":
-                self.raidnum = 0
-                self.hcchannel = self.guild_db.get(sql.gld_cols.raidhc1)
-                self.vcchannel = self.guild_db.get(sql.gld_cols.raidvc1)
-                self.client.raid_db[self.ctx.guild.id]["raiding"][0] = self
-            elif reaction.emoji == "2️⃣":
-                self.raidnum = 1
-                self.hcchannel = self.guild_db.get(sql.gld_cols.raidhc2)
-                self.vcchannel = self.guild_db.get(sql.gld_cols.raidvc2)
-                self.client.raid_db[self.ctx.guild.id]["raiding"][1] = self
-            else:
-                self.raidnum = 2
-                self.hcchannel = self.guild_db.get(sql.gld_cols.raidhc3)
-                self.vcchannel = self.guild_db.get(sql.gld_cols.raidvc3)
-                self.client.raid_db[self.ctx.guild.id]["raiding"][2] = self
-        elif self.invet:
-            self.raiderrole = self.guild_db.get(sql.gld_cols.vetroleid)
-            self.rlrole = self.guild_db.get(sql.gld_cols.vetrlroleid)
-            if reaction.emoji == "1️⃣":
-                self.raidnum = 0
-                self.hcchannel = self.guild_db.get(sql.gld_cols.vethc1)
-                self.vcchannel = self.guild_db.get(sql.gld_cols.vetvc1)
-                self.client.raid_db[self.ctx.guild.id]["vet"][0] = self
-            elif reaction.emoji == "2️⃣":
-                self.raidnum = 1
-                self.hcchannel = self.guild_db.get(sql.gld_cols.vethc2)
-                self.vcchannel = self.guild_db.get(sql.gld_cols.vetvc2)
-                self.client.raid_db[self.ctx.guild.id]["vet"][1] = self
-        elif self.inevents:
-            self.raiderrole = self.guild_db.get(sql.gld_cols.verifiedroleid)
-            self.rlrole = self.guild_db.get(sql.gld_cols.eventrlid)
-            if reaction.emoji == "1️⃣":
-                self.raidnum = 0
-                self.hcchannel = self.guild_db.get(sql.gld_cols.eventhc1)
-                self.vcchannel = self.guild_db.get(sql.gld_cols.eventvc1)
-                self.client.raid_db[self.ctx.guild.id]["events"][0] = self
-            elif reaction.emoji == "2️⃣":
-                self.raidnum = 1
-                self.hcchannel = self.guild_db.get(sql.gld_cols.eventhc2)
-                self.vcchannel = self.guild_db.get(sql.gld_cols.eventvc2)
-                self.client.raid_db[self.ctx.guild.id]["events"][1] = self
-
-        await self.setup_msg.clear_reactions()
         await self.setup_msg.edit(embed=self.worldembed)
         for r in self.numbers:
             await self.setup_msg.add_reaction(r)
@@ -190,10 +76,11 @@ class RealmClear:
         if " <-- Join!" not in self.vcchannel.name:
             await self.vcchannel.edit(name=self.vcchannel.name + " <-- Join!")
         await self.vcchannel.set_permissions(self.raiderrole, connect=True, view_channel=True, speak=False)
-
+        embed = embeds.afk_check_base("Realm Clearing", self.ctx.author, False, self.emojis)
+        embed.color = discord.Color.gold()
         self.afkmsg = await self.hcchannel.send(f"@here `Realm Clearing` {self.emojis[0]} started by {self.ctx.author.mention} "
-                                                f"in {self.vcchannel.name}",
-                                                embed=embeds.afk_check_base("Realm Clearing", self.ctx.author, False, self.emojis))
+                                                f"in {self.vcchannel.name}", embed=embed)
+
         for emoji in self.emojis:
             await self.afkmsg.add_reaction(emoji)
         await self.afkmsg.add_reaction('<:shard:682365548465487965>')
@@ -268,6 +155,7 @@ class RealmClear:
                             f"This realm clearing ran with {len(self.raiderids)} members\n{len(self.markednums)} spawns were cleared & " \
                             f"{len(self.events)} events spawned."
         embed.set_footer(text="Clearing ended at")
+        embed.set_thumbnail(url="https://www.realmeye.com/forum/uploads/default/original/1X/842ee5c4e569c7b7c1b0bf688e465a7435235fc8.png")
         embed.timestamp = datetime.utcnow()
         await self.afkmsg.edit(content="", embed=embed)
         if self.inraiding:
@@ -323,19 +211,9 @@ class RealmClear:
         if len(badnumbers) >= 1:
             await self.ctx.send(f"Some of the numbers provided were out of range or already cleared. Bad numbers: `{badnumbers}`",
                            delete_after=5)
-        img = plt.imread(f"world-maps/world_{self.world_num}.jpg")
-        fig, ax = plt.subplots(1)
-        ax.set_aspect('equal')
-        ax.axis("off")
-        ax.imshow(img)
-        for n in self.markednums:
-            point = self.world_data[str(n - 1)]
-            circ = Circle((point["x"] / 2, point["y"] / 2), 14, color='#0000FFAA')
-            ax.add_patch(circ)
-        file = io.BytesIO()
-        plt.savefig(file, transparent=True, bbox_inches='tight', pad_inches=0, format='jpg', dpi=300)
-        plt.close()
-        file.seek(0)
+        if len(numbers) == len(badnumbers):
+            return
+        file = await asyncio.get_event_loop().run_in_executor(None, self.mark_nums)
         spawns_left = (limit + 1) - len(self.markednums)
         percent = len(self.markednums) / (limit + 1)
         embed = self.cpmsg.embeds[0]
@@ -354,6 +232,22 @@ class RealmClear:
         embed = self.cpmsg.embeds[0]
         embed.set_image(url=img_data["secure_url"])
         await self.cpmsg.edit(embed=embed)
+
+    def mark_nums(self):
+        img = plt.imread(f"world-maps/world_{self.world_num}.jpg")
+        fig, ax = plt.subplots(1)
+        ax.set_aspect('equal')
+        ax.axis("off")
+        ax.imshow(img)
+        for n in self.markednums:
+            point = self.world_data[str(n - 1)]
+            circ = Circle((point["x"] / 2, point["y"] / 2), 14, color='#0000FFAA')
+            ax.add_patch(circ)
+        file = io.BytesIO()
+        plt.savefig(file, transparent=True, bbox_inches='tight', pad_inches=0, format='jpg', dpi=300)
+        plt.close()
+        file.seek(0)
+        return file
 
     async def eventspawn(self, context, remove: bool, event):
         fixed_event = self.event_type(event)

@@ -27,13 +27,13 @@ class Slots:
         self.ticket = random.randint(1, 1001)
         self.board = self.rand_board()
         self.mult = 0
-        if self.ticket > 779:
+        if self.ticket > 799:
             self.winner = True
             num = 0 if self.ticket < 900 else 1 if self.ticket < 940 else 2 if self.ticket < 970 else 3 if self.ticket < 985 \
                 else 4 if self.ticket < 995 else 5
             self.winnerE = self.emojis[num]
             self.row = [self.winnerE, self.winnerE, self.winnerE]
-            self.mult = 1 if self.ticket < 900 else 2 if self.ticket < 940 else 4 if self.ticket < 970 else 14 if self.ticket < 985 else \
+            self.mult = 1 if self.ticket < 900 else 2 if self.ticket < 940 else 4 if self.ticket < 970 else 9 if self.ticket < 985 else \
                 39 if self.ticket < 995 else 99
             self.winA = int(self.bet*self.mult)
         else:

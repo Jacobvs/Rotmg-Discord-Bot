@@ -1,14 +1,12 @@
-from difflib import get_close_matches
-
 import discord
 from discord.ext import commands
 
-import embeds
 from checks import is_rl_or_higher_check, is_mm_or_higher_check
 from cogs.Raiding.afk_check import AfkCheck
 from cogs.Raiding.fametrain import FameTrain
+from cogs.Raiding.headcount import Headcount
 from cogs.Raiding.realmclear import RealmClear
-from sql import gld_cols, get_guild
+from cogs.Raiding.vc_select import VCSelect
 
 
 class Raiding(commands.Cog):
@@ -22,61 +20,73 @@ class Raiding(commands.Cog):
     @commands.check(is_rl_or_higher_check)
     # TODO: add check that guild has no running afk up
     async def afk(self, ctx, *, location):
-        """Starts an AFK check for the type of run specified. \nValid channel types are: ```1, 2, 3,
-        vet/veteran```Valid run types are: ```realmclear, fametrain, void, fskipvoid, cult, nest``` """
+        """Starts an AFK check for the location specified."""
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             return await ctx.send("You cannot start another AFK while an AFK check is still up.")
         self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
-        afk = AfkCheck(self.client, ctx, location)
+        setup = VCSelect(self.client, ctx)
+        data = await setup.start()
+        if data:
+            (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+        else:
+            return
+        afk = AfkCheck(self.client, ctx, location, raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg)
         await afk.start()
         self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
 
-    @commands.command(usage="!headcount [type of run] [hc_channel_num]", aliases=["hc"])
+    @commands.command(usage="!headcount", aliases=["hc"])
     @commands.guild_only()
     @commands.check(is_rl_or_higher_check)
-    async def headcount(self, ctx, run_type, hc_channel_num='1'):
-        """Starts a headcount for the type of run specified. Valid run types are: ```realmclear, fametrain, void, fskipvoid, cult, nest``` """
-
-        guild_db = await get_guild(self.client.pool, ctx.guild.id)
-        (hc_channel, vc, role, title) = await get_raid_info(self, ctx, hc_channel_num, guild_db, run_type)
-
-        keyed_run = True
-        if title[0] == 'Realm Clearing' or title[0] == 'Fame Train':
-            keyed_run = False
-        emojis = run_emojis(title[0])
-        embed = embeds.headcount_base(title[0], ctx.author, keyed_run, emojis)
-        msg = await hc_channel.send("@here", embed=embed)
-        for e in emojis:
-            await msg.add_reaction(e)
-        await ctx.send("Your headcount has been started!")
+    async def headcount(self, ctx):
+        """Starts a headcount for the type of run specified."""
+        setup = VCSelect(self.client, ctx, headcount=True)
+        data = await setup.start()
+        if data:
+            (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+        else:
+            return
+        hc = Headcount(self.client, ctx, hcchannel, vcchannel, setup_msg)
+        await hc.start()
 
 
-    @commands.command(usage="!lock [vc_channel]")
+    @commands.command(usage="!lock")
     @commands.guild_only()
     @commands.check(is_rl_or_higher_check)
-    async def lock(self, ctx, vc_channel):
+    async def lock(self, ctx):
         """Locks the raiding voice channel"""
-        guild_db = await get_guild(self.client.pool, ctx.guild.id)
-        hc_channel, vc, role = await get_raid_info(self, ctx, vc_channel, guild_db)
-        vc_name = vc.name
+        setup = VCSelect(self.client, ctx, lock=True)
+        data = await setup.start()
+        if data:
+            (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+        else:
+            return
+        await setup_msg.delete()
+        vc_name = vcchannel.name
         if " <-- Join!" in vc_name:
             vc_name = vc_name.split(" <")[0]
-            await vc.edit(name=vc_name)
-        await vc.set_permissions(role, connect=False, view_channel=True, speak=False)
-        await ctx.send(f"{vc.name} Has been Locked!")
+            await vcchannel.edit(name=vc_name)
+        await vcchannel.set_permissions(raiderrole, connect=False, view_channel=True, speak=False)
+        embed = discord.Embed(description=f"{vcchannel.name} Has been Locked!", color=discord.Color.red())
+        await ctx.send(embed=embed)
 
 
-    @commands.command(usage="!unlock [vc_channel]")
+    @commands.command(usage="!unlock")
     @commands.guild_only()
     @commands.check(is_rl_or_higher_check)
-    async def unlock(self, ctx, vc_channel):
+    async def unlock(self, ctx):
         """Unlocks the raiding voice channel"""
-        guild_db = await get_guild(self.client.pool, ctx.guild.id)
-        hc_channel, vc, role = await get_raid_info(self, ctx, vc_channel, guild_db)
-        await vc.edit(name=vc.name + " <-- Join!")
-        await vc.set_permissions(role, connect=True, view_channel=True, speak=False)
-        await ctx.send(f"{vc.name} Has been unlocked!")
+        setup = VCSelect(self.client, ctx, unlock=True)
+        data = await setup.start()
+        if data:
+            (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+        else:
+            return
+        await setup_msg.delete()
+        await vcchannel.edit(name=vcchannel.name + " <-- Join!")
+        await vcchannel.set_permissions(raiderrole, connect=True, view_channel=True, speak=False)
+        embed = discord.Embed(description=f"{vcchannel.name} Has been Unlocked!", color=discord.Color.green())
+        await ctx.send(embed=embed)
 
     @commands.command(usage="!fametrain <location>", aliases=['ft'])
     @commands.guild_only()
@@ -85,7 +95,13 @@ class Raiding(commands.Cog):
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             return await ctx.send("You cannot start another AFK while an AFK check is still up.")
         self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
-        ft = FameTrain(self.client, ctx, location)
+        setup = VCSelect(self.client, ctx)
+        data = await setup.start()
+        if data:
+            (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+        else:
+            return
+        ft = FameTrain(self.client, ctx, location, raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg)
         await ft.start()
         self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
@@ -96,7 +112,13 @@ class Raiding(commands.Cog):
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             return await ctx.send("You cannot start another AFK while an AFK check is still up.")
         self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
-        rc = RealmClear(self.client, ctx, location)
+        setup = VCSelect(self.client, ctx)
+        data = await setup.start()
+        if data:
+            (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+        else:
+            return
+        rc = RealmClear(self.client, ctx, location, raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel,setup_msg)
         await rc.start()
         self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
@@ -163,75 +185,3 @@ class Raiding(commands.Cog):
 
 def setup(client):
     client.add_cog(Raiding(client))
-
-
-async def get_raid_info(self, ctx, channel, guild_db, run_type=None):
-    if channel == "vet" or channel == "veteran":
-        if ctx.author.top_role >= self.client.guild_db.get(ctx.guild.id)[gld_cols.vetrlroleid]:
-            hc_channel = ctx.guild.get_channel(guild_db[gld_cols.vethc1])
-            vc = ctx.guild.get_channel(guild_db[gld_cols.vetvc1])
-            role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.vetroleid])
-        else:
-            return await ctx.send("You have to be a vet rl to use this command.")
-    else:
-        role = discord.utils.get(ctx.guild.roles, id=guild_db[gld_cols.verifiedroleid])
-        if channel == '1':
-            hc_channel = ctx.guild.get_channel(guild_db[gld_cols.raidhc1])
-            vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc1])
-        elif channel == '2':
-            hc_channel = ctx.guild.get_channel(guild_db[gld_cols.raidhc2])
-            vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc2])
-        elif channel == '3':
-            hc_channel = ctx.guild.get_channel(guild_db[gld_cols.raidhc3])
-            vc = ctx.guild.get_channel(guild_db[gld_cols.raidvc3])
-        else:
-            return await ctx.send("That channel number is not an option, please choose a channel from 1-3 or 'vet'/'veteran'")
-    if run_type:
-        title = run_title(run_type)
-        if title is None:
-            return await ctx.send("The specified run type is not an option.")
-        if title[1] is True:
-            await ctx.send(f"A correction was made, `{type}` was changed to `{title[2]}`")
-        return hc_channel, vc, role, title
-    return hc_channel, vc, role
-
-
-def run_title(run_type):
-    run_types = {'realmclear': "Realm Clearing", 'fametrain': "Fame Train", 'void': "Void", 'fskipvoid': "Full-Skip Void", 'cult': "Cult",
-                 'eventdungeon': "Event Dungeon", "nest": "The Nest"}
-    result = run_types.get(run_type, None)
-    if result is None:
-        matches = get_close_matches(run_type, run_types.keys(), n=1, cutoff=0.8)
-        if len(matches) == 0:
-            return None
-        return run_types.get(matches[0]), True, matches[0]
-    return result, False
-
-
-default_emojis = ["<:defaultdungeon:682212333182910503>", "<:eventkey:682212349641621506>", "<:warrior:682204616997208084>",
-                  "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>"]
-
-
-def run_emojis(run_type):
-    return {'Realm Clearing': ["<:defaultdungeon:682212333182910503>", "<:trickster:682214467483861023>", "<:Warrior_1:585616162407186433>",
-                               "<:ninja_3:585616162151202817>"],
-            'Fame Train': ["<:fame:682209281722024044>", "<:sorcerer:682214487490560010>", "<:necromancer:682214503106215966>",
-                           "<:sseal:683815374403141651>", "<:paladin:682205688033968141>"],
-            'Void': ["<:void:682205817424183346>", "<:lhkey:682205801728835656>", "<:vial:682205784524062730>", default_emojis[2],
-                     default_emojis[3], default_emojis[4], "<:mseal:682205755754938409>", "<:puri:682205769973760001>",
-                     "<:planewalker:682212363889279091>"],
-            'Full-Skip Void': ["<:fskipvoid:682206558075224145>", "<:lhkey:682205801728835656>", "<:vial:682205784524062730>",
-                               default_emojis[2], default_emojis[3], default_emojis[4], "<:mseal:682205755754938409>",
-                               "<:puri:682205769973760001>", "<:brainofthegolem:682205737492938762>", "<:mystic:682205700918607969>"],
-            'Cult': ["<:cult:682205832879800388>", "<:lhkey:682205801728835656>", default_emojis[2], default_emojis[3], default_emojis[4],
-                     "<:puri:682205769973760001>", "<:planewalker:682212363889279091>"],
-            'The Nest': ["<:Nest:585617025909653524>", "<:NestKey:585617056192266240>", "<:QuiverofThunder:585616162176630784>",
-                        default_emojis[2], default_emojis[3], default_emojis[4], "<:mystic:682205700918607969>",
-                         "<:puri:682205769973760001>", "<:slow_icon:678792068965072906>"],
-            'Event Dungeon': default_emojis}.get(run_type, default_emojis)
-
-
-main_run_emojis = ["<:whitebag:682208350481547267>", "<:fame:682209281722024044>", "<:void:682205817424183346>",
-                   "<:fskipvoid:682206558075224145>", "<:cult:682205832879800388>"]
-key_emojis = ["<:lhkey:682205801728835656>", "<:vial:682205784524062730>", "<:eventkey:682212349641621506>", "<:NestKey:585617056192266240>"]
-key_ids = [682205801728835656, 682205784524062730, 682212349641621506, 585617056192266240]
