@@ -17,55 +17,48 @@ Please contact me on discord (Darkmatter#7321) if you'd like the bot added to yo
 # Writeup on Commands:
 `<> `means required arugment. `[]` means optional. Do not include `<>` or `[]` when running the command.  
   
-FOR CHANNEL ARGUMENT: `1` = Realm Clearing, `2 & 3` = General Raiding, `vet` = Endgame Raiding 1  
-  
 # Raiding  
   
-***AFK Check***: `!afk <run_type> <channel> [location]`  
+***AFK Check***: `!afk <location>`  
 ⇒ Description: Start an AFK Check for the specified run type.  
 ⇒ Aliases: `None`  
 ⇒ Permissions Needed:   
     - Channels `1-3`: @Realm Leader or higher  
-    - Channel `vet`: @Raid Leader  or higher  
+    - Channel `vet`: @Raid Leader  or higher 
+    - Channel `events`: @Event Leader or higher 
 ⇒ Examples:   
-    - `!afk fskipvoid vet USS Left Bazzar`  
-    - `!afk fametrain 2 USW Gargoyle`  
-⇒ Notes:  
-    - Valid run types at the moment are: `void, fskipvoid, cult, nest, realmclear, & fametrain` (I'll be adding more soon)  
+    - `!afk USS Left Bazzar`  
+    - `!afk USW Gargoyle`  
   
-***Headcount***: `!headcount <run_type> <channel>`  
+***Headcount***: `!headcount`  
 ⇒ Description: Start a headcount for the specified run type  
 ⇒ Aliases: `!hc`  
 ⇒ Permissions Needed: Same as AFK Checks (Channel Dependent)  
 ⇒ Examples:  
-    - `!headcount void 2`  
-    - `!hc void vet`  
-    ~ `!hc realmclear 1`  
+    - `!headcount`  
+    - `!hc`  
 ⇒ Notes:  
     - It's best to use this to see how many people would come to a run, but don't bait the raiders and not do a run too often please!  
   
-***Lock/Unlock**: `!lock <channel>` or `!unlock <channel>`  
+***Lock/Unlock**: `!lock` or `!unlock`  
 ⇒ Description: Lock/Unlock a specified voice channel  
 ⇒ Permissions Needed: Same as AFK Checks (Channel Dependent)  
 ⇒ Examples:  
-    - `!lock 1`  
-    - `!unlock 2`  
-    - `!lock vet`  
+    - `!lock`  
+    - `!unlock`    
 ⇒ Notes:  
     - This command should rarely be used, as the bot locks & unlocks channels dynamically.  
   
-***Realm Clearing***: `!realmclear <world_num> <channel> [location]`  
+***Realm Clearing***: `!realmclear <location>`  
 ⇒ Description: Start a realm clearing run  
 ⇒ Aliases: `!rc`  
 ⇒ Permissions Needed: Same as Afk Checks (Channel Dependent)  
 ⇒ Examples:  
-    - `!realmclear W3 1 USW Gargoyle`  
-    - `!rc W3 1 USW Djinn`  
-    - `!rc 3 vet Australia Spider`  
+    - `!realmclear USW Gargoyle`  
+    - `!rc Australia Spider`  
 ⇒ Notes:  
-    - ***At the moment, only 1 realmclearing can run at a time per server***, I'll be updating this soon to allow for multiple afk's! (this is due to how map uploading works)  
-    - The `W` in world_num is optional.  
-    - The `!markmap`, `!unmarkmap` and `!eventspawn` commands are tied to the realmclearing session & can only be used when an AFK is up.  
+    - The `!markmap`, `!unmarkmap` and `!eventspawn` commands are tied to the realmclearing session & can only be used when an AFK is up.
+    - To use those commands, react to the control panel message to assign yourself to the realmclearing session
   
 ***Mark Map / Un-mark Map***: `!markmap <number(s)>` or `!unmarkmap <number(s)>`  
 ⇒ Description: Used to dynamically mark spawns in a realm clearing session  
