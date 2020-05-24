@@ -11,6 +11,7 @@ from cogs.Minigames.blackjack import Blackjack
 from cogs.Minigames.coinflip import Coinflip
 from cogs.Minigames.roulette import Roulette
 from cogs.Minigames.russianroulette import RussianRoulette
+from cogs.Minigames.slots import Slots
 
 players_in_game = []
 
@@ -47,8 +48,9 @@ class Casino(commands.Cog):
         await game.play()
         players_in_game.remove(ctx.author.id)
 
-    @commands.command(usage="!roulette [bet_type] [bet]")
+    @commands.command(usage="!roulette [bet_type] [bet]", aliases=['r'])
     async def roulette(self, ctx, bet_type: str=None, bet: int=None):
+        """A classic game of roulette"""
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -76,6 +78,32 @@ class Casino(commands.Cog):
         await game.play()
         players_in_game.remove(ctx.author.id)
 
+
+    @commands.command(usage="!slots [bet]", aliases=['slot', 's'])
+    async def slots(self, ctx, bet: int = None):
+        """Test your luck on the slot machine"""
+        try:
+            await ctx.message.delete()
+        except discord.NotFound:
+            pass
+        if not bet:
+            return await ctx.send(embed=embeds.slots_help_embed())
+        if ctx.author.id in players_in_game:
+            return await ctx.send("You're already in a game! "
+                                  "Finish that game or wait for it to expire to start a new one.", delete_after=10)
+        if bet > 0:
+            data = await sql.get_casino_player(self.client.pool, ctx.author.id)
+            balance = data[sql.casino_cols.balance]
+            if balance < bet:
+                return await ctx.send(f"You don't have enough credits! Available balance: {balance}")
+
+            game = Slots(self.client, ctx, bet, ctx.author, balance)
+        else:
+            return await ctx.send("You have to bet more than 0 credits on this game!", delete_after=10)
+        players_in_game.append(ctx.author.id)
+        await game.play()
+        players_in_game.remove(ctx.author.id)
+
     @commands.command(usage="!coinflip [@member] [bet]", aliases=['cf'])
     async def coinflip(self, ctx, member: discord.Member, bet: int):
         """Bet against someone in a classic 50/50"""
@@ -86,6 +114,9 @@ class Casino(commands.Cog):
         if ctx.author.id in players_in_game:
             return await ctx.send("You're already in a game! "
                                   "Finish that game or wait for it to expire to start a new one.", delete_after=10)
+        if member.id in players_in_game:
+            return await ctx.send(f"{member.mention} is in a game. Wait for them to finish their game before starting a new one!",
+                                  delete_after=10)
         if member.bot or member == ctx.author:
             raise commands.BadArgument('Cannot play a game against that member.')
         if bet > 0:

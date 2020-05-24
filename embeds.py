@@ -186,7 +186,7 @@ def poll(title, options):
 
 # Raiding
 
-def headcount_base(run_title, requester, keyed_run, emojis):
+def headcount_base(run_title, requester, keyed_run, emojis, thumbnail=None):
     if keyed_run:
         desc = (f"React with {emojis[0]} to participate and {emojis[1]} if you have a key and are willing to pop it!\n"
                 "To indicate your class or gear choices, react to the appropriate emoji's below")
@@ -196,6 +196,8 @@ def headcount_base(run_title, requester, keyed_run, emojis):
     embed = discord.Embed(description=desc, color=discord.Color.teal())
     embed.set_author(name=f"Headcount for {run_title} started by {requester.nick}", icon_url=requester.avatar_url)
     embed.set_footer(text="Headcount started ")
+    if thumbnail:
+        embed.set_thumbnail(url=thumbnail)
     embed.timestamp = datetime.utcnow()
     return embed
 
@@ -269,6 +271,19 @@ def roulette_help_embed():
         value="Green: **0, 0** (2x the chance)\nBlack: **2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35**\n"
               "Red: **1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36**\nLow: **1-18**\nHigh: **19-36**", inline=False).add_field(
         name="Usage", value="!roulette [bet_type] [bet]", inline=False)
+    return embed
+
+def slots_help_embed():
+    embed = discord.Embed(title="Slots", color=discord.Color.orange()).add_field(name="Info", value="Roll the slot machine and watch the "
+                        "credits pour in!\nTo win, match three symbols in the middle row.", inline=False)\
+                        .add_field(name="Winnings", value=":lemon: Lemon - **2x**\n:watermelon: Melon - **3x**\n:banana: Banana - **5x**"
+                                                          "\n:cherries: Cherry - **10x**\n:gem: Diamond - **40x**\n"
+                                                          "<:slot7:711843601369530458> 7's - **100x**", inline=False)\
+                        .add_field(name="Odds", value=":x: Lose - **80%** (Tickets 1-799)\n:lemon: Lemon - **10%** (800-899)"
+                                                      "\n:watermelon: Melon - **4%** (900-939)\n:banana: Banana - **3%** (940-969)"
+                                                          "\n:cherries: Cherry - **1.5%** (970-984)\n:gem: Diamond - **1%** (985-994)\n"
+                                                          "<:slot7:711843601369530458> 7's - **0.5%** (995-1000)", inline=False)\
+                        .add_field(name="Usage", value="!slots <bet>", inline=False)
     return embed
 
 
