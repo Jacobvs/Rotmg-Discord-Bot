@@ -5,6 +5,7 @@ import discord
 
 import embeds
 import utils
+from cogs.Raiding.logrun import LogRun
 
 
 class AfkCheck:
@@ -41,12 +42,18 @@ class AfkCheck:
         def dungeon_check(m):
             return m.author == self.ctx.author and m.channel == self.ctx.channel and m.content.isdigit()
 
-        try:
-            msg = await self.client.wait_for('message', timeout=60, check=dungeon_check)
-        except asyncio.TimeoutError:
-            embed = discord.Embed(title="Timed out!", description="You didn't choose a dungeon in time!", color=discord.Color.red())
-            await self.setup_msg.clear_reactions()
-            return await self.setup_msg.edit(embed=embed)
+        while True:
+            try:
+                msg = await self.client.wait_for('message', timeout=60, check=dungeon_check)
+            except asyncio.TimeoutError:
+                embed = discord.Embed(title="Timed out!", description="You didn't choose a dungeon in time!", color=discord.Color.red())
+                await self.setup_msg.clear_reactions()
+                return await self.setup_msg.edit(embed=embed)
+
+            if msg.content.isdigit():
+                if 0 < int(msg.content) < 51:
+                    break
+            await self.ctx.send("Please choose a number between 1-50!", delete_after=7)
 
         dungeon_info = utils.dungeon_info(int(msg.content))
         self.dungeontitle = dungeon_info[0]
@@ -65,13 +72,22 @@ class AfkCheck:
             self.potentialhelm = []
 
         await self.setup_msg.delete()
-        if " <-- Join!" not in self.vcchannel.name:
-            await self.vcchannel.edit(name=self.vcchannel.name + " <-- Join!")
+        # if " <-- Join!" not in self.vcchannel.name:
+        #     name = self.vcchannel.name + " <-- Join!"
+        #     await self.vcchannel.edit(name=name)
         await self.vcchannel.set_permissions(self.raiderrole, connect=True, view_channel=True, speak=False)
 
         self.afkmsg = await self.hcchannel.send(f"@here `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} "
                                                 f"in {self.vcchannel.name}", embed=embeds.
                                                 afk_check_base(self.dungeontitle, self.ctx.author, True, self.emojis, dungeon_info[2]))
+        await self.afkmsg.pin()
+        try:
+            pinmsg = await self.hcchannel.fetch_message(self.hcchannel.last_message_id)
+            if pinmsg.type == discord.MessageType.pins_add:
+                    await pinmsg.delete()
+        except discord.NotFound:
+            pass
+
         # for emoji in self.emojis:
         #     await self.afkmsg.add_reaction(emoji)
 
@@ -81,16 +97,16 @@ class AfkCheck:
         self.cpmsg = await self.ctx.send(embed=cp)
 
         starttime = datetime.utcnow()
-        timeleft = 300 # 300 seconds = 5 mins
+        timeleft = 300  # 300 seconds = 5 mins
         lasttime = starttime
         while True:
             def check(react, usr):
-                return not usr.bot and react.message.id == self.afkmsg.id or (not react.message.guild and str(react.emoji) == '👍')
+                return not usr.bot and react.message.id == self.afkmsg.id or (not react.message.guild and str(react.emoji) in ['👍',
+                "<:sword:715832479507808317>️", "<:shield:715832479310938113>", "<:helm:715832479205949591>", "<:vial:714012990873272321>"])
             try:
                 reaction, user = await self.client.wait_for('reaction_add', timeout=timeleft, check=check)  # Wait max 1.5 hours
             except asyncio.TimeoutError:
                 return await self.end_afk(True)
-
 
             timeleft = 300 - (datetime.utcnow() - starttime).seconds
             embed = self.afkmsg.embeds[0]
@@ -120,7 +136,7 @@ class AfkCheck:
                             await msg.add_reaction('👍')
 
                 elif self.dungeontitle == "Void" or self.dungeontitle == "Full-Skip Void":
-                    if str(reaction.emoji) == '👍':
+                    if str(reaction.emoji) == '<:vial:714012990873272321>':
                         if uid in self.potentialvials:
                             self.potentialvials.remove(uid)
                             self.vials.append(uid)
@@ -141,12 +157,12 @@ class AfkCheck:
                             if len(self.vials) == 2:
                                 await user.send("There are already enough vials for this run. Wait until the next run to use yours.")
                             else:
-                                self.vials.append(uid)
+                                self.potentialvials.append(uid)
                                 msg = await user.send("Do you have a vial you are willing to pop for this run? If so react to the "
-                                                      "👍 emoji.")
-                                await msg.add_reaction("👍")
+                                                      "<:vial:714012990873272321> emoji.")
+                                await msg.add_reaction("<:vial:714012990873272321>")
                 elif self.dungeontitle == "Oryx 3":
-                    if str(reaction.emoji) == '👍':
+                    if str(reaction.emoji) in ["<:sword:715832479507808317>️", "<:shield:715832479310938113>", "<:helm:715832479205949591>"]:
                         if uid in self.potentialsword:
                             self.potentialsword.remove(uid)
                             self.swordrunes.append(uid)
@@ -199,8 +215,8 @@ class AfkCheck:
                             else:
                                 self.potentialsword.append(uid)
                                 msg = await user.send("Do you have a Sword Rune you are willing to pop for this run? If so react to the "
-                                                      "👍 emoji.")
-                                await msg.add_reaction("👍")
+                                                      "<:sword:715832479507808317>️ emoji.")
+                                await msg.add_reaction("<:sword:715832479507808317>")
                     elif str(reaction.emoji) == "<:ShieldRune:708191783674314814>":
                         if uid not in self.shieldrunes and uid not in self.potentialshield:
                             if len(self.shieldrunes) == 2:
@@ -208,8 +224,8 @@ class AfkCheck:
                             else:
                                 self.potentialshield.append(uid)
                                 msg = await user.send("Do you have a Shield Rune you are willing to pop for this run? If so react to the "
-                                                      "👍 emoji.")
-                                await msg.add_reaction("👍")
+                                                      "<:shield:715832479310938113> emoji.")
+                                await msg.add_reaction("<:shield:715832479310938113>")
                     elif str(reaction.emoji) == "<:HelmRune:708191783825178674>":
                         if uid not in self.helmrunes and uid not in self.potentialhelm:
                             if len(self.helmrunes) == 2:
@@ -217,8 +233,8 @@ class AfkCheck:
                             else:
                                 self.potentialhelm.append(uid)
                                 msg = await user.send("Do you have a Helm Rune you are willing to pop for this run? If so react to the "
-                                                      "👍 emoji.")
-                                await msg.add_reaction("👍")
+                                                      "<:helm:715832479205949591> emoji.")
+                                await msg.add_reaction("<:helm:715832479205949591>")
                 if str(reaction.emoji) == '👍':
                     if uid in self.potentialkeys:
                         self.potentialkeys.remove(uid)
@@ -247,6 +263,7 @@ class AfkCheck:
 
     async def end_afk(self, automatic: bool, ended: discord.Member = None):
         await self.afkmsg.clear_reactions()
+        await self.afkmsg.unpin()
         embed = self.afkmsg.embeds[0]
         if automatic:
             embed.set_author(name=f"{self.dungeontitle} raid has been ended automatically.", icon_url=self.ctx.author.avatar_url)
@@ -275,12 +292,22 @@ class AfkCheck:
             else:
                 self.client.raid_db[self.ctx.guild.id]["events"][1] = None
 
-        vc_name = self.vcchannel.name
-        if " <-- Join!" in vc_name:
-            vc_name = vc_name.split(" <")[0]
-            await self.vcchannel.edit(name=vc_name)
+        # vc_name = self.vcchannel.name
+        # if " <-- Join!" in vc_name:
+        #     vc_name = vc_name.split(" <")[0]
+        #     await self.vcchannel.edit(name=vc_name)
         await self.vcchannel.set_permissions(self.raiderrole, connect=False, view_channel=True, speak=False)
 
+        if self.dungeontitle == "Void" or self.dungeontitle == "Full-Skip Void":
+            log = LogRun(self.client, self.ctx, self.emojis, self.keyreacts, self.dungeontitle, self.raiderids, self.rlrole, self.inevents,
+                         vialreacts=self.vials)
+        elif self.dungeontitle == "Oryx 3":
+            log = LogRun(self.client, self.ctx, self.emojis, self.keyreacts, self.dungeontitle, self.raiderids, self.rlrole, self.inevents,
+                         helmreacts=self.helmrunes, shieldreacts=self.shieldrunes, swordreacts=self.swordrunes)
+        else:
+            log = LogRun(self.client, self.ctx, self.emojis, self.keyreacts, self.dungeontitle, self.raiderids, self.rlrole, self.inevents)
+
+        await log.start()
 
     async def add_emojis(self):
         for e in self.emojis:

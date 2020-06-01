@@ -243,6 +243,53 @@ async def get_top_balances(pool, guild_id):
             return data
 
 
+## RUN LOGGING:
+async def log_runs(pool, guild_id, member_id, column=1):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(f"SELECT * from rotmg.`{guild_id}` WHERE id = {member_id}")
+            data = await cursor.fetchone()
+            await conn.commit()
+            if not data:
+                await cursor.execute(f"INSERT INTO rotmg.`{guild_id}`(id) VALUES({member_id})")
+                await conn.commit()
+
+            name = "pkey" if column == 1 else "vials" if column == 2 else "helmrunes" if column == 3 else "shieldrunes" if column == 4 else\
+                "swordrunes" if column == 5 else "eventkeys" if column == 6 else "runsdone" if column == 7 else "eventsdone" if column == 8\
+                else "srunled" if column == 9 else "frunled" if column == 10 else "eventled" if column == 11 else "runsassisted" if\
+                column == 12 else "eventsassisted"
+            await cursor.execute(f"UPDATE rotmg.`{guild_id}` SET {name} = {name} + 1 WHERE id = {member_id}")
+            await conn.commit()
+
+async def get_log(pool, guild_id, member_id):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(f"SELECT * from rotmg.`{guild_id}` WHERE id = {member_id}")
+            data = await cursor.fetchone()
+            await conn.commit()
+            if not data:
+                await cursor.execute(f"INSERT INTO rotmg.`{guild_id}`(id) VALUES({member_id})")
+                await conn.commit()
+                await cursor.execute(f"SELECT * from rotmg.`{guild_id}` WHERE id = {member_id}")
+                data = await cursor.fetchone()
+            return data
+
+class log_cols(enum.IntEnum):
+    id = 0
+    pkey = 1
+    vials = 2
+    helmrunes = 3
+    shieldrunes = 4
+    swordrunes = 5
+    eventkeys = 6
+    runsdone = 7
+    eventsdone = 8
+    srunled = 9
+    frunled = 10
+    eventled = 11
+    runsassisted = 12
+    eventsassisted = 13
+
 class casino_cols(enum.IntEnum):
     id = 0
     balance = 1
@@ -264,7 +311,7 @@ class usr_cols(enum.IntEnum):
 
 
 gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42]
-gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37]
+gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43]
 class gld_cols(enum.IntEnum):
     """Contains References to rotmg.guilds table for easy access"""
     id = 0  # Int
@@ -310,3 +357,4 @@ class gld_cols(enum.IntEnum):
     eventvc1 = 40
     eventhc2 = 41
     eventvc2 = 42
+    raiderroleid = 43

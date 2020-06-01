@@ -191,7 +191,7 @@ class Casino(commands.Cog):
         data = await sql.get_casino_player(self.client.pool, ctx.author.id)
         balance1 = data[sql.casino_cols.balance]
         if balance1 < amount:
-            return await ctx.send(f"You don't have enough credits! Available balance: {balance1}")
+            return await ctx.send(f"You don't have enough credits! Available balance: {balance1:,}")
         data = await sql.get_casino_player(self.client.pool, member.id)
         balance2 = data[sql.casino_cols.balance]
         await sql.change_balance(self.client.pool, ctx.guild.id, ctx.author.id, balance1-amount)
@@ -353,7 +353,7 @@ class Casino(commands.Cog):
         await sql.update_cooldown(self.client.pool, ctx.author.id, sql.casino_cols.workcooldown)
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
         embed.add_field(name="Work",value=get_job(money),inline=False)
-        embed.add_field(name="Balance", value=f"You now have **{balance}** credits.")
+        embed.add_field(name="Balance", value=f"You now have **{balance:,}** credits.")
         embed.color = discord.Color.green()
         await ctx.send(embed=embed)
 
@@ -379,8 +379,8 @@ class Casino(commands.Cog):
         await sql.change_balance(self.client.pool, ctx.guild.id, ctx.author.id, balance)
         await sql.update_cooldown(self.client.pool, ctx.author.id, sql.casino_cols.searchcooldown)
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
-        embed.add_field(name="Search", value=f"You found **{money}** credits just lying around!", inline=False)
-        embed.add_field(name="Balance", value=f"You now have **{balance}** credits.")
+        embed.add_field(name="Search", value=f"You found **{money:,}** credits just lying around!", inline=False)
+        embed.add_field(name="Balance", value=f"You now have **{balance:,}** credits.")
         embed.color = discord.Color.green()
         await ctx.send(embed=embed)
 

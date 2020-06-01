@@ -196,8 +196,12 @@ class RealmClear:
                 lower = int(num.split("-")[0])
                 upper = int(num.split("-")[1]) + 1
             else:
-                lower = int(num)
-                upper = int(num) + 1
+                if num.isdigit():
+                    lower = int(num)
+                    upper = int(num) + 1
+                else:
+                    lower = 1
+                    upper = 1
             for n in range(lower, upper):
                 ismarked = n in self.markednums
                 if n - 1 < 0 or n - 1 > limit or (ismarked and not remove) or (not ismarked and remove):
