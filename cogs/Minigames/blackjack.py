@@ -1,6 +1,5 @@
 import asyncio
 
-import numpy as np
 import discord
 
 import sql
@@ -58,61 +57,113 @@ class Blackjack:
         for move in self.moves:
             await self.message_game.add_reaction(move)
 
+        self.blackjack = False
         # display cards?
         while self.playing:
             # check for blackjacks
-            # if self.calculate_score(self.player_hand) == 21:
-            #     self.playing = False
-            #     self.player_won = True
-            #     hint_message = 'Congratulations! You got a Blackjack!'
-            #
-            # elif self.calculate_score(self.dealer_hand) == 21:
-            #     self.playing = False
-            #     hint_message = 'Sadly the dealer got a Blackjack...'
-            # else:
-            hint_message = ('Your score is '
-                            f'**{self.calculate_score(self.player_hand)}**.')
-            self.update_embed(hint_message)
-            await self.message_game.edit(embed=self.embed)
+            if self.calculate_score(self.player_hand) == 21 and len(self.player_hand) == 2:
+                if self.calculate_score(self.dealer_hand) == 21:
+                    self.playing = False
+                    self.player_won = False
+                    self.push = True
+                    hint_message = "Push! Both you and the dealer got a Blackjack!"
+                else:
+                    self.playing = False
+                    self.player_won = True
+                    self.blackjack = True
+                    hint_message = 'Congratulations! You got a Natural Blackjack! (Pays 3:2)'
+
+            elif self.calculate_score(self.player_hand) == 21:
+                # give dealer card until total is above 17
+                self.playing = False
+                while self.calculate_score(self.dealer_hand) < 17:
+                    self.deck.give_cards(self.dealer_hand, 1)
+                    if self.calculate_score(self.dealer_hand) > 21:
+                        self.dealer_busted = True
+                        hint_message = ('The dealer busted with a score of '
+                                        f'**{self.calculate_score(self.dealer_hand)}**!')
+                if self.calculate_score(self.dealer_hand) != 21:
+                    self.player_won = True
+                    hint_message = 'You Won! You hit Blackjack!'
+                else:
+                    self.push = True
+                    hint_message = 'Push! Both you and the dealer got a Blackjack!'
+            elif self.calculate_score(self.dealer_hand) == 21 and len(self.dealer_hand) == 2:
+                self.playing = False
+                self.player_won = False
+                hint_message = "You lost! The dealer got a Natural Blackjack!"
+            else:
+                hint_message = ('Your score is '
+                                f'**{self.calculate_score(self.player_hand)}**.')
+                self.update_embed(hint_message)
+                await self.message_game.edit(embed=self.embed)
 
             # ask player input
-            try:
-                reaction, user = await self.bot.wait_for('reaction_add', timeout=3 * 60,  # 3 minutes
-                    check=check, )
-            except asyncio.TimeoutError as e:
-                # should probably stand if timeout
-                self.playing = False
-                self.timeout = True
-                break
-
-            move = reaction.emoji
-            await reaction.remove(user)
-            # if hit
-            if move == Alphabet.H.value:
-                # give card
-                self.deck.give_cards(self.player_hand, 1)
-                if self.calculate_score(self.player_hand) > 21:
+                try:
+                    reaction, user = await self.bot.wait_for('reaction_add', timeout=3 * 60,  # 3 minutes
+                        check=check, )
+                except asyncio.TimeoutError as e:
+                    # should probably stand if timeout
                     self.playing = False
-                    self.player_busted = True
-                    hint_message = ('You busted with a score of '
-                                    f'**{self.calculate_score(self.player_hand)}**.')
+                    self.timeout = True
+                    break
 
-            if move == Alphabet.D.value:
-                if (self.player_can_double_down):
-                    self.playing = False
+                move = reaction.emoji
+                await reaction.remove(user)
+                # if hit
+                if move == Alphabet.H.value:
+                    # give card
                     self.deck.give_cards(self.player_hand, 1)
-                    self.bet = self.bet * 2
                     if self.calculate_score(self.player_hand) > 21:
+                        self.playing = False
                         self.player_busted = True
                         hint_message = ('You busted with a score of '
                                         f'**{self.calculate_score(self.player_hand)}**.')
-                        break
+
+                if move == Alphabet.D.value:
+                    if (self.player_can_double_down):
+                        self.playing = False
+                        self.deck.give_cards(self.player_hand, 1)
+                        self.bet = self.bet * 2
+                        if self.calculate_score(self.player_hand) > 21:
+                            self.player_busted = True
+                            hint_message = ('You busted with a score of '
+                                            f'**{self.calculate_score(self.player_hand)}**.')
+                            break
+                        while self.calculate_score(self.dealer_hand) < 17:
+                            self.deck.give_cards(self.dealer_hand, 1)
+                            if self.calculate_score(self.dealer_hand) > 21:
+                                self.dealer_busted = True
+                                hint_message = ('The dealer busted with a score of '
+                                                f'**{self.calculate_score(self.dealer_hand)}**!')
+                        if self.calculate_score(self.dealer_hand) > self.calculate_score(self.player_hand) and not self.dealer_busted:
+                            hint_message = ('The dealer won! You got '
+                                            f'**{self.calculate_score(self.player_hand)}** '
+                                            'while the dealer got '
+                                            f'**{self.calculate_score(self.dealer_hand)}**.')
+
+                        elif self.calculate_score(self.dealer_hand) < self.calculate_score(self.player_hand) and not self.player_busted:
+                            self.player_won = True
+                            hint_message = ('You won! You got '
+                                            f'**{self.calculate_score(self.player_hand)}** '
+                                            'while the dealer got '
+                                            f'**{self.calculate_score(self.dealer_hand)}**.')
+
+                        elif self.calculate_score(self.dealer_hand) == self.calculate_score(self.player_hand):
+                            self.push = True
+                            hint_message = ('Push! You both got '
+                                            f'**{self.calculate_score(self.player_hand)}**.')
+
+                # elif stand
+                elif move == Alphabet.S.value:
+                    # give dealer card until total is above 17
                     while self.calculate_score(self.dealer_hand) < 17:
                         self.deck.give_cards(self.dealer_hand, 1)
                         if self.calculate_score(self.dealer_hand) > 21:
                             self.dealer_busted = True
                             hint_message = ('The dealer busted with a score of '
                                             f'**{self.calculate_score(self.dealer_hand)}**!')
+
                     if self.calculate_score(self.dealer_hand) > self.calculate_score(self.player_hand) and not self.dealer_busted:
                         hint_message = ('The dealer won! You got '
                                         f'**{self.calculate_score(self.player_hand)}** '
@@ -131,52 +182,26 @@ class Blackjack:
                         hint_message = ('Push! You both got '
                                         f'**{self.calculate_score(self.player_hand)}**.')
 
-            # elif stand
-            elif move == Alphabet.S.value:
-                # give dealer card until total is above 17
-                while self.calculate_score(self.dealer_hand) < 17:
-                    self.deck.give_cards(self.dealer_hand, 1)
-                    if self.calculate_score(self.dealer_hand) > 21:
-                        self.dealer_busted = True
-                        hint_message = ('The dealer busted with a score of '
-                                        f'**{self.calculate_score(self.dealer_hand)}**!')
+                    self.playing = False
 
-                if self.calculate_score(self.dealer_hand) > self.calculate_score(self.player_hand) and not self.dealer_busted:
-                    hint_message = ('The dealer won! You got '
-                                    f'**{self.calculate_score(self.player_hand)}** '
-                                    'while the dealer got '
-                                    f'**{self.calculate_score(self.dealer_hand)}**.')
+                if self.timeout:
+                    self.update_embed(hint_message="You took to long to choose - so your credits have been refunded.",
+                                      money=0, win="+", color=discord.Color.light_grey())
+        credits_won = 0
+        if self.blackjack:
+            credits_won += int(self.bet*1.5)
+            self.update_embed(hint_message=hint_message, money=credits_won, win="+", color=discord.Color.green())
+        elif self.player_busted or not self.player_won and not self.push and not self.dealer_busted:
+            credits_won -= self.bet
+            self.update_embed(hint_message=hint_message, money=credits_won, color=discord.Color.red())
+        elif self.player_won or self.dealer_busted:
+            credits_won += self.bet
+            self.update_embed(hint_message=hint_message, money=credits_won, win="+", color=discord.Color.green())
+        elif self.push:
+            self.update_embed(hint_message=hint_message, money=0, win="+", color=discord.Color.teal())
 
-                elif self.calculate_score(self.dealer_hand) < self.calculate_score(self.player_hand) and not self.player_busted:
-                    self.player_won = True
-                    hint_message = ('You won! You got '
-                                    f'**{self.calculate_score(self.player_hand)}** '
-                                    'while the dealer got '
-                                    f'**{self.calculate_score(self.dealer_hand)}**.')
-
-                elif self.calculate_score(self.dealer_hand) == self.calculate_score(self.player_hand):
-                    self.push = True
-                    hint_message = ('Push! You both got '
-                                    f'**{self.calculate_score(self.player_hand)}**.')
-
-                self.playing = False
-
-        if self.timeout:
-            self.update_embed(hint_message="You took to long to choose - so your credits have been refunded.",
-                              money=0, win="+", color=discord.Color.light_grey())
-        else:
-            credits_won = 0
-            if self.player_busted or not self.player_won and not self.push and not self.dealer_busted:
-                credits_won -= self.bet
-                self.update_embed(hint_message=hint_message, money=credits_won, color=discord.Color.red())
-            elif self.player_won or self.dealer_busted:
-                credits_won += self.bet
-                self.update_embed(hint_message=hint_message, money=credits_won, win="+", color=discord.Color.green())
-            elif self.push:
-                self.update_embed(hint_message=hint_message, money=0, win="+", color=discord.Color.teal())
-
-            if self.bet > 0 and not self.push:
-                await sql.change_balance(self.bot.pool, self.ctx.guild.id, self.ctx.author.id, self.balance+credits_won)
+        if self.bet > 0 and not self.push:
+            await sql.change_balance(self.bot.pool, self.ctx.guild.id, self.ctx.author.id, self.balance+credits_won)
         await self.message_game.edit(embed=self.embed)
         await self.message_game.clear_reactions()
 

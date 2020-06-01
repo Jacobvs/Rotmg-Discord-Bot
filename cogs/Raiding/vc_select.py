@@ -6,14 +6,16 @@ import sql
 
 
 class VCSelect:
-    def __init__(self, client, ctx, headcount=False, lock=False, unlock=False):
+    def __init__(self, client, ctx, headcount=False, lock=False, unlock=False, clean=False):
         self.client = client
         self.ctx = ctx
         self.headcount = headcount
-        title = "Headcount Setup" if headcount else "Lock Selection" if lock else "Unlock Selection" if unlock else "AFK-Check Setup"
+        title = "Headcount Setup" if headcount else "Lock Selection" if lock else "Unlock Selection" if unlock else "Cleaning Selection" if\
+            clean else "AFK-Check Setup"
         description = "Please choose what channel you'd like to start this headcount in." if headcount else\
             "Please choose which channel you'd like to lock." if lock else "Please choose which channel you'd like to unlock." if unlock\
-            else "Please choose what channel you'd like to start this afk check in."
+            else "Please choose which channel you'd like to clean." if clean else \
+                "Please choose what channel you'd like to start this afk check in."
         self.locationembed = discord.Embed(title=title,
                                            description=description,
                                            color=discord.Color.green())
@@ -98,7 +100,7 @@ class VCSelect:
             return await self.setup_msg.edit(embed=embed)
 
         if self.inraiding:
-            self.raiderrole = self.guild_db.get(sql.gld_cols.verifiedroleid)
+            self.raiderrole = self.guild_db.get(sql.gld_cols.raiderroleid)
             self.rlrole = self.guild_db.get(sql.gld_cols.rlroleid)
             if reaction.emoji == "1️⃣":
                 self.raidnum = 0
@@ -129,7 +131,7 @@ class VCSelect:
                 self.vcchannel = self.guild_db.get(sql.gld_cols.vetvc2)
                 self.client.raid_db[self.ctx.guild.id]["vet"][1] = self
         elif self.inevents:
-            self.raiderrole = self.guild_db.get(sql.gld_cols.verifiedroleid)
+            self.raiderrole = self.guild_db.get(sql.gld_cols.raiderroleid)
             self.rlrole = self.guild_db.get(sql.gld_cols.eventrlid)
             if reaction.emoji == "1️⃣":
                 self.raidnum = 0

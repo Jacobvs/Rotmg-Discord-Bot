@@ -458,6 +458,31 @@ def dungeon_info(num: int = None):
         return dungeons
     else:
         res = dungeons.get(num)
+        if not res:
+            return dungeons
         if len(res[1]) == 2:
             return tuple((res[0], res[1] + defaults, res[2]))
         return res
+
+
+def rand_dungon_keys():
+    keys = ["<:defaultdungeon:682212333182910503>", '<:WineCellarInc:708191799750950962>', '<:lhkey:682205801728835656>',
+            '<:ShattersKey:561744174152548374>',
+            '<:CavernKey:609078341529632778>', '<:NestKey:585617056192266240>', '<:tombOfTheAncientsKey:561248916822163487>',
+            '<:IiceCaveKey:561248916620967949>', '<:oceanTrenchKey:561248917048655882>', '<:theCrawlingDepthsKey:561248917052719104>',
+            '<:woodlandLabyrinthKey:561248917115633667>', '<:deadwaterDocksKey:561248917052850176>',
+            '<:lairOfDraconisKey:561248916931084320>', '<:mountainTempleKey:561248917027684367>',
+            '<:davyJonesLockerKey:561248917086273536>', '<:parasiteChambersKey:561248917115633665>', '<:madLabKey:561248917010776065>',
+            '<:machineKey:711442921211035701>', '<:cemeteryKey:561248917052981278>', '<:cursedLibraryKey:576610460690939914>',
+            '<:toxicSewersKey:561248917145124874>', '<:theatreKey:561248917065433119>', '<:manorKey:561248917120090142>',
+            '<:abyssOfDemonsKey:561248916624900097>', '<:undeadLairKey:561248917090729999>',
+            '<:caveOfAThousandTreasuresKey:561248916968964129>', '<:candylandKey:561248916989935656>',
+            '<:spriteWorldKey:561249834292477967>', '<:magicWoodsKey:561248916805386270>', '<:hiveKey:711443611425832981>',
+            '<:forbiddenJungleKey:711443611794800670>', '<:snakePitKey:561248916734083075>', '<:spiderDenKey:711443611371175978>',
+            '<:forestMazeKey:711443611568439367>', '<:pirateCaveKey:711443611429896245>', '<:beachzoneKey:711444566103949392>',
+            '<:BelladonnasGardenKey:561248916830552067>', '<:iceTombKey:561248917082079272>', '<:battleOfTheNexusKey:561248916570505219>',
+            '<:alienRedKey:711445699392438302>', '<:alienBlueKey:711445699241312259>', '<:alienGreenKey:711445699308290068>',
+            '<:alienYellowKey:711445699195043850>', '<:shaitansKey:561248917191131152>', '<:puppetMastersEncoreKey:561248917082079252>',
+            '<:reefKey:561251664388947968>', '<:thicketKey:561248917208039434>', '<:hudlKey:711444346334871643>',
+            '<:habbyKey:711444346263830559>']
+    return keys

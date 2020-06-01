@@ -287,9 +287,12 @@ def slots_help_embed():
     return embed
 
 
-def dungeon_select():
-    embed = discord.Embed(title="Dungeon Selection", description="Please select a dungeon type by typing the number corresponding to the "
-                                                                 "dungeon for which you would like to start a raid.",
+def dungeon_select(hc=False):
+    descrip = "Please select a dungeon type by typing the number corresponding to the  dungeon for which you would like to start a raid.\n" \
+              "To start a random dungeon headcount type: `(0)` <:defaultdungeon:682212333182910503> Random Dungeons." if hc else \
+        "Please select a dungeon type by typing the number corresponding to the  dungeon for which you would like to start a raid."
+
+    embed = discord.Embed(title="Dungeon Selection", description=descrip,
                           color=discord.Color.orange())
     dungeons = utils.dungeon_info()
     endgame = ""

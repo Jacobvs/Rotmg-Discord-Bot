@@ -9,6 +9,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 import sql
+import utils
 
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
@@ -20,6 +21,7 @@ urllib3.disable_warnings()
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
 
+utils.rand_dungon_keys()
 
 def get_prefix(client, message):
     """Returns the prefix for the specified server"""

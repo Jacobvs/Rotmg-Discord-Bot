@@ -1,7 +1,9 @@
 import asyncio
 import random
+from datetime import datetime
 from os import listdir
 from os.path import isfile, join
+
 import discord
 import psutil
 import youtube_dl
@@ -9,8 +11,9 @@ from discord.ext import commands
 from discord.utils import get
 
 import embeds
-from sql import get_num_verified
+import sql
 from checks import in_voice_channel, is_dj, is_rl_or_higher_check, is_bot_owner
+from sql import get_num_verified
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -58,6 +61,61 @@ class Misc(commands.Cog):
         self.client = client
         self.laughs = ["files/ahhaha.mp3", "files/jokerlaugh.mp3"]
         self.numbers = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+
+
+    @commands.command(usage="!stats {@member}")
+    async def stats(self, ctx, member: discord.User=None):
+        author = member if member else ctx.author
+        if not ctx.guild:
+            servers = []
+            for g in self.client.guilds:
+                if g.get_member(author.id):
+                    servers.append(g)
+            serverstr = ""
+            for i, s in enumerate(servers):
+                serverstr += self.numbers[i] + " - " + s.name + "\n"
+            embed = discord.Embed(description="What server would you like to check stats for?\n"+serverstr, color=discord.Color.gold())
+            msg = await author.send(embed=embed)
+            for e in self.numbers[:len(servers)]:
+                await msg.add_reaction(e)
+
+            def check(react, usr):
+                return usr == ctx.author and react.message.id == msg.id and str(react.emoji) in self.numbers[:len(servers)]
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', timeout=1800, check=check)  # Wait 1/2 hr max
+            except asyncio.TimeoutError:
+                embed = discord.Embed(title="Timed out!", description="You didn't choose a server in time!", color=discord.Color.red())
+                await msg.clear_reactions()
+                return await msg.edit(embed=embed)
+
+            serverid = servers[self.numbers.index(str(reaction.emoji))].id
+            await msg.delete()
+        else:
+            await ctx.message.delete()
+            if member:
+                converter = discord.ext.commands.MemberConverter()
+                try:
+                    author = await converter.convert(ctx, str(member.id))
+                except discord.ext.commands.BadArgument:
+                    pass
+            serverid = ctx.guild.id
+
+        data = await sql.get_log(self.client.pool, serverid, author.id)
+        embed = discord.Embed(title=f"Stats for {author.display_name}", color=discord.Color.green())
+        embed.set_thumbnail(url=author.avatar_url)
+        embed.add_field(name="__**Key Stats**__", value="Popped: "
+                        f"**{data[sql.log_cols.pkey]}**\nEvent Keys: **{data[sql.log_cols.eventkeys]}**\nVials: "
+                        f"**{data[sql.log_cols.vials]}**\nSword Runes: **{data[sql.log_cols.swordrunes]}**\nShield Runes: "
+                        f"**{data[sql.log_cols.shieldrunes]}**\nHelm Runes: **{data[sql.log_cols.helmrunes]}**", inline=False)\
+                        .add_field(name="__**Run Stats**__", value=f"Completed: **{data[sql.log_cols.runsdone]}**\nEvents Completed: "
+                        f"**{data[sql.log_cols.eventsdone]}**", inline=False).add_field(name="__**Leading Stats**__", value="Successful Runs: "
+                        f"**{data[sql.log_cols.srunled]}**\nFailed Runs: **{data[sql.log_cols.frunled]}**\nAssisted: "
+                        f"**{data[sql.log_cols.runsassisted]}**\nEvents: **{data[sql.log_cols.eventled]}**\nEvents Assisted: "
+                        f"**{data[sql.log_cols.eventsassisted]}**", inline=False)
+        embed.timestamp = datetime.utcnow()
+        if ctx.guild:
+            return await ctx.send(embed=embed)
+        await author.send(embed=embed)
 
 
     @commands.command(aliases=["ahhaha"], usage="!laugh [1 or 2]")

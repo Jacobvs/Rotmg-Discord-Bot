@@ -1,5 +1,7 @@
-import traceback
 import logging
+import traceback
+
+import discord
 from discord.ext import commands
 
 
@@ -40,6 +42,24 @@ class CommandErrorHandler(commands.Cog):
                 f"To prevent overload, this command is on cooldown for: ***{round(error.retry_after)}*** more seconds. Retry the command then.",
                 delete_after=5)
             return await ctx.message.delete()
+
+        if isinstance(error, commands.MissingRequiredArgument):
+            embed = discord.Embed(title="Error!", description="You appear to be missing a required argument!", color=discord.Color.red())
+            embed.add_field(name="Missing argument", value=f'`{error.args[0]}`', inline=False)
+            embed.add_field(name="Command Usage", value=f'`{ctx.command.usage}`', inline=False)
+            if ctx.command.aliases:
+                aliases = "".join("!" + c + ", " for c in ctx.command.aliases)
+                embed.add_field(name="Command Aliases", value=f"{aliases}", inline=False)
+            return await ctx.send(embed=embed)
+
+        if isinstance(error, commands.BadArgument):
+            embed = discord.Embed(title="Error!", description="An argument you entered is invalid!", color=discord.Color.red())
+            embed.add_field(name="Bad Argument", value=f'`{error.args[0]}`', inline=False)
+            embed.add_field(name="Command Usage", value=f'`{ctx.command.usage}`', inline=False)
+            if ctx.command.aliases:
+                aliases = "`".join("!" + c for c in ctx.command.aliases)+"`"
+                embed.add_field(name="Command Aliases", value=f"{aliases}", inline=False)
+            return await ctx.send(embed=embed)
 
         if isinstance(error, commands.CommandError):
             return await ctx.send(f"Unhandled error while executing command `{ctx.command.name}`: {str(error)}")

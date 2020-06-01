@@ -15,7 +15,7 @@ class Headcount:
         self.vcchannel = vcchannel
         self.setup_msg = setup_msg
         self.guild_db = self.client.guild_db.get(self.ctx.guild.id)
-        self.dungeonembed = embeds.dungeon_select()
+        self.dungeonembed = embeds.dungeon_select(hc=True)
         self.dungeonembed.add_field(name="Other", value="`(51)` <:whitebag:682208350481547267> Realm Clearing\n`(52)` "
                                                         "<:fame:682209281722024044> Fame Train")
 
@@ -26,16 +26,39 @@ class Headcount:
         def dungeon_check(m):
             return m.author == self.ctx.author and m.channel == self.ctx.channel and m.content.isdigit()
 
-
-        try:
-            msg = await self.client.wait_for('message', timeout=60, check=dungeon_check)
-        except asyncio.TimeoutError:
-            embed = discord.Embed(title="Timed out!", description="You didn't choose a dungeon in time!", color=discord.Color.red())
-            await self.setup_msg.clear_reactions()
-            return await self.setup_msg.edit(embed=embed)
+        while True:
+            try:
+                msg = await self.client.wait_for('message', timeout=60, check=dungeon_check)
+            except asyncio.TimeoutError:
+                embed = discord.Embed(title="Timed out!", description="You didn't choose a dungeon in time!", color=discord.Color.red())
+                await self.setup_msg.clear_reactions()
+                return await self.setup_msg.edit(embed=embed)
+            if -1 < int(msg.content) < 53:
+                break
+            await self.ctx.send("Please choose a number between 0-52!", delete_after=7)
 
         self.keyed_run = False
-        if int(msg.content) == 51:
+        if int(msg.content) == 0:
+            self.dungeontitle = "Random Dungeons"
+            self.emojis = utils.rand_dungon_keys()
+            self.thumbnail = "https://static.drips.pw/rotmg/wiki/Environment/Portals/Rainbow%20Road.png"
+            await msg.delete()
+            await self.setup_msg.delete()
+            embed = embeds.headcount_base(self.dungeontitle, self.ctx.author, False, self.emojis, thumbnail=self.thumbnail)
+            embed.description = f"React to {self.emojis[0]} to participate in the run!\nIf you have keys, react to the appropriate emojis " \
+                                f"below!"
+            msg = await self.hcchannel.send(f"@here Headcount for `{self.dungeontitle}` {self.emojis[0]} started by "
+                                            f"{self.ctx.author.mention} for {self.vcchannel.name}", embed=embed)
+            for emoji in self.emojis[:20]:
+                await msg.add_reaction(emoji)
+            msg = await self.hcchannel.send("More Keys:")
+            for emoji in self.emojis[20:40]:
+                await msg.add_reaction(emoji)
+            msg = await self.hcchannel.send("Even More Keys:")
+            for emoji in self.emojis[40:]:
+                await msg.add_reaction(emoji)
+            return
+        elif int(msg.content) == 51:
             self.dungeontitle = "Realm Clearing"
             self.emojis = ["<:defaultdungeon:682212333182910503>", "<:trickster:682214467483861023>", "<:Warrior_1:585616162407186433>",
                            "<:ninja_3:585616162151202817>"]
