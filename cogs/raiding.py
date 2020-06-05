@@ -116,8 +116,6 @@ class Raiding(commands.Cog):
         else:
             return
         await setup_msg.delete()
-        # if " <-- Join!" not in vcchannel.name:
-        #     await vcchannel.edit(name=vcchannel.name + " <-- Join!")
         await vcchannel.set_permissions(raiderrole, connect=True, view_channel=True, speak=False)
         embed = discord.Embed(description=f"{vcchannel.name} Has been Unlocked!", color=discord.Color.green())
         await ctx.send(embed=embed)
