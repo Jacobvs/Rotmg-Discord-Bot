@@ -1,6 +1,7 @@
 import functools
 import io
 import re
+from difflib import get_close_matches
 
 import cv2
 import discord
@@ -279,17 +280,28 @@ def parse_image(image, vc):
     names = split_str[3].split(", ")
     cleaned_members = ["".join(c for c in m.display_name.lower() if c.isalpha()) for m in vc.members]
     crashing = []
+    fixed_names = []
     for name in names:
-        name = name.lower().strip()
         if " " in name:
-            name = name.split(" ")[0]
-        if name not in cleaned_members:
-            crashing.append(name)
+            names = name.split(" ")
+            name = names[0]
+        if name.lower().strip() not in cleaned_members:
+            matches = get_close_matches(name.lower().strip(), cleaned_members, n=1, cutoff=0.8)
+            if len(matches) == 0:
+                crashing.append(name.strip())
+            else:
+                if matches[0] not in cleaned_members:
+                    fixed_names.append((name.lower().strip(), matches[0]))
+
     kicklist = "".join("`/kick " + m + "`\n" for m in crashing)
-    desc = f"Possible Crashers: **{len(crashing)}**\n(Members in run but not in vc)\n"+kicklist
-    if len(desc) > 2000:
-        desc = "Too many characters (>2000)!\nTry again with a smaller list!"
-    embed = discord.Embed(title=f"Parsing Results for {vc.name}", description=desc, color=discord.Color.orange())
+    if fixed_names:
+        fixedlist = "     Fixed Name | Original Parse".join("`/kick " + fixed + "` | (" + orig + ")\n" for (orig, fixed) in fixed_names)
+    if len(kicklist) > 2000:
+        kicklist = "Too many characters (>2000)!\nTry again with a smaller list!"
+    embed = discord.Embed(title=f"Parsing Results for {vc.name}", description=f"Possible Crashers: **{len(crashing)}**",
+                          color=discord.Color.orange()).add_field(name="Members in run but not in vc:", value=kicklist, inline=True)
+    if fixed_names:
+        embed.add_field(name="Possible Fixed Names", value=fixedlist)
     return embed
 
 
