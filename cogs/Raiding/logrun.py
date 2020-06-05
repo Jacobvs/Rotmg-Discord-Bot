@@ -139,7 +139,10 @@ class LogRun:
             desc += "# Raiders - " + str(len(self.members)) + "\n"
         else:
             desc += f"Manual run log for {self.numruns} runs.\n"
-        desc += self.confirmedLogs[-1][0] + " - " + self.confirmedLogs[-1][1]
+        try:
+            desc += str(self.confirmedLogs[-1][0]) + " - " + str(self.confirmedLogs[-1][1])
+        except IndexError:
+            pass
         embed = discord.Embed(title="Run Logged!", description=desc, color=discord.Color.green())
         await self.msg.clear_reactions()
         await self.msg.edit(content=None, embed=embed)

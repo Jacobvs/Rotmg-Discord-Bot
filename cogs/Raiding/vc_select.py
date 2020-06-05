@@ -6,16 +6,16 @@ import sql
 
 
 class VCSelect:
-    def __init__(self, client, ctx, headcount=False, lock=False, unlock=False, clean=False):
+    def __init__(self, client, ctx, headcount=False, lock=False, unlock=False, clean=False, parse=False):
         self.client = client
         self.ctx = ctx
         self.headcount = headcount
         title = "Headcount Setup" if headcount else "Lock Selection" if lock else "Unlock Selection" if unlock else "Cleaning Selection" if\
-            clean else "AFK-Check Setup"
+            clean else "Parsing Setup" if parse else "AFK-Check Setup"
         description = "Please choose what channel you'd like to start this headcount in." if headcount else\
             "Please choose which channel you'd like to lock." if lock else "Please choose which channel you'd like to unlock." if unlock\
-            else "Please choose which channel you'd like to clean." if clean else \
-                "Please choose what channel you'd like to start this afk check in."
+            else "Please choose which channel you'd like to clean." if clean else "Please choose which channel you'd like to parse for." if\
+                parse else "Please choose what channel you'd like to start this afk check in."
         self.locationembed = discord.Embed(title=title,
                                            description=description,
                                            color=discord.Color.green())

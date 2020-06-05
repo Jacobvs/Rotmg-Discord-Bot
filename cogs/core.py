@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import discord
 from discord.ext import commands
 
+import sql
 from checks import is_role_or_higher
 from cogs import verification, raiding, moderation
 from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification, subverify_react_handler
@@ -168,7 +169,8 @@ class Core(commands.Cog):
                 return await subverify_react_handler(Verification(self.client), payload, 2, guild_data, user, guild, subverify_2_msg_id)
             elif payload.channel_id in [guild_data[gld_cols.raidhc1], guild_data[gld_cols.raidhc2], guild_data[gld_cols.raidhc3],
                                         guild_data[gld_cols.vethc1]]:  # handles raiding emoji reactions
-                if str(payload.emoji) == '❌' and await is_role_or_higher(guild.get_member(user.id), guild, guild_data[gld_cols.rlroleid]):
+                if str(payload.emoji) == '❌' and await is_role_or_higher(guild.get_member(user.id),
+                                                                         self.client.guild_db.get(guild.id)[sql.gld_cols.rlroleid]):
                     #from cogs.raiding import end_afk_check
                     return await raiding.end_afk_check(self.client.pool, guild.get_member(user.id), guild, False)
                 #from cogs.raiding import afk_check_reaction_handler

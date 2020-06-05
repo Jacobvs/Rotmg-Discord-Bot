@@ -184,6 +184,8 @@ class Casino(commands.Cog):
             pass
         if ctx.author.id in players_in_game:
             return await ctx.send("You cannot use the pay command while in a game!", delete_after=7)
+        elif member.id in players_in_game:
+            return await ctx.send(f"{member.mention} is in a game, retry when they're done!", delete_after=7)
         if member.bot or member == ctx.author:
             raise commands.BadArgument('You cannot pay yourself or bots!')
         if amount <= 0:

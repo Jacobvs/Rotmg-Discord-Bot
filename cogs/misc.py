@@ -10,9 +10,10 @@ import youtube_dl
 from discord.ext import commands
 from discord.utils import get
 
+import checks
 import embeds
 import sql
-from checks import in_voice_channel, is_dj, is_rl_or_higher_check, is_bot_owner
+from checks import is_dj, is_rl_or_higher_check, is_bot_owner
 from sql import get_num_verified
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -72,7 +73,7 @@ class Misc(commands.Cog):
                 if g.get_member(author.id):
                     servers.append(g)
             serverstr = ""
-            for i, s in enumerate(servers):
+            for i, s in enumerate(servers[:10]):
                 serverstr += self.numbers[i] + " - " + s.name + "\n"
             embed = discord.Embed(description="What server would you like to check stats for?\n"+serverstr, color=discord.Color.gold())
             msg = await author.send(embed=embed)
@@ -89,6 +90,7 @@ class Misc(commands.Cog):
                 return await msg.edit(embed=embed)
 
             serverid = servers[self.numbers.index(str(reaction.emoji))].id
+            author = servers[self.numbers.index(str(reaction.emoji))].get_member(author.id)
             await msg.delete()
         else:
             await ctx.message.delete()
@@ -108,10 +110,13 @@ class Misc(commands.Cog):
                         f"**{data[sql.log_cols.vials]}**\nSword Runes: **{data[sql.log_cols.swordrunes]}**\nShield Runes: "
                         f"**{data[sql.log_cols.shieldrunes]}**\nHelm Runes: **{data[sql.log_cols.helmrunes]}**", inline=False)\
                         .add_field(name="__**Run Stats**__", value=f"Completed: **{data[sql.log_cols.runsdone]}**\nEvents Completed: "
-                        f"**{data[sql.log_cols.eventsdone]}**", inline=False).add_field(name="__**Leading Stats**__", value="Successful Runs: "
+                        f"**{data[sql.log_cols.eventsdone]}**", inline=False)
+        if author.top_role >= self.client.guild_db.get(serverid)[sql.gld_cols.rlroleid]:
+            embed.add_field(name="__**Leading Stats**__", value="Successful Runs: "
                         f"**{data[sql.log_cols.srunled]}**\nFailed Runs: **{data[sql.log_cols.frunled]}**\nAssisted: "
                         f"**{data[sql.log_cols.runsassisted]}**\nEvents: **{data[sql.log_cols.eventled]}**\nEvents Assisted: "
-                        f"**{data[sql.log_cols.eventsassisted]}**", inline=False)
+                        f"**{data[sql.log_cols.eventsassisted]}**\nWeekly Runs Led: **{data[sql.log_cols.weeklyruns]}**\n"
+                        f"Weekly Runs Assisted: **{data[sql.log_cols.weeklyassists]}**", inline=False)
         embed.timestamp = datetime.utcnow()
         if ctx.guild:
             return await ctx.send(embed=embed)
@@ -120,8 +125,8 @@ class Misc(commands.Cog):
 
     @commands.command(aliases=["ahhaha"], usage="!laugh [1 or 2]")
     @commands.guild_only()
-    @commands.check_any(is_dj, is_bot_owner)
-    @commands.check(in_voice_channel)
+    @commands.check_any(is_dj(), is_bot_owner())
+    @checks.in_voice_channel()
     async def laugh(self, ctx, option=1):
         """Ah-Ha-hA"""
         voice = await connect_helper(self, ctx)
@@ -140,8 +145,8 @@ class Misc(commands.Cog):
 
     @commands.command(usage="!richard")
     @commands.guild_only()
-    @commands.check_any(is_dj, is_bot_owner)
-    @commands.check(in_voice_channel)
+    @commands.check_any(is_dj(), is_bot_owner())
+    @checks.in_voice_channel()
     async def richard(self, ctx):
         """"RICHARD!"""
         voice = await connect_helper(self, ctx)
@@ -156,7 +161,7 @@ class Misc(commands.Cog):
 
 
     @commands.command(usage="!oogabooga")
-    @commands.check_any(is_rl_or_higher_check, is_bot_owner)
+    @commands.check_any(is_rl_or_higher_check(), is_bot_owner())
     async def oogabooga(self, ctx):
         """The only command you ever need."""
         await ctx.message.delete()
@@ -167,7 +172,7 @@ class Misc(commands.Cog):
 
 
     @commands.command(usage="!whatthefuck")
-    @commands.check_any(is_rl_or_higher_check, is_bot_owner)
+    @commands.check_any(is_rl_or_higher_check(), is_bot_owner())
     async def whatthefuck(self, ctx):
         """????"""
         await ctx.message.delete()
@@ -177,7 +182,7 @@ class Misc(commands.Cog):
 
 
     @commands.command(usage="!isitgone")
-    @commands.check_any(is_rl_or_higher_check, is_bot_owner)
+    @commands.check_any(is_rl_or_higher_check(), is_bot_owner())
     async def isitgone(self, ctx):
         """Spooky"""
         await ctx.message.delete()
@@ -188,7 +193,7 @@ class Misc(commands.Cog):
 
     @commands.command(usage='!poll "[title]" [option 1] [option 2]...')
     @commands.guild_only()
-    @commands.check_any(is_rl_or_higher_check, is_bot_owner)
+    @commands.check_any(is_rl_or_higher_check(), is_bot_owner())
     async def poll(self, ctx, title, *options):
         """Creates a poll with up to 2-10 options"""
         if len(options) < 2:
