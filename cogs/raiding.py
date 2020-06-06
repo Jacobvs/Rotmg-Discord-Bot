@@ -252,18 +252,18 @@ def setup(client):
 def parse_image(image, vc):
     file_bytes = np.asarray(bytearray(image.read()), dtype=np.uint8)
     img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-    kernel = np.ones((1, 1), np.uint8)
-    img = cv2.dilate(img, kernel, iterations=1)
-    img = cv2.erode(img, kernel, iterations=1)
+    img = cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     # define range of yellow color in HSV
-    lower_val = np.array([22, 160, 160])
-    upper_val = np.array([30, 255, 255])
+    lower = np.array([28, 190, 190])
+    upper = np.array([31, 255, 255])
     # Threshold the HSV image to get only yellow colors
-    mask = cv2.inRange(hsv, lower_val, upper_val)
+    mask = cv2.inRange(hsv, lower, upper)
+    cv2.imwrite("mask.jpg", mask)
     # invert the mask to get yellow letters on white background
     res = cv2.bitwise_not(mask)
+    cv2.imwrite("res.jpg", res)
 
     str = pytesseract.image_to_string(res)
     str = str.replace("\n", " ")
@@ -272,6 +272,9 @@ def parse_image(image, vc):
     str = str.replace(";", ":")
     split_str = re.split(r'(.*)(Players online \([0-9]+\): )', str)
     if len(split_str) < 4:
+        print("ERROR - Parsed String: " + str)
+        print("INFO - Split String: ")
+        print(split_str)
         embed = discord.Embed(title="Error!", description="Could not find the who command in the image you provided.\nPlease re-run the "
                             "command with an image that shows the results of `/who`.", color=discord.Color.red())
         return embed
@@ -292,6 +295,8 @@ def parse_image(image, vc):
                     fixed_names.append((name.lower().strip(), matches[0]))
 
     kicklist = "".join("`/kick " + m + "`\n" for m in crashing)
+    if not kicklist:
+        kicklist = "No members crashing!"
     if fixed_names:
         fixedlist = "     Fixed Name | Original Parse".join("`/kick " + fixed + "` | (" + orig + ")\n" for (orig, fixed) in fixed_names)
     if len(kicklist) > 2000:
