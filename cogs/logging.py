@@ -90,7 +90,7 @@ async def update_leaderboards(client):
     while(True):
         startofweek = (datetime.datetime.today() + datetime.timedelta(days=7 - datetime.datetime.today().weekday())).replace(hour=0,
                                                                       minute=0, second=0, microsecond=1)
-        await asyncio.sleep((startofweek-datetime.datetime.utcnow()).seconds)
+        await asyncio.sleep((startofweek-datetime.datetime.utcnow()).total_seconds())
 
         for id in client.serverwleaderboard:
             await update_leaderboard(client, id)
