@@ -64,7 +64,7 @@ def get_result(num, bet_type: str):
         if num in [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]:
             return 1
     elif bet_type == "green" and num == 0:
-        return 14
+        return 18
     elif bet_type == "high" and num >= 19:
         return 1
     elif bet_type == "low" and 18 >= num >= 1:
@@ -90,7 +90,7 @@ def get_placement(bet_type: str):
     placements = {
         "red": "Red (Bet **x2**)",
         "black": "Black (Bet **x2**)",
-        "green": "Green (Bet **x14**)",
+        "green": "Green (Bet **x18**)",
         "high": "High (Bet **x2**)",
         "low": "Low (Bet **x2**)",
         "even": "Even (Bet **x2**)",

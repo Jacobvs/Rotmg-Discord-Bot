@@ -24,7 +24,6 @@ class Core(commands.Cog):
 
 
     @commands.command(usage="!uptime")
-    @commands.has_permissions(administrator=True)
     async def uptime(self, ctx):
         """Tells how long the bot has been running."""
         uptime_seconds = round((datetime.now() - self.start_time).total_seconds())
@@ -69,7 +68,7 @@ class Core(commands.Cog):
             if message.content[0] == '!':
                 # TODO: implement proper checks
                 if message.author.id not in self.client.variables.get('allowed_user_ids'):
-                    await message.author.send('You do not have the permissions to use this command.')
+                    await message.author.send('You do not have the permissions to use this command in a DM context.')
                 return
 
             user_data = await get_user(self.client.pool, message.author.id)

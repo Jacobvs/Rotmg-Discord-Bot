@@ -79,7 +79,7 @@ class Raiding(commands.Cog):
             return
         await setup_msg.delete()
         msg = await ctx.send("Parsing image. This may take a minute...")
-        embed = await self.client.loop.run_in_executor(None, functools.partial(parse_image, image, vcchannel))
+        embed = await self.client.loop.run_in_executor(None, functools.partial(parse_image, ctx.author, image, vcchannel))
         await msg.delete()
         await ctx.send(embed=embed)
 
@@ -249,23 +249,28 @@ class Raiding(commands.Cog):
 def setup(client):
     client.add_cog(Raiding(client))
 
-def parse_image(image, vc):
+def parse_image(author, image, vc):
     file_bytes = np.asarray(bytearray(image.read()), dtype=np.uint8)
     img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-    img = cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    width = img.shape[:2][1]
+    factor = 700 / width
+    img = cv2.resize(img, None, fx=factor, fy=factor, interpolation=cv2.INTER_CUBIC)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     # define range of yellow color in HSV
-    lower = np.array([28, 190, 190])
+    lower = np.array([27, 130, 180])
     upper = np.array([31, 255, 255])
     # Threshold the HSV image to get only yellow colors
     mask = cv2.inRange(hsv, lower, upper)
-    cv2.imwrite("mask.jpg", mask)
+    # cv2.imwrite("mask.jpg", mask)
     # invert the mask to get yellow letters on white background
     res = cv2.bitwise_not(mask)
-    cv2.imwrite("res.jpg", res)
+    # cv2.imwrite("res.jpg", res)
+    kernel = np.ones((2, 2), np.uint8)
+    res = cv2.erode(res, kernel, iterations=1)
+    blur = cv2.GaussianBlur(res, (3, 3), 0)
 
-    str = pytesseract.image_to_string(res)
+    str = pytesseract.image_to_string(blur, lang='eng')
     str = str.replace("\n", " ")
     str = str.replace("}", ")")
     str = str.replace("{", "(")
@@ -279,32 +284,64 @@ def parse_image(image, vc):
                             "command with an image that shows the results of `/who`.", color=discord.Color.red())
         return embed
     names = split_str[3].split(", ")
-    cleaned_members = ["".join(c for c in m.display_name.lower() if c.isalpha()) for m in vc.members]
+    cleaned_members = []
+    alts = []
+    def clean_member(m):
+        if " | " in m:
+            names = m.split(" | ")
+            for i, name in enumerate(names):
+                if i == 0:
+                    cleaned_members.append(clean_name(name))
+                else:
+                    alts.append(clean_name(name))
+        else:
+            cleaned_members.append(clean_name(m))
+    def clean_name(n):
+        return "".join(c for c in n if c.isalpha())
+
+    for m in vc.members:
+        clean_member(m.display_name)
+
     crashing = []
+    possible_alts = []
     fixed_names = []
+    author = clean_name(author.display_name)
     for name in names:
         if " " in name:
             names = name.split(" ")
             name = names[0]
-        if name.lower().strip() not in cleaned_members:
-            matches = get_close_matches(name.lower().strip(), cleaned_members, n=1, cutoff=0.8)
+        if name.strip() not in cleaned_members:
+            matches = get_close_matches(name.strip(), cleaned_members, n=1, cutoff=0.8)
             if len(matches) == 0:
-                crashing.append(name.strip())
+                if name.strip() not in alts:
+                    crashing.append(name.strip())
             else:
                 if matches[0] not in cleaned_members:
-                    fixed_names.append((name.lower().strip(), matches[0]))
+                    fixed_names.append((name.strip(), matches[0]))
+                else:
+                    cleaned_members.remove(matches[0])
+        else:
+            cleaned_members.remove(name.strip())
+
+    for m in cleaned_members:
+        if m != author:
+            possible_alts.append(m)
 
     kicklist = "".join("`/kick " + m + "`\n" for m in crashing)
     if not kicklist:
         kicklist = "No members crashing!"
     if fixed_names:
         fixedlist = "     Fixed Name | Original Parse".join("`/kick " + fixed + "` | (" + orig + ")\n" for (orig, fixed) in fixed_names)
+    if possible_alts:
+        altlist = "".join("`" + name + "`\n" for name in possible_alts)
     if len(kicklist) > 2000:
         kicklist = "Too many characters (>2000)!\nTry again with a smaller list!"
     embed = discord.Embed(title=f"Parsing Results for {vc.name}", description=f"Possible Crashers: **{len(crashing)}**",
                           color=discord.Color.orange()).add_field(name="Members in run but not in vc:", value=kicklist, inline=True)
     if fixed_names:
         embed.add_field(name="Possible Fixed Names", value=fixedlist)
+    if possible_alts:
+        embed.add_field(name="Possible Alts (In VC but not in game)", value=altlist)
     return embed
 
 

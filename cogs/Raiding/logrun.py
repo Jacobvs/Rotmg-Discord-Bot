@@ -169,7 +169,7 @@ class LogRun:
             return
         elif str(reaction.emoji) in self.numbers:
             i = self.numbers.index(str(reaction.emoji))
-            memberid = reacts[i]
+            memberid = reacts[i].id
         else:
             await self.msg.clear_reactions()
             await self.msg.edit(embed=self.otheremebed)
@@ -194,7 +194,7 @@ class LogRun:
                     await msg.delete()
 
         await sql.log_runs(self.client.pool, self.ctx.guild.id, memberid, column, self.numruns)
-        self.confirmedLogs.append((emoji, memberid))
+        self.confirmedLogs.append((emoji, f"<@{memberid}>"))
 
     async def add_emojis(self, msg, emojis):
         for e in emojis:

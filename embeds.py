@@ -266,7 +266,7 @@ def roulette_help_embed():
     embed = discord.Embed(title="Roulette", color=discord.Color.orange()).add_field(name="Bet Types",
                                                                                     value="black/red/green/high/low/even/odd, 0-36", inline=False)\
         .add_field(
-        name="Winnings", value="**Black/Red** - x2\n**Green** - x14\n**1-36** - x35\n**High/Low** - x2\n**Even/Odd** - x2", inline=False).add_field(
+        name="Winnings", value="**Black/Red** - x2\n**Green** - x18\n**1-36** - x35\n**High/Low** - x2\n**Even/Odd** - x2", inline=False).add_field(
         name="Numbers",
         value="Green: **0, 0** (2x the chance)\nBlack: **2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35**\n"
               "Red: **1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36**\nLow: **1-18**\nHigh: **19-36**", inline=False).add_field(
