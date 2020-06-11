@@ -50,6 +50,7 @@ async def on_ready():
     bot.guild_db = await sql.construct_guild_database(bot.pool, bot)
     bot.raid_db = {}
     bot.mapmarkers = {}
+    bot.players_in_game = []
     bot.serverwleaderboard = [703987028567523468, 660344559074541579, 713655609760940044]
     for g in bot.guild_db:
         bot.raid_db[g] = {"raiding": {0: None, 1: None, 2: None}, "vet": {0: None, 1: None}, "events": {0: None, 1: None}, "leaders": []}

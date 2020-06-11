@@ -5,7 +5,6 @@ import random
 import discord
 
 import sql
-from cogs import casino
 
 
 class RussianRoulette:
@@ -57,8 +56,8 @@ class RussianRoulette:
             except asyncio.TimeoutError as e:
                 if len(self.players) == 1:
                     self.task.cancel()
-                    if self.player1.id in casino.players_in_game:  ##Temp bugfix for players not appending properly
-                        casino.players_in_game.remove(self.player1.id)
+                    if self.player1.id in self.client.players_in_game:  ##Temp bugfix for players not appending properly
+                        self.client.players_in_game.remove(self.player1.id)
                     await self.game_msg.edit(embed=self.cancelembed)
                     return await self.game_msg.clear_reactions()
                 else:
@@ -70,8 +69,8 @@ class RussianRoulette:
             if str(reaction.emoji) == "▶":
                 if len(self.players) == 1:
                     self.task.cancel()
-                    if self.player1.id in casino.players_in_game:  ##Temp bugfix for players not appending properly
-                        casino.players_in_game.remove(self.player1.id)
+                    if self.player1.id in self.client.players_in_game:  ##Temp bugfix for players not appending properly
+                        self.client.players_in_game.remove(self.player1.id)
                     await self.game_msg.edit(embed=self.cancelembed)
                     return await self.game_msg.clear_reactions()
                 else:
@@ -84,12 +83,12 @@ class RussianRoulette:
             balance = data[sql.casino_cols.balance]
             if balance < self.bet:
                 await self.ctx.send(f"{user.mention} does not have enough credits to join. Available balance: {balance:,}.", delete_after=7)
-            elif user.id in casino.players_in_game:
+            elif user.id in self.client.players_in_game:
                 await self.ctx.send("You're already in a game! "
                                     "Finish that game or wait for it to expire to start a new one.", delete_after=10)
             else:
                 self.players.append(user)
-                casino.players_in_game.append(user.id)
+                self.client.players_in_game.append(user.id)
                 mentions = ''.join(p.mention + "\n" for p in self.players)
                 self.gameembed.set_field_at(0, name="Players", value=mentions, inline=False)
                 self.gameembed.set_field_at(3, name="Pot", value=f"**{(self.bet*len(self.players)):,}** credits.", inline=True)
@@ -137,13 +136,13 @@ class RussianRoulette:
             data = await sql.get_casino_player(self.client.pool, p.id)
             balance = data[sql.casino_cols.balance]
             await sql.change_balance(self.client.pool, self.ctx.guild.id, p.id, balance-self.bet)
-            if p.id in casino.players_in_game: ##Temp bugfix for players not appending properly
-                casino.players_in_game.remove(p.id)
+            if p.id in self.client.players_in_game: ##Temp bugfix for players not appending properly
+                self.client.players_in_game.remove(p.id)
         data = await sql.get_casino_player(self.client.pool, self.players[0].id)
         balance = data[sql.casino_cols.balance]
         await sql.change_balance(self.client.pool, self.ctx.guild.id, self.players[0].id, balance + (self.bet*len(self.killedplayers)))
-        if self.players[0].id in casino.players_in_game:
-            casino.players_in_game.remove(self.players[0].id)
+        if self.players[0].id in self.client.players_in_game:
+            self.client.players_in_game.remove(self.players[0].id)
         self.gameembed.color = discord.Color.green()
         self.gameembed.description = f"{self.players[0].mention} won!"
         self.gameembed.remove_field(1)

@@ -13,7 +13,6 @@ from cogs.Minigames.roulette import Roulette
 from cogs.Minigames.russianroulette import RussianRoulette
 from cogs.Minigames.slots import Slots
 
-players_in_game = []
 
 class Casino(commands.Cog):
 
@@ -30,7 +29,7 @@ class Casino(commands.Cog):
             await ctx.message.delete()
         except discord.NotFound:
             pass
-        if ctx.author.id in players_in_game:
+        if ctx.author.id in self.client.players_in_game:
             return await ctx.send("You're already in a game! "
                                   "Finish that game or wait for it to expire to start a new one.", delete_after=10)
         if bet > 0:
@@ -44,9 +43,9 @@ class Casino(commands.Cog):
                 game = Blackjack(ctx, self.client, bet, balance, False)
         else:
             game = Blackjack(ctx, self.client, 0, 0, False)
-        players_in_game.append(ctx.author.id)
+        self.client.players_in_game.append(ctx.author.id)
         await game.play()
-        players_in_game.remove(ctx.author.id)
+        self.client.players_in_game.remove(ctx.author.id)
 
     @commands.command(usage="!roulette [bet_type] [bet]", aliases=['r'])
     async def roulette(self, ctx, bet_type: str=None, bet: int=None):
@@ -57,7 +56,7 @@ class Casino(commands.Cog):
             pass
         if not bet_type or not bet:
             return await ctx.send(embed=embeds.roulette_help_embed())
-        if ctx.author.id in players_in_game:
+        if ctx.author.id in self.client.players_in_game:
             return await ctx.send("You're already in a game! "
                                   "Finish that game or wait for it to expire to start a new one.", delete_after=10)
         if bet_type.isdigit():
@@ -74,9 +73,9 @@ class Casino(commands.Cog):
             game = Roulette(ctx, self.client, bet, ctx.author, balance, bet_type)
         else:
             return await ctx.send("You have to bet more than 0 credits on this game!", delete_after=10)
-        players_in_game.append(ctx.author.id)
+        self.client.players_in_game.append(ctx.author.id)
         await game.play()
-        players_in_game.remove(ctx.author.id)
+        self.client.players_in_game.remove(ctx.author.id)
 
 
     @commands.command(usage="!slots [bet]", aliases=['slot', 's'])
@@ -88,7 +87,7 @@ class Casino(commands.Cog):
             pass
         if not bet:
             return await ctx.send(embed=embeds.slots_help_embed())
-        if ctx.author.id in players_in_game:
+        if ctx.author.id in self.client.players_in_game:
             return await ctx.send("You're already in a game! "
                                   "Finish that game or wait for it to expire to start a new one.", delete_after=10)
         if bet > 0:
@@ -100,9 +99,9 @@ class Casino(commands.Cog):
             game = Slots(self.client, ctx, bet, ctx.author, balance)
         else:
             return await ctx.send("You have to bet more than 0 credits on this game!", delete_after=10)
-        players_in_game.append(ctx.author.id)
+        self.client.players_in_game.append(ctx.author.id)
         await game.play()
-        players_in_game.remove(ctx.author.id)
+        self.client.players_in_game.remove(ctx.author.id)
 
     @commands.command(usage="!coinflip [@member] [bet]", aliases=['cf'])
     async def coinflip(self, ctx, member: discord.Member, bet: int):
@@ -111,10 +110,10 @@ class Casino(commands.Cog):
             await ctx.message.delete()
         except discord.NotFound:
             pass
-        if ctx.author.id in players_in_game:
+        if ctx.author.id in self.client.players_in_game:
             return await ctx.send("You're already in a game! "
                                   "Finish that game or wait for it to expire to start a new one.", delete_after=10)
-        if member.id in players_in_game:
+        if member.id in self.client.players_in_game:
             return await ctx.send(f"{member.mention} is in a game. Wait for them to finish their game before starting a new one!",
                                   delete_after=10)
         if member.bot or member == ctx.author:
@@ -129,9 +128,9 @@ class Casino(commands.Cog):
             if balance2 < bet:
                 return await ctx.send(f"{member.display_name} doesn't have enough credits to play.")
             game = Coinflip(ctx, self.client, bet, balance1, balance2, member)
-            players_in_game.append(ctx.author.id)
+            self.client.players_in_game.append(ctx.author.id)
             await game.play()
-            players_in_game.remove(ctx.author.id)
+            self.client.players_in_game.remove(ctx.author.id)
         else:
             await ctx.send("You have to place a bet higher than 0!")
 
@@ -142,7 +141,7 @@ class Casino(commands.Cog):
             await ctx.message.delete()
         except discord.NotFound:
             pass
-        if ctx.author.id in players_in_game:
+        if ctx.author.id in self.client.players_in_game:
             return await ctx.send("You're already in a game! "
                                   "Finish that game or wait for it to expire to start a new one.", delete_after=10)
         if bet > 0:
@@ -151,7 +150,7 @@ class Casino(commands.Cog):
             if balance < bet:
                 return await ctx.send(f"You don't have enough credits! Available balance: {balance}")
             game = RussianRoulette(ctx, self.client, bet, ctx.author)
-            players_in_game.append(ctx.author.id)
+            self.client.players_in_game.append(ctx.author.id)
             await game.play()
         else:
             await ctx.send("You have to place a bet higher than 0!")
@@ -182,9 +181,9 @@ class Casino(commands.Cog):
             await ctx.message.delete()
         except discord.NotFound:
             pass
-        if ctx.author.id in players_in_game:
+        if ctx.author.id in self.client.players_in_game:
             return await ctx.send("You cannot use the pay command while in a game!", delete_after=7)
-        elif member.id in players_in_game:
+        elif member.id in self.client.players_in_game:
             return await ctx.send(f"{member.mention} is in a game, retry when they're done!", delete_after=7)
         if member.bot or member == ctx.author:
             raise commands.BadArgument('You cannot pay yourself or bots!')
