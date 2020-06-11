@@ -244,7 +244,7 @@ async def get_top_balances(pool, guild_id):
 
 
 ## RUN LOGGING:
-async def log_runs(pool, guild_id, member_id, column=1):
+async def log_runs(pool, guild_id, member_id, column=1, number=1):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute(f"SELECT * from rotmg.`{guild_id}` WHERE id = {member_id}")
@@ -258,7 +258,14 @@ async def log_runs(pool, guild_id, member_id, column=1):
                 "swordrunes" if column == 5 else "eventkeys" if column == 6 else "runsdone" if column == 7 else "eventsdone" if column == 8\
                 else "srunled" if column == 9 else "frunled" if column == 10 else "eventled" if column == 11 else "runsassisted" if\
                 column == 12 else "eventsassisted"
-            await cursor.execute(f"UPDATE rotmg.`{guild_id}` SET {name} = {name} + 1 WHERE id = {member_id}")
+            if column == 9 or column == 10 or column == 11:
+                await cursor.execute(f"UPDATE rotmg.`{guild_id}` SET {name} = {name} + {number}, weeklyruns = weeklyruns + {number} "
+                                     f"WHERE id = {member_id}")
+            elif column == 12:
+                await cursor.execute(f"UPDATE rotmg.`{guild_id}` SET {name} = {name} + {number}, weeklyassists = weeklyassists + {number} "
+                                     f"WHERE id = {member_id}")
+            else:
+                await cursor.execute(f"UPDATE rotmg.`{guild_id}` SET {name} = {name} + {number} WHERE id = {member_id}")
             await conn.commit()
 
 async def get_log(pool, guild_id, member_id):
@@ -273,6 +280,30 @@ async def get_log(pool, guild_id, member_id):
                 await cursor.execute(f"SELECT * from rotmg.`{guild_id}` WHERE id = {member_id}")
                 data = await cursor.fetchone()
             return data
+
+async def get_top_10_logs(pool, guild_id, column, only_10=True):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            name = "pkey" if column == 1 else "vials" if column == 2 else "helmrunes" if column == 3 else "shieldrunes" if column == 4 \
+                else "swordrunes" if column == 5 else "eventkeys" if column == 6 else "runsdone" if column == 7 else "eventsdone" if \
+                column == 8 else "srunled" if column == 9 else "frunled" if column == 10 else "eventled" if column == 11 else \
+                "runsassisted" if column == 12 else "eventsassisted" if column == 13 else "weeklyruns" if column == 14 else "weeklyassists"
+            if only_10:
+                await cursor.execute(f"SELECT * from rotmg.`{guild_id}` ORDER BY {name} DESC LIMIT 10")
+            else:
+                await cursor.execute(f"SELECT * from rotmg.`{guild_id}` ORDER BY {name} DESC")
+            data = await cursor.fetchall()
+            await conn.commit()
+            return list(data)
+
+async def get_0_runs(pool, guild_id):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(f"SELECT * from rotmg.`{guild_id}` WHERE weeklyruns = 0")
+            data = await cursor.fetchall()
+            await conn.commit()
+            return list(data)
+
 
 class log_cols(enum.IntEnum):
     id = 0
@@ -289,6 +320,8 @@ class log_cols(enum.IntEnum):
     eventled = 11
     runsassisted = 12
     eventsassisted = 13
+    weeklyruns = 14
+    weeklyassists = 15
 
 class casino_cols(enum.IntEnum):
     id = 0
@@ -310,7 +343,7 @@ class usr_cols(enum.IntEnum):
     verifiedguilds = 6  # String (CSV)
 
 
-gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42]
+gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45]
 gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43]
 class gld_cols(enum.IntEnum):
     """Contains References to rotmg.guilds table for easy access"""
@@ -358,3 +391,23 @@ class gld_cols(enum.IntEnum):
     eventhc2 = 41
     eventvc2 = 42
     raiderroleid = 43
+    leaderboardchannel = 44
+    zerorunchannel = 45
+
+
+## EVENTS:
+# CREATE EVENT `zero_runs_weekly`
+#     ON SCHEDULE
+#         EVERY 168 HOUR STARTS '2020-06-01 20:00:00'
+#     ON COMPLETION PRESERVE
+#     ENABLE
+# DO BEGIN
+#          UPDATE rotmg.`660344559074541579` SET weeklyruns = 0 WHERE weeklyruns <> 0;
+#          UPDATE rotmg.`678528908429361152` SET weeklyruns = 0 WHERE weeklyruns <> 0;
+#          UPDATE rotmg.`703987028567523468` SET weeklyruns = 0 WHERE weeklyruns <> 0;
+#          UPDATE rotmg.`713655609760940044` SET weeklyruns = 0 WHERE weeklyruns <> 0;
+#          UPDATE rotmg.`660344559074541579` SET weeklyassists = 0 WHERE weeklyassists <> 0;
+#          UPDATE rotmg.`678528908429361152` SET weeklyassists = 0 WHERE weeklyassists <> 0;
+#          UPDATE rotmg.`703987028567523468` SET weeklyassists = 0 WHERE weeklyassists <> 0;
+#          UPDATE rotmg.`713655609760940044` SET weeklyassists = 0 WHERE weeklyassists <> 0;
+# END

@@ -5,8 +5,9 @@ import logging
 import discord
 from discord.ext import commands
 
+import checks
 import embeds
-from checks import is_rl_or_higher_check, manual_verify_channel, has_manage_roles
+from checks import manual_verify_channel, has_manage_roles
 from cogs import verification
 from sql import get_guild, get_user, update_user, add_new_user, gld_cols, usr_cols
 
@@ -35,7 +36,7 @@ class Moderation(commands.Cog):
 
     @commands.command(usage="!find [nickname]")
     @commands.guild_only()
-    @commands.check(is_rl_or_higher_check)
+    @checks.is_rl_or_higher_check()
     async def find(self, ctx, mem):
         """Find a user by the specified nickname"""
         converter = discord.ext.commands.MemberConverter()
@@ -108,14 +109,14 @@ class Moderation(commands.Cog):
 
     @commands.command(usage="!manual_verify [@member] {optional: ign}")
     @commands.guild_only()
-    @commands.check_any(manual_verify_channel, has_manage_roles)
+    @commands.check_any(manual_verify_channel(), has_manage_roles())
     async def manual_verify(self, ctx, member: discord.Member, ign=None):
         await ctx.message.delete()
         return await manual_verify_ext(self.client.pool, ctx.guild, member.id, ctx.author, ign)
 
     @commands.command(usage="!manual_verify_deny [@member]")
     @commands.guild_only()
-    @commands.check_any(manual_verify_channel, has_manage_roles)
+    @commands.check_any(manual_verify_channel(), has_manage_roles())
     async def manual_verify_deny(self, ctx, member: discord.Member):
         await ctx.message.delete()
         return await manual_verify_deny_ext(self.client.pool, ctx.guild, member.id, ctx.author)

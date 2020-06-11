@@ -2,10 +2,8 @@ import asyncio
 import random
 
 import discord
-from discord.ext import tasks
 
 import sql
-from cogs import casino
 
 
 class Coinflip:
@@ -59,7 +57,7 @@ class Coinflip:
         await self.game_msg.clear_reactions()
 
         if resp == '✅':
-            if user.id in casino.players_in_game:
+            if user.id in self.client.players_in_game:
                 await self.ctx.send("You're already in a game! "
                                     "Finish that game or wait for it to expire to start a new one.", delete_after=10)
                 self.gameembed.color = discord.Color.red()

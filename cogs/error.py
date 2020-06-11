@@ -6,8 +6,8 @@ from discord.ext import commands
 
 
 class CommandErrorHandler(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self, client):
+        self.client = client
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
@@ -64,7 +64,9 @@ class CommandErrorHandler(commands.Cog):
         if isinstance(error, commands.CommandError):
             return await ctx.send(f"Unhandled error while executing command `{ctx.command.name}`: {str(error)}")
 
-        await ctx.send("An unexpected error occurred while running that command.")
+        if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
+            self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
+        await ctx.send("An unexpected error occurred while running that command. Please report this by sending a DM to Darkmattr#7321.")
         logging.warning("Ignoring exception in command {}:".format(ctx.command))
         logging.warning("\n" + "".join(traceback.format_exception(type(error), error, error.__traceback__)))
 

@@ -97,7 +97,7 @@ class AfkCheck:
         self.cpmsg = await self.ctx.send(embed=cp)
 
         starttime = datetime.utcnow()
-        timeleft = 300  # 300 seconds = 5 mins
+        timeleft = 480  # 300 seconds = 5 mins
         lasttime = starttime
         while True:
             def check(react, usr):

@@ -10,7 +10,7 @@ class LogRun:
     numbers = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', "🔟"]
 
     def __init__(self, client, ctx, emojis, keyreacts, runtitle, members, rlrole, events=False, vialreacts=None, helmreacts=None,
-                 shieldreacts=None, swordreacts=None):
+                 shieldreacts=None, swordreacts=None, numruns=1, runleader=None):
         self.client = client
         self.ctx = ctx
         self.keyreacts = keyreacts
@@ -23,6 +23,8 @@ class LogRun:
         self.helmreacts = helmreacts
         self.shieldreacts = shieldreacts
         self.swordreacts = swordreacts
+        self.numruns = numruns
+        self.leader = runleader if runleader else ctx.author
         self.converter = MemberConverter()
         self.confirmedLogs = []
         self.startembed = discord.Embed(title=f"Log this Run: {ctx.author.display_name}",
@@ -112,7 +114,7 @@ class LogRun:
                 return await self.msg.edit(embed=embed)
 
             col = sql.log_cols.srunled if str(reaction.emoji) == "✅" else sql.log_cols.frunled
-            await sql.log_runs(self.client.pool, self.ctx.guild.id, self.ctx.author.id, col)
+            await sql.log_runs(self.client.pool, self.ctx.guild.id, self.leader.id, col, self.numruns)
             self.confirmedLogs.append(("Run Successful", str(reaction.emoji)))
 
         for m in self.members:
@@ -132,9 +134,15 @@ class LogRun:
         desc = "Log Status:\n"
         for r in self.confirmedLogs[:-1]:
             desc += r[0] + " - <@" + str(r[1]) + ">\n"
-        desc += "Run Leader - " + self.ctx.author.mention + "\n"
-        desc += "# Raiders - " + str(len(self.members)) + "\n"
-        desc += self.confirmedLogs[-1][0] + " - " + self.confirmedLogs[-1][1]
+        desc += "Run Leader - " + self.leader.mention + "\n"
+        if len(self.members) != 1:
+            desc += "# Raiders - " + str(len(self.members)) + "\n"
+        else:
+            desc += f"Manual run log for {self.numruns} runs.\n"
+        try:
+            desc += str(self.confirmedLogs[-1][0]) + " - " + str(self.confirmedLogs[-1][1])
+        except IndexError:
+            pass
         embed = discord.Embed(title="Run Logged!", description=desc, color=discord.Color.green())
         await self.msg.clear_reactions()
         await self.msg.edit(content=None, embed=embed)
@@ -161,7 +169,7 @@ class LogRun:
             return
         elif str(reaction.emoji) in self.numbers:
             i = self.numbers.index(str(reaction.emoji))
-            memberid = reacts[i]
+            memberid = reacts[i].id
         else:
             await self.msg.clear_reactions()
             await self.msg.edit(embed=self.otheremebed)
@@ -185,8 +193,8 @@ class LogRun:
                     await self.ctx.send(f"The member you specified (`{msg}`) was not found.", delete_after=7)
                     await msg.delete()
 
-        await sql.log_runs(self.client.pool, self.ctx.guild.id, memberid, column)
-        self.confirmedLogs.append((emoji, memberid))
+        await sql.log_runs(self.client.pool, self.ctx.guild.id, memberid, column, self.numruns)
+        self.confirmedLogs.append((emoji, f"<@{memberid}>"))
 
     async def add_emojis(self, msg, emojis):
         for e in emojis:

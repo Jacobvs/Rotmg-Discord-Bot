@@ -73,8 +73,6 @@ class RealmClear:
         self.world_data = self.world_data[f"world_{self.world_num}.png"]
 
         await self.setup_msg.delete()
-        if " <-- Join!" not in self.vcchannel.name:
-            await self.vcchannel.edit(name=self.vcchannel.name + " <-- Join!")
         await self.vcchannel.set_permissions(self.raiderrole, connect=True, view_channel=True, speak=False)
         embed = embeds.afk_check_base("Realm Clearing", self.ctx.author, False, self.emojis)
         embed.color = discord.Color.gold()
@@ -176,10 +174,6 @@ class RealmClear:
             else:
                 self.client.raid_db[self.ctx.guild.id]["events"][1] = None
 
-        vc_name = self.vcchannel.name
-        if " <-- Join!" in vc_name:
-            vc_name = vc_name.split(" <")[0]
-            await self.vcchannel.edit(name=vc_name)
         await self.vcchannel.set_permissions(self.raiderrole, connect=False, view_channel=True, speak=False)
 
         for m in self.markers:

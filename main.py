@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 import sql
 import utils
+from cogs.logging import update_leaderboards
 
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
@@ -49,6 +50,8 @@ async def on_ready():
     bot.guild_db = await sql.construct_guild_database(bot.pool, bot)
     bot.raid_db = {}
     bot.mapmarkers = {}
+    bot.players_in_game = []
+    bot.serverwleaderboard = [703987028567523468, 660344559074541579, 713655609760940044]
     for g in bot.guild_db:
         bot.raid_db[g] = {"raiding": {0: None, 1: None, 2: None}, "vet": {0: None, 1: None}, "events": {0: None, 1: None}, "leaders": []}
 
@@ -56,6 +59,8 @@ async def on_ready():
         await bot.change_presence(status=discord.Status.idle, activity=discord.Game("IN MAINTENANCE MODE!"))
     else:
         await bot.change_presence(status=discord.Status.online, activity=discord.Game("boooga."))
+
+    bot.loop.create_task(update_leaderboards(bot))
     print(f'{bot.user.name} has connected to Discord!')
 
 
