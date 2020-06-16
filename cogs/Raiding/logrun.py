@@ -119,17 +119,18 @@ class LogRun:
 
         for m in self.members:
             m = self.ctx.guild.get_member(m)
-            if self.events:
-                if m.top_role >= self.rlrole:
-                    if not m.id == self.ctx.author.id:
-                        await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.eventsassisted)
+            if m:
+                if self.events:
+                    if m.top_role >= self.rlrole:
+                        if not m.id == self.ctx.author.id:
+                            await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.eventsassisted)
 
-                await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.eventsdone)
-            else:
-                if m.top_role >= self.rlrole:
-                    if not m.id == self.ctx.author.id:
-                        await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.runsassisted)
-                await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.runsdone)
+                    await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.eventsdone)
+                else:
+                    if m.top_role >= self.rlrole:
+                        if not m.id == self.ctx.author.id:
+                            await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.runsassisted)
+                    await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.runsdone)
 
         desc = "Log Status:\n"
         for r in self.confirmedLogs[:-1]:
@@ -169,7 +170,9 @@ class LogRun:
             return
         elif str(reaction.emoji) in self.numbers:
             i = self.numbers.index(str(reaction.emoji))
-            memberid = reacts[i].id
+            member = reacts[i]
+            if isinstance(member, int):
+                member = self.client.get_user(member)
         else:
             await self.msg.clear_reactions()
             await self.msg.edit(embed=self.otheremebed)
@@ -186,15 +189,14 @@ class LogRun:
 
                 try:
                     member = await self.converter.convert(self.ctx, msg.content)
-                    memberid = member.id
                     await msg.delete()
                     break
                 except discord.ext.commands.BadArgument:
-                    await self.ctx.send(f"The member you specified (`{msg}`) was not found.", delete_after=7)
+                    await self.ctx.send(f"The member you specified (`{msg.content}`) was not found.", delete_after=7)
                     await msg.delete()
 
-        await sql.log_runs(self.client.pool, self.ctx.guild.id, memberid, column, self.numruns)
-        self.confirmedLogs.append((emoji, f"<@{memberid}>"))
+        await sql.log_runs(self.client.pool, self.ctx.guild.id, member.id, column, self.numruns)
+        self.confirmedLogs.append((emoji, f"{member.mention}"))
 
     async def add_emojis(self, msg, emojis):
         for e in emojis:

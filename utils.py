@@ -5,8 +5,37 @@ import re
 from enum import Enum
 
 import aiohttp
+import discord
 import numpy as np
 from discord.ext.commands import BadArgument, Converter
+
+import sql
+
+
+class MemberLookupConverter(discord.ext.commands.MemberConverter):
+    async def convert(self, ctx, mem) -> discord.Member:
+        in_db = False
+        try:
+            member = await super().convert(ctx, mem)  # Convert parameter to discord.member
+        except discord.ext.commands.BadArgument:
+            if isinstance(mem, str):
+                try:
+                    data = await sql.get_user_from_ign(ctx.bot.pool, mem)
+                    if data:
+                        in_db = True
+                        member = await super().convert(ctx, str(data[0]))
+                    else:
+                        raise BadArgument(f"No members found with the name: {mem} and no results were found in the bot's database. "
+                                          "Check your spelling and try again!")
+                except discord.ext.commands.BadArgument:
+                    desc = f"No members found with the name: {mem}. "
+                    desc += f"Found 1 result in the bot's database under the user: <@{data[0]}>. Verified in: [{data[6]}]" if in_db \
+                        else "No results found in the bot's database. Check your spelling and try again!"
+                    raise BadArgument(desc)
+            else:
+                raise BadArgument(f"No members found with the name: `{mem}`")
+        return member
+
 
 
 class Card:
@@ -452,7 +481,7 @@ def dungeon_info(num: int = None):
                 48: ("Secluded Thicket", ["<:thicket:561248701402578944>", "<:thicketKey:561248917208039434>"],
                      "https://i.imgur.com/xFWvgyV.png"),
                 49: ("Heroic UDL", ["<:HUDL:711479365602508820>", "<:hudlKey:711444346334871643>"], "https://i.imgur.com/WmL1qda.png"),
-                50: ("Heroic Abyss", ["<:HAbyss:711431861678637129>", "<:habbyKey:711444346263830559>"], "https://i.imgur.com/LCALe5V.png")
+                50: ("Heroic Abyss", ["<:HAbyss:711431861678637129>", "<:habbyKey:711444346263830559>"], "https://i.imgur.com/LCALe5V.png"),
                 }
     if not num:
         return dungeons

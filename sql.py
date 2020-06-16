@@ -32,11 +32,13 @@ async def ign_exists(pool, ign, id):
                 return False
             return True
 
-
-# async def user_exists(uid):
-#     if await get_user(uid) is None:
-#         return False
-#     return True
+async def get_user_from_ign(pool, ign):
+    """Retrieve User Data From IGN"""
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute("SELECT * from rotmg.users WHERE ign = '{}' AND status = 'verified'".format(ign))
+            user = await cursor.fetchone()
+            return user
 
 
 async def add_new_user(pool, user_id, guild_id, verify_id):
@@ -69,6 +71,19 @@ async def add_new_guild(pool, guild_id, guild_name):
                    "verifylogchannel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
             data = (guild_id, guild_name, 0, 0, 0, 0, False, True, "", 0, 0, 0)
             await cursor.execute(sql, data)
+            await conn.commit()
+            sql = f"create table rotmg.`{guild_id}` (id bigint not null primary key, pkey int default '0' null, vials int default '0'"\
+                  "null, helmrunes int default '0' null, shieldrunes int default '0' null, swordrunes int default '0' null, eventkeys int"\
+                  "default '0' null, runsdone int default '0' null, eventsdone int default '0' null, srunled int default '0' null, frunled"\
+                  "int default '0' null, eventled int default '0' null, runsassisted int default '0' null, eventsassisted int default '0'"\
+                  "null, weeklyruns int default '0' null, weeklyassists int default '0' null);"
+            await cursor.execute(sql)
+            await conn.commit()
+            sql = "INSERT INTO `rotmg`.`casino_top` (`guildid`, `1_id`, `1_bal`, `2_id`, `2_bal`, `3_id`, `3_bal`, `4_id`, `4_bal`," \
+                  " `5_id`, `5_bal`, `6_id`, `6_bal`, `7_id`, `7_bal`, `8_id`, `8_bal`, `9_id`, `9_bal`, `10_id`, `10_bal`) VALUES " \
+                  f"({guild_id}, NULL, DEFAULT, NULL, DEFAULT, NULL, DEFAULT, NULL, DEFAULT, NULL, DEFAULT, NULL, DEFAULT, NULL, " \
+                  "DEFAULT, NULL, DEFAULT, NULL, DEFAULT, NULL, DEFAULT)"
+            await cursor.execute(sql)
             await conn.commit()
 
 
@@ -267,6 +282,7 @@ async def log_runs(pool, guild_id, member_id, column=1, number=1):
             else:
                 await cursor.execute(f"UPDATE rotmg.`{guild_id}` SET {name} = {name} + {number} WHERE id = {member_id}")
             await conn.commit()
+            return data[column]
 
 async def get_log(pool, guild_id, member_id):
     async with pool.acquire() as conn:
@@ -304,6 +320,47 @@ async def get_0_runs(pool, guild_id):
             await conn.commit()
             return list(data)
 
+## Punishments
+async def add_punishment(pool, uid, gid, type, rid, endtime, reason):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            time = endtime.strftime('%Y-%m-%d %H:%M:%S') if endtime else None
+            sql = f"INSERT INTO rotmg.punishments (uid, gid, type, r_uid, endtime, reason) VALUES (%s, %s, %s, %s, %s, %s)"
+            data = (uid, gid, type, rid, time, reason)
+            await cursor.execute(sql, data)
+            await conn.commit()
+
+async def has_active(pool, uid, gid, ptype):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(f"select exists(select * from rotmg.punishments where uid = {uid} AND gid = {gid} AND type = '{ptype}' "
+                                 "and active = TRUE limit 1)")
+            data = await cursor.fetchone()
+            return True if data[0] >= 1 else False
+
+async def get_all_active_punishments(pool):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute("SELECT * FROM rotmg.punishments WHERE active = TRUE and endtime IS NOT NULL")
+            data = await cursor.fetchall()
+            return data
+
+async def set_unactive(pool, gid, uid, ptype):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(f"UPDATE rotmg.punishments SET active = FALSE WHERE uid = {uid} AND gid = {gid} AND type = '{ptype}'")
+            await conn.commit()
+
+
+class punish_cols(enum.IntEnum):
+    uid = 0
+    gid = 1
+    type = 2
+    r_uid = 3
+    starttime = 4
+    endtime = 5
+    reason = 6
+    active = 7
 
 class log_cols(enum.IntEnum):
     id = 0
@@ -343,8 +400,8 @@ class usr_cols(enum.IntEnum):
     verifiedguilds = 6  # String (CSV)
 
 
-gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45]
-gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43]
+gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 46]
+gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43, 47]
 class gld_cols(enum.IntEnum):
     """Contains References to rotmg.guilds table for easy access"""
     id = 0  # Int
@@ -393,6 +450,8 @@ class gld_cols(enum.IntEnum):
     raiderroleid = 43
     leaderboardchannel = 44
     zerorunchannel = 45
+    punishlogchannel = 46
+    suspendedrole = 47
 
 
 ## EVENTS:

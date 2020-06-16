@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 
 
-class CommandErrorHandler(commands.Cog):
+class ErrorHandler(commands.Cog):
     def __init__(self, client):
         self.client = client
 
@@ -48,7 +48,7 @@ class CommandErrorHandler(commands.Cog):
             embed.add_field(name="Missing argument", value=f'`{error.args[0]}`', inline=False)
             embed.add_field(name="Command Usage", value=f'`{ctx.command.usage}`', inline=False)
             if ctx.command.aliases:
-                aliases = "".join("!" + c + ", " for c in ctx.command.aliases)
+                aliases = "`" + "".join("!" + c + ", " for c in ctx.command.aliases) + "`"
                 embed.add_field(name="Command Aliases", value=f"{aliases}", inline=False)
             return await ctx.send(embed=embed)
 
@@ -57,8 +57,15 @@ class CommandErrorHandler(commands.Cog):
             embed.add_field(name="Bad Argument", value=f'`{error.args[0]}`', inline=False)
             embed.add_field(name="Command Usage", value=f'`{ctx.command.usage}`', inline=False)
             if ctx.command.aliases:
-                aliases = "`".join("!" + c for c in ctx.command.aliases)+"`"
+                aliases = "`" + "".join("!" + c for c in ctx.command.aliases)+"`"
                 embed.add_field(name="Command Aliases", value=f"{aliases}", inline=False)
+            return await ctx.send(embed=embed)
+
+        if isinstance(error, discord.ext.commands.errors.ExtensionNotLoaded):
+            embed = discord.Embed(title="Error!", description="Cog not found!", color=discord.Color.red())
+            embed.add_field(name="Bad Argument", value=f'`{error.args[0]}`', inline=False)
+            embed.add_field(name="Command Usage", value=f'`{ctx.command.usage}`', inline=False)
+            embed.add_field(name='Loaded Cogs:', value="".join("`" + c + "`\n" for c in sorted(self.client.cogs)), inline=False)
             return await ctx.send(embed=embed)
 
         if isinstance(error, commands.CommandError):
@@ -72,4 +79,4 @@ class CommandErrorHandler(commands.Cog):
 
 
 def setup(client):
-    client.add_cog(CommandErrorHandler(client))
+    client.add_cog(ErrorHandler(client))

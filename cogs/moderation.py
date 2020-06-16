@@ -7,6 +7,7 @@ from discord.ext import commands
 
 import checks
 import embeds
+import utils
 from checks import manual_verify_channel, has_manage_roles
 from cogs import verification
 from sql import get_guild, get_user, update_user, add_new_user, gld_cols, usr_cols
@@ -37,23 +38,8 @@ class Moderation(commands.Cog):
     @commands.command(usage="!find [nickname]")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
-    async def find(self, ctx, mem):
+    async def find(self, ctx, member: utils.MemberLookupConverter):
         """Find a user by the specified nickname"""
-        converter = discord.ext.commands.MemberConverter()
-        try:
-            member = await converter.convert(ctx, mem) # Convert parameter to discord.member
-        except discord.ext.commands.BadArgument:
-            if isinstance(mem, str):
-                try:
-                    member = await converter.convert(ctx, mem.capitalize())
-                except discord.ext.commands.BadArgument:
-                    embed = discord.Embed(
-                        description=f"No members found with the name: `{mem}`\nTip: This command is case-sensitive.",
-                        color=discord.Color.red())
-                    return await ctx.send(embed=embed)
-            else:
-                embed = discord.Embed(description=f"No members found with the name: `{mem}`\nTip: This command is case-sensitive.", color=discord.Color.red())
-                return await ctx.send(embed=embed)
         if member.voice is None:
             vc = '❌'
         else:
@@ -168,13 +154,13 @@ class Moderation(commands.Cog):
     # async def unmute(self, ctx, member: discord.Member):
     #     """Remove the mute on member."""
     #
-    #     for channel in ctx.guild.text_channels:
-    #         permissions = channel.permissions_for(member)
-    #
-    #         if permissions.read_messages:
-    #             # This removes the PermissionOverwrite on the channel, it
-    #             # does not grant send_messages=True
-    #             await channel.set_permissions(member, overwrite=None)
+        # for channel in ctx.guild.text_channels:
+        #     permissions = channel.permissions_for(member)
+        #
+        #     if permissions.read_messages:
+        #         # This removes the PermissionOverwrite on the channel, it
+        #         # does not grant send_messages=True
+        #         await channel.set_permissions(member, overwrite=None)
     #
     #     await ctx.send(f"{member.mention} has been unmuted.")
 

@@ -301,6 +301,7 @@ def dungeon_select(hc=False):
     lowtier = ""
     other = ""
     mini = ""
+    events = ""
     for i, d in enumerate(dungeons.values(), 1):
         if i < 8:
             endgame += f"`({i})` {d[1][0]} {d[0]}\n"
@@ -312,8 +313,10 @@ def dungeon_select(hc=False):
             lowtier += f"`({i})` {d[1][0]} {d[0]}\n"
         elif i < 45:
             other += f"`({i})` {d[1][0]} {d[0]}\n"
-        else:
+        elif i < 51:
             mini += f"`({i})` {d[1][0]} {d[0]}\n"
+        else:
+            events += f"`({i})` {d[1][0]} {d[0]}\n"
 
     embed.add_field(name="Endgame Dungeons", value=endgame, inline=True)
     embed.add_field(name="Realm-Related Dungeons", value=realmrelated, inline=True)
@@ -321,4 +324,5 @@ def dungeon_select(hc=False):
     embed.add_field(name="Low-Tier Dungeons", value=lowtier, inline=True)
     embed.add_field(name="Misc. Dungeons", value=other, inline=True)
     embed.add_field(name="Mini Dungeons", value=mini, inline=True)
+    embed.add_field(name="Events", value=events)
     return embed

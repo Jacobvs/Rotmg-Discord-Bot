@@ -51,9 +51,9 @@ class AfkCheck:
                 return await self.setup_msg.edit(embed=embed)
 
             if msg.content.isdigit():
-                if 0 < int(msg.content) < 51:
+                if 0 < int(msg.content) < 52:
                     break
-            await self.ctx.send("Please choose a number between 1-50!", delete_after=7)
+            await self.ctx.send("Please choose a number between 1-51!", delete_after=7)
 
         dungeon_info = utils.dungeon_info(int(msg.content))
         self.dungeontitle = dungeon_info[0]
@@ -269,7 +269,7 @@ class AfkCheck:
             embed.set_author(name=f"{self.dungeontitle} raid has been ended automatically.", icon_url=self.ctx.author.avatar_url)
         else:
             embed.set_author(name=f"{self.dungeontitle} raid has been ended by {ended.display_name}", icon_url=ended.avatar_url)
-        embed.description = "Thanks for running with us!\n" \
+        embed.description = f"Raid running in {self.vcchannel.name}. Thanks for running with us!\n" \
                             f"This raid ran with {len(self.raiderids)} members.\nPlease wait for the next AFK-Check to begin."
         embed.set_footer(text="Raid ended at")
         embed.timestamp = datetime.utcnow()

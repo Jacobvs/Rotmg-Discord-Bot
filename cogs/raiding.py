@@ -29,7 +29,7 @@ class Raiding(commands.Cog):
     async def afk(self, ctx, *, location):
         """Starts an AFK check for the location specified."""
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
-            return await ctx.send("You cannot start another AFK while an AFK check is still up.")
+            return await ctx.send("You cannot start another AFK while an AFK check is still up or a run log has not been completed.")
         self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
         setup = VCSelect(self.client, ctx)
         data = await setup.start()
@@ -300,7 +300,8 @@ def parse_image(author, image, vc):
         return "".join(c for c in n if c.isalpha())
 
     for m in vc.members:
-        clean_member(m.display_name)
+        if not m.bot:
+            clean_member(m.display_name)
 
     crashing = []
     possible_alts = []
@@ -311,7 +312,7 @@ def parse_image(author, image, vc):
             names = name.split(" ")
             name = names[0]
         if name.strip() not in cleaned_members:
-            matches = get_close_matches(name.strip(), cleaned_members, n=1, cutoff=0.8)
+            matches = get_close_matches(name.strip(), cleaned_members, n=1, cutoff=0.6)
             if len(matches) == 0:
                 if name.strip() not in alts:
                     crashing.append(name.strip())
