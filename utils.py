@@ -324,7 +324,7 @@ class Duration(Converter):
                                  r"((?P<seconds>\d+?) ?(seconds|second|S|s))?")
 
 
-    async def convert(self, ctx, duration: str) -> datetime:
+    async def convert(self, ctx, duration: str) -> datetime.datetime:
         """
         Converts a `duration` string to a datetime object that's
         `duration` in the future.

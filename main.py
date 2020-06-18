@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import os
@@ -68,7 +69,12 @@ async def on_ready():
         member = guild.get_member(p[sql.punish_cols.uid])
         ptype = p[sql.punish_cols.type]
         until = p[sql.punish_cols.endtime]
-        bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, until))
+        tsecs = (until - datetime.datetime.utcnow()).total_seconds()
+        if ptype == 'suspend':
+            roles = await sql.get_suspended_roles(bot.pool, member.id, guild)
+            bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs, roles))
+        else:
+            bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs))
 
     print(f'{bot.user.name} has connected to Discord!')
 
@@ -100,8 +106,7 @@ async def reload(ctx, extension):
         await build_guild_db()
         extension = 'Guild Database'
     else:
-        bot.unload_extension(f'cogs.{extension}')
-        bot.load_extension(f'cogs.{extension}')
+        bot.reload_extension(f'cogs.{extension}')
     await ctx.send('{} has been reloaded.'.format(extension.capitalize()))
 
 

@@ -278,11 +278,11 @@ def slots_help_embed():
                         "credits pour in!\nTo win, match three symbols in the middle row.", inline=False)\
                         .add_field(name="Winnings", value=":lemon: Lemon - **2x**\n:watermelon: Melon - **3x**\n:banana: Banana - **5x**"
                                                           "\n:cherries: Cherry - **10x**\n:gem: Diamond - **40x**\n"
-                                                          "<:slot7:711843601369530458> 7's - **100x**", inline=False)\
-                        .add_field(name="Odds", value=":x: Lose - **80%** (Tickets 1-799)\n:lemon: Lemon - **10%** (800-899)"
-                                                      "\n:watermelon: Melon - **4%** (900-939)\n:banana: Banana - **3%** (940-969)"
-                                                          "\n:cherries: Cherry - **1.5%** (970-984)\n:gem: Diamond - **1%** (985-994)\n"
-                                                          "<:slot7:711843601369530458> 7's - **0.5%** (995-1000)", inline=False)\
+                                                          "<:slot7:711843601369530458> 7's - **77x**", inline=False)\
+                        .add_field(name="Odds", value=":x: Lose - **84.8%** (Tickets 1-848)\n:lemon: Lemon - **8%** (849-928)"
+                                                      "\n:watermelon: Melon - **3%** (929-958)\n:banana: Banana - **2%** (959-978)"
+                                                          "\n:cherries: Cherry - **1.5%** (979-993)\n:gem: Diamond - **0.5%** (994-997)\n"
+                                                          "<:slot7:711843601369530458> 7's - **0.3%** (998-1000)", inline=False)\
                         .add_field(name="Usage", value="!slots <bet>", inline=False)
     return embed
 
@@ -324,5 +324,5 @@ def dungeon_select(hc=False):
     embed.add_field(name="Low-Tier Dungeons", value=lowtier, inline=True)
     embed.add_field(name="Misc. Dungeons", value=other, inline=True)
     embed.add_field(name="Mini Dungeons", value=mini, inline=True)
-    embed.add_field(name="Events", value=events)
+    # embed.add_field(name="Events", value=events)
     return embed

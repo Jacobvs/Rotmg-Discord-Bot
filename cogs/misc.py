@@ -224,9 +224,10 @@ class Misc(commands.Cog):
                         value=f"**`{len(self.client.guilds)}`** servers with **`{len(list(self.client.get_all_members()))}`** total members.",
                         inline=False)
         embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.", inline=False)
+        lines = line_count('/home/pi/Rotmg-Bot/')+line_count('/home/pi/Rotmg-Bot/cogs')+line_count('/home/pi/Rotmg-Bot/cogs/Raiding')+\
+                line_count('/home/pi/Rotmg-Bot/cogs/Minigames')
         embed.add_field(name="Lines of Code:",
-                        value=(f"**`{line_count('/home/pi/Rotmg-Bot/')+line_count('/home/pi/Rotmg-Bot/cogs')}"
-                               "`** lines of code."), inline=False)
+                        value=(f"**`{lines}`** lines of code."), inline=False)
         embed.add_field(name="Server Status:",
                         value=(f"```yaml\nServer: Google Cloud Compute (US East)\nCPU: {psutil.cpu_percent()}% utilization."
                                f"\nMemory: {psutil.virtual_memory().percent}% utilization."

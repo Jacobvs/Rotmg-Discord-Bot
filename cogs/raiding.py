@@ -54,7 +54,7 @@ class Raiding(commands.Cog):
             (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
         else:
             return
-        hc = Headcount(self.client, ctx, hcchannel, vcchannel, setup_msg)
+        hc = Headcount(self.client, ctx, hcchannel, vcchannel, setup_msg, raidnum, inraiding, invet, inevents, raiderrole, rlrole)
         await hc.start()
 
     @commands.command(usage="!parse (Attach an image of /who list with this command)")

@@ -1,11 +1,10 @@
 import asyncio
 
-import numpy as np
 import discord
+import numpy as np
 
 import utils
 from utils import Alphabet
-
 
 # load the words at import, not instanciation for better performance
 with open('cogs/Minigames/hangman_words.txt', 'r') as f:
@@ -32,6 +31,7 @@ class Hangman:
         self.ctx = ctx
         self.bot = bot
         self.word_to_guess = np.random.choice(WORD_LIST).strip()
+        print(f"Hangman word: {self.word_to_guess}")
         self.chances = 7
         self.won = False
         self.bad_guesses = []

@@ -1,4 +1,5 @@
 import enum
+import json
 from datetime import datetime, timedelta
 
 
@@ -268,6 +269,9 @@ async def log_runs(pool, guild_id, member_id, column=1, number=1):
             if not data:
                 await cursor.execute(f"INSERT INTO rotmg.`{guild_id}`(id) VALUES({member_id})")
                 await conn.commit()
+                data = 0
+            else:
+                data = data[column]
 
             name = "pkey" if column == 1 else "vials" if column == 2 else "helmrunes" if column == 3 else "shieldrunes" if column == 4 else\
                 "swordrunes" if column == 5 else "eventkeys" if column == 6 else "runsdone" if column == 7 else "eventsdone" if column == 8\
@@ -282,7 +286,8 @@ async def log_runs(pool, guild_id, member_id, column=1, number=1):
             else:
                 await cursor.execute(f"UPDATE rotmg.`{guild_id}` SET {name} = {name} + {number} WHERE id = {member_id}")
             await conn.commit()
-            return data[column]
+
+            return data
 
 async def get_log(pool, guild_id, member_id):
     async with pool.acquire() as conn:
@@ -321,14 +326,26 @@ async def get_0_runs(pool, guild_id):
             return list(data)
 
 ## Punishments
-async def add_punishment(pool, uid, gid, type, rid, endtime, reason):
+async def add_punishment(pool, uid, gid, type, rid, endtime, reason, roles=None):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             time = endtime.strftime('%Y-%m-%d %H:%M:%S') if endtime else None
-            sql = f"INSERT INTO rotmg.punishments (uid, gid, type, r_uid, endtime, reason) VALUES (%s, %s, %s, %s, %s, %s)"
-            data = (uid, gid, type, rid, time, reason)
+            sql = f"INSERT INTO rotmg.punishments (uid, gid, type, r_uid, endtime, reason, presuspendroles) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+            data = (uid, gid, type, rid, time, reason, json.dumps(roles))
             await cursor.execute(sql, data)
             await conn.commit()
+
+async def get_suspended_roles(pool, uid, guild):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(f"SELECT * from rotmg.punishments WHERE uid = {uid} AND gid = {guild.id} AND type = 'suspend' AND "
+                                 "active = TRUE ")
+            data = await cursor.fetchone()
+            roles = []
+            res = json.loads(data[punish_cols.roles])
+            for r in res.values():
+                roles.append(guild.get_role(r))
+            return roles
 
 async def has_active(pool, uid, gid, ptype):
     async with pool.acquire() as conn:
@@ -361,6 +378,7 @@ class punish_cols(enum.IntEnum):
     endtime = 5
     reason = 6
     active = 7
+    roles = 8
 
 class log_cols(enum.IntEnum):
     id = 0
