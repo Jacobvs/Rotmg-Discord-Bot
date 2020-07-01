@@ -3,6 +3,8 @@ Discord bot for ROTMG Verification &amp; AFK Checks
 
 Please contact me on discord (Darkmatter#7321) if you'd like the bot added to your server.
 
+If you want to see what I'm working on with the bot, click on the `Projects` tab up top!
+
 -----
 # Requirements
 - [github.com/Jacobvs/Realmeye-API](https://github.com/Jacobvs/RealmEye-API)
@@ -14,7 +16,7 @@ Please contact me on discord (Darkmatter#7321) if you'd like the bot added to yo
 -----
 -----
 
-# Writeup on Commands:
+# Writeup on Commands (OUTDATED FYI):
 `<> `means required arugment. `[]` means optional. Do not include `<>` or `[]` when running the command.  
   
 # Raiding  
