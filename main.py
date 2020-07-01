@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import os
@@ -10,6 +11,7 @@ from dotenv import load_dotenv
 
 import sql
 import utils
+from cogs import punishments
 from cogs.logging import update_leaderboards
 
 logger = logging.getLogger('discord')
@@ -47,11 +49,11 @@ async def on_ready():
     """Wait until bot has connected to discord"""
     bot.pool = await aiomysql.create_pool(host=os.getenv("MYSQL_HOST"), port=3306, user='root', password=os.getenv("MYSQL_PASSWORD"),
                                           db='mysql', loop=bot.loop)
-    bot.guild_db = await sql.construct_guild_database(bot.pool, bot)
     bot.raid_db = {}
     bot.mapmarkers = {}
     bot.players_in_game = []
-    bot.serverwleaderboard = [703987028567523468, 660344559074541579, 713655609760940044]
+    bot.serverwleaderboard = [703987028567523468, 660344559074541579, 713655609760940044, 719406991117647893, 691607211046076471]
+    await build_guild_db()
     for g in bot.guild_db:
         bot.raid_db[g] = {"raiding": {0: None, 1: None, 2: None}, "vet": {0: None, 1: None}, "events": {0: None, 1: None}, "leaders": []}
 
@@ -59,10 +61,26 @@ async def on_ready():
         await bot.change_presence(status=discord.Status.idle, activity=discord.Game("IN MAINTENANCE MODE!"))
     else:
         await bot.change_presence(status=discord.Status.online, activity=discord.Game("boooga."))
-
     bot.loop.create_task(update_leaderboards(bot))
+
+    active = await sql.get_all_active_punishments(bot.pool)
+    for p in active:
+        guild = bot.get_guild(p[sql.punish_cols.gid])
+        member = guild.get_member(p[sql.punish_cols.uid])
+        if member:
+            ptype = p[sql.punish_cols.type]
+            until = p[sql.punish_cols.endtime]
+            tsecs = (until - datetime.datetime.utcnow()).total_seconds()
+            if ptype == 'suspend':
+                roles = await sql.get_suspended_roles(bot.pool, member.id, guild)
+                bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs, roles))
+            else:
+                bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs))
+
     print(f'{bot.user.name} has connected to Discord!')
 
+async def build_guild_db():
+    bot.guild_db = await sql.construct_guild_database(bot.pool, bot)
 
 @bot.command(usage="!load [cog]")
 @commands.is_owner()
@@ -80,14 +98,18 @@ async def unload(ctx, extension):
     bot.unload_extension(f'cogs.{extension.capitalize()}')
 
 
-@bot.command(usage="!reload [cog]")
+@bot.command(usage="!reload [cog/guilds]")
 @commands.is_owner()
 async def reload(ctx, extension):
     """Reload specified cog"""
     extension = extension.lower()
-    bot.unload_extension(f'cogs.{extension}')
-    bot.load_extension(f'cogs.{extension}')
+    if extension == 'guilds':
+        await build_guild_db()
+        extension = 'Guild Database'
+    else:
+        bot.reload_extension(f'cogs.{extension}')
     await ctx.send('{} has been reloaded.'.format(extension.capitalize()))
+
 
 @bot.command(usage="!fleave <id>")
 @commands.is_owner()

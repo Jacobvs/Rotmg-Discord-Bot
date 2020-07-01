@@ -17,7 +17,6 @@ class Verification(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-
     async def step_2_verify(self, user_id):
         user = self.client.get_user(user_id)
         key = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
@@ -52,6 +51,9 @@ class Verification(commands.Cog):
 
         async with aiohttp.ClientSession() as cs:
             async with cs.get('https://rotmg-discord-bot.wm.r.appspot.com/?player={}'.format(user_data[usr_cols.ign]), ssl=False) as r:
+                if r.status == 403:
+                    print("ERROR: API ACCESS FORBIDDEN")
+                    await channel.send(f"<@{self.client.owner_id}> ERROR: API ACCESS REVOKED!.")
                 data = await r.json()  # returns dict
 
         if not data:
@@ -99,16 +101,21 @@ class Verification(commands.Cog):
 
         if time and time != "hidden":
             days = 0
-            if "years" in time or "year" in time:
-                if "years" in time:
-                    days += int(time.split(" years")[0].split("~")[1]) * 365
-                else:
-                    days += 365
+            if "years" in time:
+                days += int(time.split(" years")[0].split("~")[1]) * 365
                 if "days" in time:
                     days += int(time.split("and ")[1].split(" days")[0])
+                elif 'day' in time:
+                    days += 1
+            elif "year" in time:
+                days += int(time.split(" year")[0].split("~")[1]) * 365
+                if "days" in time:
+                    days += int(time.split("and ")[1].split(" days")[0])
+                elif 'day' in time:
+                    days += 1
             elif "days" in time:
                 days += int(time.split(" days")[0].split("~")[1])
-            months = int(days / 30)
+            months = days / 30
         else:
             embed = embeds.verification_private_time()
             await member.send(embed=embed)
@@ -359,12 +366,20 @@ async def dm_verify_react_handler(self, payload, user_data, user):
         #     await step_1_verify(self.client.pool, payload.user_id, user_data[usr_cols.ign])
     else:
         if str(payload.emoji) == '✅' or str(payload.emoji) == '👍':
+            print(user_data[usr_cols.ign])
             guild_data = await get_guild(self.client.pool, user_data[usr_cols.verifyguild])
+            print(1)
             guild = self.client.get_guild(guild_data[gld_cols.id])
+            print(2)
             channel = guild.get_channel(guild_data[gld_cols.manualverifychannel])
+            print(3)
             key = user_data[usr_cols.verifykey]
+            print(4)
             if not key:
                 key = "`N/A: Re-verification`"
+            print(5)
+
+            print(1)
 
             fame_req = guild_data[gld_cols.nfame]
             n_maxed_req = guild_data[gld_cols.nmaxed]
@@ -373,39 +388,63 @@ async def dm_verify_react_handler(self, payload, user_data, user):
             private_loc = guild_data[gld_cols.privateloc]
 
             async with aiohttp.ClientSession() as cs:
-                async with cs.get('https://rotmg-discord-bot.wm.r.appspot.com/?player={}'.format(user_data[usr_cols.ign])) as r:
+                async with cs.get('https://rotmg-discord-bot.wm.r.appspot.com/?player={}'.format(user_data[usr_cols.ign]), ssl=False) as r:
                     data = await r.json()  # returns dict
+
+            print(2)
+            print(data)
 
             alive_fame = 0
             n_maxed = 0
             n_stars = int(data["rank"])
             location = data["player_last_seen"]
+            print(10)
 
             for char in data["characters"]:
                 alive_fame += int(char["fame"])
                 if int(char["stats_maxed"]) == 8:
                     n_maxed += 1
+            print(11)
 
             if data["fame"] and data["fame"] != "hidden":
                 alive_fame = int(data["fame"])
 
+            print(12)
             time = ""
-            if "created" in data:
-                time = data["created"]
-            elif "player_first_seen" in data:
-                time = data["player_first_seen"]
+            try:
+                time = data['created']
+            except KeyError:
+                try:
+                    time = data['player_first_seen']
+                except KeyError:
+                    pass
 
+            print(13)
+            print(time)
             months = 0
-            if time and time != "hidden":
+            if time != "" and time != "hidden":
+                print(time)
                 days = 0
                 if "years" in time:
                     days += int(time.split(" years")[0].split("~")[1]) * 365
+                    print(days)
                     if "days" in time:
                         days += int(time.split("and ")[1].split(" days")[0])
+                    elif 'day' in time:
+                        days += 1
+                elif "year" in time:
+                    days += int(time.split(" year")[0].split("~")[1]) * 365
+                    print(days)
+                    if "days" in time:
+                        days += int(time.split("and ")[1].split(" days")[0])
+                    elif 'day' in time:
+                        days += 1
                 elif "days" in time:
                     days += int(time.split(" days")[0].split("~")[1])
                 months = days / 30
+                print(months)
 
+            print(3)
             fame_passed = alive_fame >= fame_req
             maxed_passed = n_maxed >= n_maxed_req
             stars_passed = n_stars >= star_req
@@ -417,9 +456,12 @@ async def dm_verify_react_handler(self, payload, user_data, user):
                                                                              alive_fame, fame_req, maxed_passed, n_maxed, n_maxed_req,
                                                                              stars_passed, n_stars, star_req, months_passed, round(months),
                                                                              months_req, private_passed))
+            print(4)
             await update_user(self.client.pool, payload.user_id, "status", "deny_appeal")
             await update_user(self.client.pool, payload.user_id, "verifyid", msg.id)
+            print(5)
             await user.send("Your application is being reviewed by staff. Please wait for their decision.")
+            print(6)
             await msg.add_reaction('✅')
             await msg.add_reaction('❌')
         elif str(payload.emoji) == '❌':

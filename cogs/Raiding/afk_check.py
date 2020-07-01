@@ -51,15 +51,19 @@ class AfkCheck:
                 return await self.setup_msg.edit(embed=embed)
 
             if msg.content.isdigit():
-                if 0 < int(msg.content) < 51:
+                if 0 < int(msg.content) < 56:
                     break
-            await self.ctx.send("Please choose a number between 1-50!", delete_after=7)
+            await self.ctx.send("Please choose a number between 1-55!", delete_after=7)
 
-        dungeon_info = utils.dungeon_info(int(msg.content))
-        self.dungeontitle = dungeon_info[0]
-        self.emojis = dungeon_info[1]
+        self.dungeon_info = utils.dungeon_info(int(msg.content))
+        self.dungeontitle = self.dungeon_info[0]
+        self.emojis = self.dungeon_info[1]
         await msg.delete()
 
+        await self.start_afk()
+
+
+    async def start_afk(self, convert_from_hc=False):
         if self.dungeontitle == "Void" or self.dungeontitle == "Full-Skip Void":
             self.vials = []
             self.potentialvials = []
@@ -77,9 +81,18 @@ class AfkCheck:
         #     await self.vcchannel.edit(name=name)
         await self.vcchannel.set_permissions(self.raiderrole, connect=True, view_channel=True, speak=False)
 
-        self.afkmsg = await self.hcchannel.send(f"@here `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} "
+        if not convert_from_hc:
+            self.afkmsg = await self.hcchannel.send(f"@here `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} "
                                                 f"in {self.vcchannel.name}", embed=embeds.
-                                                afk_check_base(self.dungeontitle, self.ctx.author, True, self.emojis, dungeon_info[2]))
+                                                afk_check_base(self.dungeontitle, self.ctx.author, True, self.emojis, self.dungeon_info[2]))
+        else:
+            await self.hcmsg.clear_reactions()
+            await self.hcmsg.edit(content=f"@here `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} "
+                                    f"in {self.vcchannel.name} (Converted from headcount)",
+                                  embed=embeds.afk_check_base(self.dungeontitle, self.ctx.author, True, self.emojis, self.dungeon_info[2]))
+            pingmsg = await self.hcchannel.send(f"@here `{self.dungeontitle}` {self.emojis[0]} re-ping (Headcount -> AFK)")
+            await pingmsg.delete()
+            self.afkmsg = self.hcmsg
         await self.afkmsg.pin()
         try:
             pinmsg = await self.hcchannel.fetch_message(self.hcchannel.last_message_id)
@@ -108,7 +121,7 @@ class AfkCheck:
             except asyncio.TimeoutError:
                 return await self.end_afk(True)
 
-            timeleft = 300 - (datetime.utcnow() - starttime).seconds
+            timeleft = 480 - (datetime.utcnow() - starttime).seconds
             embed = self.afkmsg.embeds[0]
             uid = str(user.id)
             try:
@@ -269,7 +282,7 @@ class AfkCheck:
             embed.set_author(name=f"{self.dungeontitle} raid has been ended automatically.", icon_url=self.ctx.author.avatar_url)
         else:
             embed.set_author(name=f"{self.dungeontitle} raid has been ended by {ended.display_name}", icon_url=ended.avatar_url)
-        embed.description = "Thanks for running with us!\n" \
+        embed.description = f"Raid running in {self.vcchannel.name}. Thanks for running with us!\n" \
                             f"This raid ran with {len(self.raiderids)} members.\nPlease wait for the next AFK-Check to begin."
         embed.set_footer(text="Raid ended at")
         embed.timestamp = datetime.utcnow()
@@ -314,3 +327,19 @@ class AfkCheck:
             await self.afkmsg.add_reaction(e)
         await self.afkmsg.add_reaction('<:shard:682365548465487965>')
         await self.afkmsg.add_reaction('❌')
+
+    async def convert_from_headcount(self, hcmsg, dungeoninfo, dungeontitle, emojis, raidnum, inraiding, invet, inevents, raiderrole,
+                                     rlrole, hcchannel, vcchannel):
+        self.hcmsg = hcmsg
+        self.dungeon_info = dungeoninfo
+        self.dungeontitle = dungeontitle
+        self.emojis = emojis
+        self.raidnum = raidnum
+        self.inraiding = inraiding
+        self.invet = invet
+        self.inevents = inevents
+        self.raiderrole = raiderrole
+        self.rlrole = rlrole
+        self.hcchannel = hcchannel
+        self.vcchannel = vcchannel
+        await self.start_afk(True)

@@ -7,6 +7,7 @@ from discord.ext import commands
 
 import embeds
 import sql
+import utils
 from cogs.Minigames.blackjack import Blackjack
 from cogs.Minigames.coinflip import Coinflip
 from cogs.Minigames.roulette import Roulette
@@ -104,7 +105,7 @@ class Casino(commands.Cog):
         self.client.players_in_game.remove(ctx.author.id)
 
     @commands.command(usage="!coinflip [@member] [bet]", aliases=['cf'])
-    async def coinflip(self, ctx, member: discord.Member, bet: int):
+    async def coinflip(self, ctx, member: utils.MemberLookupConverter, bet: int):
         """Bet against someone in a classic 50/50"""
         try:
             await ctx.message.delete()
@@ -157,7 +158,7 @@ class Casino(commands.Cog):
 
 
     @commands.command(usage="!balance {optional: @member}", aliases=['bal'])
-    async def balance(self, ctx, member: discord.Member=None):
+    async def balance(self, ctx, member: utils.MemberLookupConverter=None):
         """Check your balance"""
         try:
             await ctx.message.delete()
@@ -175,7 +176,7 @@ class Casino(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(usage="!pay [@member] [amount] {reason}")
-    async def pay(self, ctx, member: discord.Member, amount: int, *reason):
+    async def pay(self, ctx, member: utils.MemberLookupConverter, amount: int, *reason):
         """Pay someone your hard-earned credits."""
         try:
             await ctx.message.delete()
@@ -206,7 +207,7 @@ class Casino(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(usage="!steal [@member]")
-    async def steal(self, ctx, member: discord.Member):
+    async def steal(self, ctx, member: utils.MemberLookupConverter):
         """Your gambling addiction is strong enough to steal from someone?! What is wrong with you?"""
         try:
             await ctx.message.delete()
@@ -301,7 +302,7 @@ class Casino(commands.Cog):
             cooldown = data[i]
             if cooldown > datetime.utcnow():
                 (hours, minutes, seconds) = timedeltaformatter(cooldown - datetime.utcnow())
-                str += f"**{hours}:{minutes}:{seconds}**\n"
+                str += f"**{hours}**h, **{minutes}**m, **{seconds}**s\n"
             else:
                 str += " **READY**\n"
         embed.add_field(name="Cooldowns", value=str)
@@ -323,12 +324,12 @@ class Casino(commands.Cog):
             embed.add_field(name="You have already collected your daily credits!", value=f"Next in: {hours}:{minutes}:{seconds}")
             embed.set_footer(text="Use !cooldowns to check your cooldown timers.")
             return await ctx.send(embed=embed, delete_after=10)
-        balance = data[sql.casino_cols.balance]+2500
+        balance = data[sql.casino_cols.balance]+7500
         await sql.change_balance(self.client.pool, ctx.guild.id, ctx.author.id, balance)
         await sql.update_cooldown(self.client.pool, ctx.author.id, sql.casino_cols.dailycooldown)
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
         embed.color = discord.Color.green()
-        embed.add_field(name="You got 2,500 credits!", value=f"Current balance: **{balance:,}** credits.")
+        embed.add_field(name="You got 7,500 credits!", value=f"Current balance: **{balance:,}** credits.")
         return await ctx.send(embed=embed)
 
     @commands.command(usage="!work")

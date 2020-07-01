@@ -4,6 +4,7 @@ import discord
 from discord.ext.commands import MemberConverter
 
 import sql
+import utils
 
 
 class LogRun:
@@ -25,10 +26,11 @@ class LogRun:
         self.swordreacts = swordreacts
         self.numruns = numruns
         self.leader = runleader if runleader else ctx.author
-        self.converter = MemberConverter()
+        self.converter = utils.MemberLookupConverter()
         self.confirmedLogs = []
         self.startembed = discord.Embed(title=f"Log this Run: {ctx.author.display_name}",
-                                        description="Press the ✅ reaction when you finish the run to log it in the database.",
+                                        description="Press the ✅ reaction when you finish the run to log it in the database.\nTo cancel "
+                                                    "logging if you didn't do the run, press the ❌",
                                         color=discord.Color.gold())
         reacts = ""
         for i, r in enumerate(keyreacts[:10]):
@@ -49,14 +51,21 @@ class LogRun:
     async def start(self):
         self.msg = await self.ctx.send(content=self.ctx.author.mention, embed=self.startembed)
         await self.msg.add_reaction("✅")
+        await self.msg.add_reaction("❌")
 
         def check(react, usr):
-            return usr == self.ctx.author and react.message.id == self.msg.id and str(react.emoji) == "✅"
+            return usr == self.ctx.author and react.message.id == self.msg.id and (str(react.emoji) == "✅" or str(react.emoji) == '❌')
 
         try:
             reaction, user = await self.client.wait_for('reaction_add', timeout=3600, check=check)  # Wait 1 hr max
         except asyncio.TimeoutError:
             embed = discord.Embed(title="Timed out!", description="You didn't log this run in time!", color=discord.Color.red())
+            await self.msg.clear_reactions()
+            return await self.msg.edit(embed=embed)
+
+        if str(reaction.emoji) == '❌':
+            embed = discord.Embed(title="Cancelled!", description=f"{self.ctx.author.mention} cancelled this log.",
+                                  color=discord.Color.red())
             await self.msg.clear_reactions()
             return await self.msg.edit(embed=embed)
 
@@ -119,21 +128,22 @@ class LogRun:
 
         for m in self.members:
             m = self.ctx.guild.get_member(m)
-            if self.events:
-                if m.top_role >= self.rlrole:
-                    if not m.id == self.ctx.author.id:
-                        await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.eventsassisted)
+            if m:
+                if self.events:
+                    if m.top_role >= self.rlrole:
+                        if not m.id == self.ctx.author.id:
+                            await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.eventsassisted)
 
-                await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.eventsdone)
-            else:
-                if m.top_role >= self.rlrole:
-                    if not m.id == self.ctx.author.id:
-                        await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.runsassisted)
-                await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.runsdone)
+                    await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.eventsdone)
+                else:
+                    if m.top_role >= self.rlrole:
+                        if not m.id == self.ctx.author.id:
+                            await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.runsassisted)
+                    await sql.log_runs(self.client.pool, self.ctx.guild.id, m.id, sql.log_cols.runsdone)
 
         desc = "Log Status:\n"
         for r in self.confirmedLogs[:-1]:
-            desc += r[0] + " - <@" + str(r[1]) + ">\n"
+            desc += r[0] + " - " + str(r[1]) + "\n"
         desc += "Run Leader - " + self.leader.mention + "\n"
         if len(self.members) != 1:
             desc += "# Raiders - " + str(len(self.members)) + "\n"
@@ -169,7 +179,9 @@ class LogRun:
             return
         elif str(reaction.emoji) in self.numbers:
             i = self.numbers.index(str(reaction.emoji))
-            memberid = reacts[i].id
+            member = reacts[i]
+            if isinstance(member, str):
+                member = self.client.get_user(int(member))
         else:
             await self.msg.clear_reactions()
             await self.msg.edit(embed=self.otheremebed)
@@ -186,15 +198,16 @@ class LogRun:
 
                 try:
                     member = await self.converter.convert(self.ctx, msg.content)
-                    memberid = member.id
-                    await msg.delete()
+                    try:
+                        await msg.delete()
+                    except discord.NotFound:
+                        pass
                     break
                 except discord.ext.commands.BadArgument:
-                    await self.ctx.send(f"The member you specified (`{msg}`) was not found.", delete_after=7)
-                    await msg.delete()
+                    await self.ctx.send(f"The member you specified (`{msg.content}`) was not found.", delete_after=7)
 
-        await sql.log_runs(self.client.pool, self.ctx.guild.id, memberid, column, self.numruns)
-        self.confirmedLogs.append((emoji, f"<@{memberid}>"))
+        await sql.log_runs(self.client.pool, self.ctx.guild.id, member.id, column, self.numruns)
+        self.confirmedLogs.append((emoji, f"{member.mention}"))
 
     async def add_emojis(self, msg, emojis):
         for e in emojis:

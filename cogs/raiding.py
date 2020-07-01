@@ -29,7 +29,7 @@ class Raiding(commands.Cog):
     async def afk(self, ctx, *, location):
         """Starts an AFK check for the location specified."""
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
-            return await ctx.send("You cannot start another AFK while an AFK check is still up.")
+            return await ctx.send("You cannot start another AFK while an AFK check is still up or a run log has not been completed.")
         self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
         setup = VCSelect(self.client, ctx)
         data = await setup.start()
@@ -54,7 +54,7 @@ class Raiding(commands.Cog):
             (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
         else:
             return
-        hc = Headcount(self.client, ctx, hcchannel, vcchannel, setup_msg)
+        hc = Headcount(self.client, ctx, hcchannel, vcchannel, setup_msg, raidnum, inraiding, invet, inevents, raiderrole, rlrole)
         await hc.start()
 
     @commands.command(usage="!parse (Attach an image of /who list with this command)")
@@ -71,13 +71,16 @@ class Raiding(commands.Cog):
             return await ctx.send("Please only attach an image of type 'png' or 'jpg'.", delete_after=10)
         image = io.BytesIO()
         await attachment.save(image, seek_begin=True)
-        setup = VCSelect(self.client, ctx, parse=True)
-        data = await setup.start()
-        if isinstance(data, tuple):
-            (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+        if ctx.author.voice:
+            vcchannel = ctx.author.voice.channel
         else:
-            return
-        await setup_msg.delete()
+            setup = VCSelect(self.client, ctx, parse=True)
+            data = await setup.start()
+            if isinstance(data, tuple):
+                (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+            else:
+                return
+            await setup_msg.delete()
         msg = await ctx.send("Parsing image. This may take a minute...")
         embed = await self.client.loop.run_in_executor(None, functools.partial(parse_image, ctx.author, image, vcchannel))
         await msg.delete()
@@ -300,7 +303,8 @@ def parse_image(author, image, vc):
         return "".join(c for c in n if c.isalpha())
 
     for m in vc.members:
-        clean_member(m.display_name)
+        if not m.bot:
+            clean_member(m.display_name)
 
     crashing = []
     possible_alts = []
@@ -311,7 +315,7 @@ def parse_image(author, image, vc):
             names = name.split(" ")
             name = names[0]
         if name.strip() not in cleaned_members:
-            matches = get_close_matches(name.strip(), cleaned_members, n=1, cutoff=0.8)
+            matches = get_close_matches(name.strip(), cleaned_members, n=1, cutoff=0.6)
             if len(matches) == 0:
                 if name.strip() not in alts:
                     crashing.append(name.strip())

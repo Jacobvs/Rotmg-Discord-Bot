@@ -5,8 +5,85 @@ import re
 from enum import Enum
 
 import aiohttp
+import discord
 import numpy as np
 from discord.ext.commands import BadArgument, Converter
+
+import sql
+
+
+class MemberLookupConverter(discord.ext.commands.MemberConverter):
+    async def convert(self, ctx, mem) -> discord.Member:
+        in_db = False
+        try:
+            member = await super().convert(ctx, mem)  # Convert parameter to discord.member
+        except discord.ext.commands.BadArgument:
+            if isinstance(mem, str):
+                try:
+                    data = await sql.get_user_from_ign(ctx.bot.pool, mem)
+                    if data:
+                        in_db = True
+                        member = await super().convert(ctx, str(data[0]))
+                    else:
+                        raise BadArgument(f"No members found with the name: {mem} and no results were found in the bot's database. "
+                                          "Check your spelling and try again!")
+                except discord.ext.commands.BadArgument:
+                    desc = f"No members found with the name: {mem}. "
+                    desc += f"Found 1 result in the bot's database under the user: <@{data[0]}>. Verified in: [{data[6]}]" if in_db \
+                        else "No results found in the bot's database. Check your spelling and try again!"
+                    raise BadArgument(desc)
+            else:
+                raise BadArgument(f"No members found with the name: `{mem}`")
+        return member
+
+
+class EmbedPaginator():
+
+    def __init__(self, client, ctx, pages):
+        self.client = client
+        self.ctx = ctx
+        self.pages = pages
+
+    async def paginate(self):
+        if self.pages:
+            pagenum = 0
+            msg = await self.ctx.send(embed=self.pages[pagenum])
+            await msg.add_reaction("⬅️")
+            await msg.add_reaction("⏹️")
+            await msg.add_reaction("➡️")
+
+            starttime = datetime.datetime.utcnow()
+            timeleft = 600  # 10 minute timeout
+            while True:
+                def check(react, usr):
+                    return not usr.bot and react.message.id == msg.id and usr.id == self.ctx.author.id and str(react.emoji) in \
+                           ["⬅️", "⏹️", "➡️"]
+                try:
+                    reaction, user = await self.client.wait_for('reaction_add', timeout=timeleft, check=check)  # Wait max 1.5 hours
+                except asyncio.TimeoutError:
+                    return await self.end_pagination(msg)
+
+                await msg.remove_reaction(reaction.emoji, self.ctx.author)
+                timeleft = 600 - (datetime.datetime.utcnow() - starttime).seconds
+                if str(reaction.emoji) == "⬅️" and pagenum != 0:
+                    pagenum -= 1
+                elif str(reaction.emoji) == "➡️" and pagenum != (len(self.pages)-1):
+                    pagenum += 1
+                elif str(reaction.emoji) == "⏹️":
+                    return await self.end_pagination(msg)
+                else:
+                    continue
+
+                await msg.edit(embed=self.pages[pagenum])
+
+    async def end_pagination(self, msg):
+        if self.pages:
+            await msg.edit(embed=self.pages[0])
+        try:
+            await msg.clear_reactions()
+        except discord.NotFound:
+            pass
+
 
 
 class Card:
@@ -295,7 +372,7 @@ class Duration(Converter):
                                  r"((?P<seconds>\d+?) ?(seconds|second|S|s))?")
 
 
-    async def convert(self, ctx, duration: str) -> datetime:
+    async def convert(self, ctx, duration: str) -> datetime.datetime:
         """
         Converts a `duration` string to a datetime object that's
         `duration` in the future.
@@ -346,113 +423,132 @@ def dungeon_info(num: int = None):
                 2: ("Cult", ["<:CultistHideout:585613559254482974>", "<:lhkey:682205801728835656>", "<:warrior:682204616997208084>",
                              "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
                              "<:puri:682205769973760001>", "<:planewalker:682212363889279091>"], "https://i.imgur.com/nPkovWR.png"),
-                3: ("Void", ["<:void:682205817424183346>", "<:lhkey:682205801728835656>", "<:vial:682205784524062730>",
+                3: ("MBC", ["<:MBC:727607969591853228>", "<:lhkey:682205801728835656>",
+                             "<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>",
+                             "<:priest:682206578908069905>", "<:mseal:682205755754938409>", "<:puri:682205769973760001>",
+                             "<:planewalker:682212363889279091>"], "https://i.imgur.com/G8FArqL.png"),
+                4: ("Void", ["<:void:682205817424183346>", "<:lhkey:682205801728835656>", "<:vial:682205784524062730>",
                              "<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>",
                              "<:priest:682206578908069905>", "<:mseal:682205755754938409>", "<:puri:682205769973760001>",
                              "<:planewalker:682212363889279091>"], "https://i.imgur.com/7JGSvMq.png"),
-                4: ("Full-Skip Void", ["<:fskipvoid:682206558075224145>", "<:lhkey:682205801728835656>", "<:vial:682205784524062730>",
+                5: ("Full-Skip Void", ["<:fskipvoid:682206558075224145>", "<:lhkey:682205801728835656>", "<:vial:682205784524062730>",
                                        "<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>",
                                        "<:priest:682206578908069905>", "<:mystic:682205700918607969>", "<:mseal:682205755754938409>",
                                        "<:puri:682205769973760001>", "<:brainofthegolem:682205737492938762>"],
                     "https://i.imgur.com/7JGSvMq.png"),
-                5: ("Shatters", ["<:TheShatters:561744041532719115>", "<:ShattersKey:561744174152548374>", "<:warrior:682204616997208084>",
+                6: ("Shatters", ["<:TheShatters:561744041532719115>", "<:ShattersKey:561744174152548374>", "<:warrior:682204616997208084>",
                                 "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
                                  "<:mystic:682205700918607969>", "<:armorbreak:682206598156124212>", "<:orbofaether:682206626157035605>",
                                  "<:switch1:682206658461433986>", "<:switch2:682206673506533395>", "<:switch3:682206687083757569>"],
                     "https://static.drips.pw/rotmg/wiki/Enemies/shtrs%20The%20Forgotten%20King.png"),
-                6: ("Fungal Cavern", ["<:FungalCavern:609078085945655296>", "<:CavernKey:609078341529632778>",
+                7: ("Fungal Cavern", ["<:FungalCavern:609078085945655296>", "<:CavernKey:609078341529632778>",
                                       "<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>",
                                       "<:priest:682206578908069905>", "<:trickster:682214467483861023>", "<:mystic:682205700918607969>",
                                       "<:planewalker:682212363889279091>", "<:mseal:682205755754938409>",
                                       "<:QuiverofThunder:585616162176630784>", "<:armorbreak:682206598156124212>",
                                       "<:slow_icon:678792068965072906>"], "https://i.imgur.com/K6rOQzR.png"),
-                7: ("The Nest", ["<:Nest:585617025909653524>", "<:NestKey:585617056192266240>", "<:warrior:682204616997208084>",
+                8: ("The Nest", ["<:Nest:585617025909653524>", "<:NestKey:585617056192266240>", "<:warrior:682204616997208084>",
                                  "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
                                  "<:mystic:682205700918607969>", "<:puri:682205769973760001>", "<:QuiverofThunder:585616162176630784>",
                                  "<:slow_icon:678792068965072906>"], "https://i.imgur.com/hUWc3IV.png"),
-                8: ("Tomb", ["<:TomboftheAncientsPortal:561248700723363860>", "<:tombOfTheAncientsKey:561248916822163487>"],
+                9: ("Full-Skip Nest", ["<:fskipNest:727606399621791934>", "<:NestKey:585617056192266240>", "<:warrior:682204616997208084>",
+                                 "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
+                                 "<:mystic:682205700918607969>", "<:puri:682205769973760001>", "<:QuiverofThunder:585616162176630784>",
+                                 "<:slow_icon:678792068965072906>"], "https://i.imgur.com/Qmsl0Pq.png"),
+                10: ("Tomb", ["<:TomboftheAncientsPortal:561248700723363860>", "<:tombOfTheAncientsKey:561248916822163487>"],
                     "https://static.drips.pw/rotmg/wiki/Enemies/Tomb%20Defender.png"),
-                9: ("Ice Cave", ["<:IceCavePortal:561248701276880918>", "<:IiceCaveKey:561248916620967949>"],
+                11: ("Ice Cave", ["<:IceCavePortal:561248701276880918>", "<:IiceCaveKey:561248916620967949>"],
                     "https://static.drips.pw/rotmg/wiki/Enemies/ic%20Esben%20the%20Unwilling.png"),
-                10: ("Ocean Trench", ["<:OceanTrenchPortal:561248700601466891>", "<:oceanTrenchKey:561248917048655882>"],
+                12: ("Ocean Trench", ["<:OceanTrenchPortal:561248700601466891>", "<:oceanTrenchKey:561248917048655882>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Thessal%20the%20Mermaid%20Goddess.png"),
-                11: ("Crawling Depths", ["<:TheCrawlingDepths:561248701591322644>", "<:theCrawlingDepthsKey:561248917052719104>"],
+                13: ("Crawling Depths", ["<:TheCrawlingDepths:561248701591322644>", "<:theCrawlingDepthsKey:561248917052719104>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Son%20of%20Arachna.png"),
-                12: ("Woodland Labyrinth", ["<:WoodlandLabyrinth:561248701440589824>", "<:woodlandLabyrinthKey:561248917115633667>"],
+                14: ("Woodland Labyrinth", ["<:WoodlandLabyrinth:561248701440589824>", "<:woodlandLabyrinthKey:561248917115633667>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Murderous%20Megamoth.png"),
-                13: ("Deadwater Docks", ["<:DeadwaterDocks:561248700324773909>", "<:deadwaterDocksKey:561248917052850176>"],
+                15: ("Deadwater Docks", ["<:DeadwaterDocks:561248700324773909>", "<:deadwaterDocksKey:561248917052850176>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Jon%20Bilgewater%20the%20Pirate%20King.png"),
-                14: ("Lair of Draconis", ["<:ConsolationofDraconisPortal:561248700672901120>", "<:lairOfDraconisKey:561248916931084320>"],
+                16: ("Lair of Draconis", ["<:ConsolationofDraconisPortal:561248700672901120>", "<:lairOfDraconisKey:561248916931084320>"],
                      "https://i.imgur.com/beABgum.png"),
-                15: ("Mountain Temple", ["<:mt:561248700769239076>", "<:mountainTempleKey:561248917027684367>"],
+                17: ("Mountain Temple", ["<:mt:561248700769239076>", "<:mountainTempleKey:561248917027684367>"],
                      "https://i.imgur.com/TIektVi.png"),
-                16: ("Davy Jones Locker", ["<:DavyJonessLockerPortal:561248700295544883>", "<:davyJonesLockerKey:561248917086273536>"],
+                18: ("Davy Jones Locker", ["<:DavyJonessLockerPortal:561248700295544883>", "<:davyJonesLockerKey:561248917086273536>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Davy%20Jones.png"),
-                17: ("Parasite Chambers", ["<:Parasite:561248700727558144>", "<:parasiteChambersKey:561248917115633665>"],
+                19: ("Parasite Chambers", ["<:Parasite:561248700727558144>", "<:parasiteChambersKey:561248917115633665>"],
                      "https://i.imgur.com/zodPEFO.png"),
-                18: ("Mad Lab", ["<:MadLabPortal:561248700899262469>", "<:madLabKey:561248917010776065>"],
+                20: ("Mad Lab", ["<:MadLabPortal:561248700899262469>", "<:madLabKey:561248917010776065>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Dr%20Terrible.png"),
-                19: ("Machine", ["<:Machine:572596351204982784>", "<:machineKey:711442921211035701>"],
+                21: ("Machine", ["<:Machine:572596351204982784>", "<:machineKey:711442921211035701>"],
                      "https://i.imgur.com/G7Hbr58.png"),
-                20: ("Cemetary", ["<:HauntedCemeteryPortal:561248700693741578>", "<:cemeteryKey:561248917052981278>"],
+                22: ("Cemetary", ["<:HauntedCemeteryPortal:561248700693741578>", "<:cemeteryKey:561248917052981278>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Ghost%20of%20Skuld.png"),
-                21: ("Cursed Library", ["<a:CursedLibraryPortal:576610298262454316>", "<:cursedLibraryKey:576610460690939914>"],
+                23: ("Cursed Library", ["<a:CursedLibraryPortal:576610298262454316>", "<:cursedLibraryKey:576610460690939914>"],
                      "https://i.imgur.com/DfhWagx.png"),
-                22: ("Toxic Sewers", ["<:ToxicSewersPortal:561248701213835265>", "<:toxicSewersKey:561248917145124874>"],
+                24: ("Toxic Sewers", ["<:ToxicSewersPortal:561248701213835265>", "<:toxicSewersKey:561248917145124874>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/DS%20Gulpord%20the%20Slime%20God.png"),
-                23: ("Puppet Master's Theatre", ["<:PuppetTheatrePortal:561248700408791051>", "<:theatreKey:561248917065433119>"],
+                25: ("Puppet Master's Theatre", ["<:PuppetTheatrePortal:561248700408791051>", "<:theatreKey:561248917065433119>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/The%20Puppet%20Master.png"),
-                24: ("Manor", ["<:ManoroftheImmortalsPortal:561248700337225759>", "<:manorKey:561248917120090142>"],
+                26: ("Manor", ["<:ManoroftheImmortalsPortal:561248700337225759>", "<:manorKey:561248917120090142>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Lord%20Ruthven.png"),
-                25: ("Abyss", ["<:AbyssofDemonsPortal:561248700643409931>", "<:abyssOfDemonsKey:561248916624900097>"],
+                27: ("Abyss", ["<:AbyssofDemonsPortal:561248700643409931>", "<:abyssOfDemonsKey:561248916624900097>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Archdemon%20Malphas.png"),
-                26: ("Undead Lair", ["<:UndeadLairPortal:561248700601729036>", "<:undeadLairKey:561248917090729999>"],
+                28: ("Undead Lair", ["<:UndeadLairPortal:561248700601729036>", "<:undeadLairKey:561248917090729999>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Septavius%20the%20Ghost%20God.png"),
-                27: ("Treasure Cave", ["<:TreasureCavePortal:561248701809557511>", "<:caveOfAThousandTreasuresKey:561248916968964129>"],
+                29: ("Treasure Cave", ["<:TreasureCavePortal:561248701809557511>", "<:caveOfAThousandTreasuresKey:561248916968964129>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Golden%20Oryx%20Effigy.png"),
-                28: ("Candyland", ["<:CandylandPortal:561248700916301825>", "<:candylandKey:561248916989935656>"],
+                30: ("Candyland", ["<:CandylandPortal:561248700916301825>", "<:candylandKey:561248916989935656>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Gigacorn.png"),
-                29: ("Sprite World", ["<:GlowingPortal:561249801501540363>", "<:spriteWorldKey:561249834292477967>"],
+                31: ("Sprite World", ["<:GlowingPortal:561249801501540363>", "<:spriteWorldKey:561249834292477967>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Limon%20the%20Sprite%20God.png"),
-                30: ("Magic Woods", ["<:MagicWoodPortal:561248700870033408>", "<:magicWoodsKey:561248916805386270>"],
+                32: ("Magic Woods", ["<:MagicWoodPortal:561248700870033408>", "<:magicWoodsKey:561248916805386270>"],
                      "https://i.imgur.com/jVimXOv.png"),
-                31: ("Hive", ["<:Hive:711430596714430535>", "<:hiveKey:711443611425832981>"],
+                33: ("Hive", ["<:Hive:711430596714430535>", "<:hiveKey:711443611425832981>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/TH%20Queen%20Bee.png"),
-                32: ("Forbidden Jungle", ["<:ForbiddenJungle:711430596571955363>", "<:forbiddenJungleKey:711443611794800670>"],
+                34: ("Forbidden Jungle", ["<:ForbiddenJungle:711430596571955363>", "<:forbiddenJungleKey:711443611794800670>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Mixcoatl%20the%20Masked%20God.png"),
-                33: ("Snake Pit", ["<:SnakePitPortal:561248700291088386>", "<:snakePitKey:561248916734083075>"],
+                35: ("Snake Pit", ["<:SnakePitPortal:561248700291088386>", "<:snakePitKey:561248916734083075>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Stheno%20the%20Snake%20Queen.png"),
-                34: ("Spider Den", ["<:SpiderDen:711430596567760957>", "<:spiderDenKey:711443611371175978>"],
+                36: ("Spider Den", ["<:SpiderDen:711430596567760957>", "<:spiderDenKey:711443611371175978>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Arachna%20the%20Spider%20Queen.png"),
-                35: ("Forest Maze", ["<:ForestMaze:711430596752179241>", "<:forestMazeKey:711443611568439367>"],
+                37: ("Forest Maze", ["<:ForestMaze:711430596752179241>", "<:forestMazeKey:711443611568439367>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Mama%20Mothra.png"),
-                36: ("Pirate Cave", ["<:PirateCavePortal:574080648000569353>", "<:pirateCaveKey:711443611429896245>"],
+                38: ("Pirate Cave", ["<:PirateCavePortal:574080648000569353>", "<:pirateCaveKey:711443611429896245>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Dreadstump%20the%20Pirate%20King.png"),
-                37: ("Beachzone", ["<:BeachzonePortal:711430895051079740>", "<:beachzoneKey:711444566103949392>"],
+                39: ("Beachzone", ["<:BeachzonePortal:711430895051079740>", "<:beachzoneKey:711444566103949392>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Masked%20Party%20God.png"),
-                38: ("Belladonnas Garden", ["<:BelladonnasGardenPortal:561248700693741569>", "<:BelladonnasGardenKey:561248916830552067>"],
+                40: ("Belladonnas Garden", ["<:BelladonnasGardenPortal:561248700693741569>", "<:BelladonnasGardenKey:561248916830552067>"],
                      "https://i.imgur.com/d7xzYLG.png"),
-                39: ("Ice Tomb", ["<:IceTombPortal:561248700270116869>", "<:iceTombKey:561248917082079272>"],
+                41: ("Ice Tomb", ["<:IceTombPortal:561248700270116869>", "<:iceTombKey:561248917082079272>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Ice%20Tomb%20Defender.png"),
-                40: ("Battle Nexus", ["<:BattleNexusPortal:561248700588883979>", "<:battleOfTheNexusKey:561248916570505219>"],
+                42: ("Battle Nexus", ["<:BattleNexusPortal:561248700588883979>", "<:battleOfTheNexusKey:561248916570505219>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Oryx%20the%20Mad%20God%20Deux.png"),
-                41: ("Red Aliens", ["<:AlienRed:711431346698059858>", "<:alienRedKey:711445699392438302>"],
+                43: ("Red Aliens", ["<:AlienRed:711431346698059858>", "<:alienRedKey:711445699392438302>"],
                      "https://i.imgur.com/BLPokRW.png"),
-                42: ("Blue Aliens", ["<:AlienBlue:711431346740002878>", "<:alienBlueKey:711445699241312259>"],
+                44: ("Blue Aliens", ["<:AlienBlue:711431346740002878>", "<:alienBlueKey:711445699241312259>"],
                      "https://i.imgur.com/TQOdFo6.png"),
-                43: ("Green Aliens", ["<:AlienGreen:711431347029409853>", "<:alienGreenKey:711445699308290068>"],
+                45: ("Green Aliens", ["<:AlienGreen:711431347029409853>", "<:alienGreenKey:711445699308290068>"],
                      "https://i.imgur.com/BEToOal.png"),
-                44: ("Yellow Aliens", ["<:AlienYellow:711431347108839424>", "<:alienYellowKey:711445699195043850>"],
+                46: ("Yellow Aliens", ["<:AlienYellow:711431347108839424>", "<:alienYellowKey:711445699195043850>"],
                      "https://i.imgur.com/C3kJ0x8.png"),
-                45: ("Shaitan's Lair", ["<:LairofShaitanPortal:561248700828090388>", "<:shaitansKey:561248917191131152>"],
+                47: ("Shaitan's Lair", ["<:LairofShaitanPortal:561248700828090388>", "<:shaitansKey:561248917191131152>"],
                      "https://i.imgur.com/azzD6jD.png"),
-                46: ("Puppet Master's Encore", ["<:PuppetEncorePortal:561248700723101696>", "<:puppetMastersEncoreKey:561248917082079252>"],
+                48: ("Puppet Master's Encore", ["<:PuppetEncorePortal:561248700723101696>", "<:puppetMastersEncoreKey:561248917082079252>"],
                      "https://static.drips.pw/rotmg/wiki/Enemies/Puppet%20Master%20v2.png"),
-                47: ("Cnidarian Reef", ["<:Reef:561250455284350998>", "<:reefKey:561251664388947968>"], "https://i.imgur.com/BF2DclQ.png"),
-                48: ("Secluded Thicket", ["<:thicket:561248701402578944>", "<:thicketKey:561248917208039434>"],
+                49: ("Cnidarian Reef", ["<:Reef:561250455284350998>", "<:reefKey:561251664388947968>"], "https://i.imgur.com/BF2DclQ.png"),
+                50: ("Secluded Thicket", ["<:thicket:561248701402578944>", "<:thicketKey:561248917208039434>"],
                      "https://i.imgur.com/xFWvgyV.png"),
-                49: ("Heroic UDL", ["<:HUDL:711479365602508820>", "<:hudlKey:711444346334871643>"], "https://i.imgur.com/WmL1qda.png"),
-                50: ("Heroic Abyss", ["<:HAbyss:711431861678637129>", "<:habbyKey:711444346263830559>"], "https://i.imgur.com/LCALe5V.png")
+                51: ("Heroic UDL", ["<:HUDL:711479365602508820>", "<:hudlKey:711444346334871643>"], "https://i.imgur.com/WmL1qda.png"),
+                52: ("Heroic Abyss", ["<:HAbyss:711431861678637129>", "<:habbyKey:711444346263830559>"], "https://i.imgur.com/LCALe5V.png"),
+                53: ("Janus", ["<:Janus:727609287148306552>", '<:WineCellarInc:708191799750950962>', "<:trickster:682214467483861023>",
+                               "<:ninja_3:585616162151202817>", "<:warrior:682204616997208084>", "<:knight:682205672116584459>",
+                               "<:paladin:682205688033968141>", "<:priest:682206578908069905>"], "https://i.imgur.com/RfObrpY.png"),
+                54: ("Oryx 2", ["<:O2:727610126592376873>", '<:WineCellarInc:708191799750950962>', "<:trickster:682214467483861023>",
+                               "<:ninja_3:585616162151202817>", "<:warrior:682204616997208084>", "<:knight:682205672116584459>",
+                               "<:paladin:682205688033968141>", "<:priest:682206578908069905>"],
+                     "https://static.drips.pw/rotmg/wiki/Enemies/Oryx%20the%20Mad%20God%202.png"),
+                55: ("Keyper Clearing", ["<:whitebag:682208350481547267>", '<:WineCellarInc:708191799750950962>',
+                               "<:trickster:682214467483861023>", "<:ninja_3:585616162151202817>", "<:warrior:682204616997208084>",
+                               "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>"],
+                     "https://i.imgur.com/ldJqTmK.png")
                 }
     if not num:
         return dungeons

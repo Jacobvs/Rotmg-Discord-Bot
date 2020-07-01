@@ -20,7 +20,7 @@ class Logging(commands.Cog):
     @commands.command(usage="!pop <key/event/vial/helm/shield/sword> <@member> {number}")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
-    async def pop(self, ctx, type, member: discord.Member, number: int = 1):
+    async def pop(self, ctx, type, member: utils.MemberLookupConverter, number: int = 1):
         """Log key pops"""
         type = type.lower()
         if type not in ["key", "event", "vial", "helm", "shield", "sword"]:
@@ -94,6 +94,7 @@ async def update_leaderboards(client):
 
         for id in client.serverwleaderboard:
             await update_leaderboard(client, id)
+        await asyncio.sleep(10) # Sleep for 10s so don't get repeated messages
   
 async def update_leaderboard(client, guild_id):
     guild = client.get_guild(guild_id)
