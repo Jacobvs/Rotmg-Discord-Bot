@@ -67,14 +67,15 @@ async def on_ready():
     for p in active:
         guild = bot.get_guild(p[sql.punish_cols.gid])
         member = guild.get_member(p[sql.punish_cols.uid])
-        ptype = p[sql.punish_cols.type]
-        until = p[sql.punish_cols.endtime]
-        tsecs = (until - datetime.datetime.utcnow()).total_seconds()
-        if ptype == 'suspend':
-            roles = await sql.get_suspended_roles(bot.pool, member.id, guild)
-            bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs, roles))
-        else:
-            bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs))
+        if member:
+            ptype = p[sql.punish_cols.type]
+            until = p[sql.punish_cols.endtime]
+            tsecs = (until - datetime.datetime.utcnow()).total_seconds()
+            if ptype == 'suspend':
+                roles = await sql.get_suspended_roles(bot.pool, member.id, guild)
+                bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs, roles))
+            else:
+                bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs))
 
     print(f'{bot.user.name} has connected to Discord!')
 

@@ -30,7 +30,7 @@ class Punishments(commands.Cog):
 
     @commands.command(usage="!mute <@member> <duration> <reason>")
     @commands.guild_only()
-    @checks.is_rl_or_higher_check()
+    @checks.is_security_or_higher_check()
     async def mute(self, ctx, member: utils.MemberLookupConverter, duration: utils.Duration, *, reason):
         """Prevent the member from sending messages or adding reactions."""
         if member.bot:
@@ -63,7 +63,7 @@ class Punishments(commands.Cog):
 
     @commands.command(usage='!unmute <@member> {reason}')
     @commands.guild_only()
-    @checks.is_rl_or_higher_check()
+    @checks.is_security_or_higher_check()
     async def unmute(self, ctx, member: utils.MemberLookupConverter, *, reason=None):
         """Unmute specified member."""
         if member.bot:
@@ -83,7 +83,7 @@ class Punishments(commands.Cog):
 
     @commands.command(usage='!suspend <@member> <duration> <reason>')
     @commands.guild_only()
-    @checks.is_rl_or_higher_check()
+    @checks.is_security_or_higher_check()
     async def suspend(self, ctx, member: utils.MemberLookupConverter, duration: utils.Duration, *, reason):
         """Suspend a member, assigning them the suspended role."""
         if member.bot:
@@ -94,7 +94,7 @@ class Punishments(commands.Cog):
             return await ctx.send(f'Cannot suspend `{member.display_name}` as you have equal or lower roles than them.')
         if ctx.guild.me.top_role <= member.top_role:
             return await ctx.send(f'Cannot suspend `{member.display_name}` as the bot has equal or lower roles than them.')
-        already_active = await sql.has_active(self.client.pool, member.id, ctx.guild.id, 'mute')
+        already_active = await sql.has_active(self.client.pool, member.id, ctx.guild.id, 'suspend')
         if already_active:
             return await ctx.send(f"{member.mention} already has an active suspension!")
 
@@ -117,6 +117,9 @@ class Punishments(commands.Cog):
 
         await member.add_roles(suspendrole)
 
+        if member.voice:
+            await member.move_to(None, reason="Suspension")
+
         embed = discord.Embed(title="Success!",
                               description=f"`{member.display_name}` was successfully suspended for reason:\n{reason}.\nDuration: "
                                           f"{duration_formatter(tsecs, 'Suspended')}", color=discord.Color.green())
@@ -126,7 +129,7 @@ class Punishments(commands.Cog):
 
     @commands.command(usage="!unsuspend <@member> {reason}")
     @commands.guild_only()
-    @checks.is_rl_or_higher_check()
+    @checks.is_security_or_higher_check()
     async def unsuspend(self, ctx, member: utils.MemberLookupConverter, *, reason=None):
         """Unsuspend the specified member."""
         if member.bot:
@@ -146,6 +149,9 @@ class Punishments(commands.Cog):
         embed = discord.Embed(title="Success!",
                               description=f"`{member.display_name}` was successfully un-suspended.", color=discord.Color.green())
         await ctx.send(embed=embed)
+
+    #TODO: Add change duration command
+    #TODO: add proof optional to punishment
 
     async def send_log(self, guild, user, requester, ptype, duration, reason):
         channel = self.client.guild_db.get(guild.id)[sql.gld_cols.punishlogchannel]
@@ -197,7 +203,7 @@ async def send_update_embeds(client, guild, member, mute, auto=True, requester=N
     embed = discord.Embed(title=f"{ptype} Info", description=desc, color=discord.Color.green())
     time = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     embed.add_field(name="Info:", value=f"{ptype} at: {time}", inline=False)
-    embed.set_footer(text="Member Successfully un-muted!")
+    embed.set_footer(text=f"Member Successfully {ptype}!")
     channel = client.guild_db.get(guild.id)[sql.gld_cols.punishlogchannel]
     await channel.send(embed=embed)
     await member.send(member.mention, embed=embed)

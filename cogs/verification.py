@@ -17,7 +17,6 @@ class Verification(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-
     async def step_2_verify(self, user_id):
         user = self.client.get_user(user_id)
         key = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
@@ -52,6 +51,9 @@ class Verification(commands.Cog):
 
         async with aiohttp.ClientSession() as cs:
             async with cs.get('https://rotmg-discord-bot.wm.r.appspot.com/?player={}'.format(user_data[usr_cols.ign]), ssl=False) as r:
+                if r.status == 403:
+                    print("ERROR: API ACCESS FORBIDDEN")
+                    await channel.send(f"<@{self.client.owner_id}> ERROR: API ACCESS REVOKED!.")
                 data = await r.json()  # returns dict
 
         if not data:

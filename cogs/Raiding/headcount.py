@@ -40,9 +40,9 @@ class Headcount:
                 embed = discord.Embed(title="Timed out!", description="You didn't choose a dungeon in time!", color=discord.Color.red())
                 await self.setup_msg.clear_reactions()
                 return await self.setup_msg.edit(embed=embed)
-            if -1 < int(msg.content) < 53 or 60 < int(msg.content) < 62:
+            if -1 < int(msg.content) < 56 or 60 < int(msg.content) < 62:
                 break
-            await self.ctx.send("Please choose a number between 0-52 or 61-62!", delete_after=7)
+            await self.ctx.send("Please choose a number between 0-55 or 61-62!", delete_after=7)
 
         self.keyed_run = False
         num = int(msg.content)
@@ -89,22 +89,29 @@ class Headcount:
             f"@here Headcount for `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} for {self.vcchannel.name}",
             embed=embeds.headcount_base(self.dungeontitle, self.ctx.author, self.keyed_run, self.emojis, self.thumbnail))
 
-        embed = discord.Embed(title="Headcount", description=f"{self.ctx.author.mention} - your headcount for"
+        if 0 < num < 61:
+            embed = discord.Embed(title="Headcount", description=f"{self.ctx.author.mention} - your headcount for"
                                                              f" `{self.dungeontitle}` has been started!\nTo convert this headcount into an "
                                                              "afk check, press the 🔀 button.", color=discord.Color.green())
+        else:
+            embed = discord.Embed(title="Headcount", description=f"{self.ctx.author.mention} - your headcount for"
+                                                                 f" `{self.dungeontitle}` has been started!", color=discord.Color.green())
         hcmsg = await self.ctx.send(embed=embed)
-        await hcmsg.add_reaction("🔀")
 
         for emoji in self.emojis:
             await afkmsg.add_reaction(emoji)
 
         if 0 < num < 61:
+            await hcmsg.add_reaction("🔀")
             while True:
                 def check(react, usr):
                     return not usr.bot and react.message.id == hcmsg.id and usr == self.ctx.author and str(react.emoji) == '🔀'
                 try:
                     reaction, user = await self.client.wait_for('reaction_add', timeout=3600, check=check)  # Wait max 1 hour
                 except asyncio.TimeoutError:
+                    embed.description = f"{self.ctx.author.mention} - your headcount for `{self.dungeontitle}` has been started!\n" \
+                                        f"Conversion to an afk check timed out. Try starting a new headcount/afk."
+                    await hcmsg.edit(embed=embed)
                     return await hcmsg.clear_reactions()
 
                 if self.ctx.author.id in self.client.raid_db[self.ctx.guild.id]['leaders']:
@@ -128,4 +135,5 @@ class Headcount:
                 await msg.delete()
                 afk = AfkCheck(self.client, self.ctx, location, self.raidnum, self.inraiding, self.invet, self.inevents, self.raiderrole,
                                self.rlrole, self.hcchannel, self.vcchannel, setup_msg)
-                await afk.convert_from_headcount(afkmsg, self.dungeon_info, self.dungeontitle, self.emojis)
+                await afk.convert_from_headcount(afkmsg, self.dungeon_info, self.dungeontitle, self.emojis, self.raidnum, self.inraiding,
+                                                 self.invet, self.inevents, self.raiderrole, self.rlrole, self.hcchannel, self.vcchannel)

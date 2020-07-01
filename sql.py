@@ -7,7 +7,7 @@ async def get_user(pool, uid):
     """Return user data from rotmg.users table"""
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
-            await cursor.execute("SELECT * from rotmg.users WHERE id = {}".format(uid))
+            await cursor.execute(f"SELECT * from rotmg.users WHERE id = {uid}")
             data = await cursor.fetchone()
             await conn.commit()
             return data
@@ -362,6 +362,12 @@ async def get_all_active_punishments(pool):
             data = await cursor.fetchall()
             return data
 
+async def get_users_punishments(pool, uid, gid):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(f"SELECT * from rotmg.punishments WHERE uid = {uid} and gid = {gid} ORDER BY type ASC")
+            return await cursor.fetchall()
+
 async def set_unactive(pool, gid, uid, ptype):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
@@ -419,7 +425,7 @@ class usr_cols(enum.IntEnum):
 
 
 gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 46]
-gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43, 47]
+gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43, 47, 48]
 class gld_cols(enum.IntEnum):
     """Contains References to rotmg.guilds table for easy access"""
     id = 0  # Int
@@ -470,6 +476,7 @@ class gld_cols(enum.IntEnum):
     zerorunchannel = 45
     punishlogchannel = 46
     suspendedrole = 47
+    securityrole = 48
 
 
 ## EVENTS:

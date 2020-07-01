@@ -303,17 +303,17 @@ def dungeon_select(hc=False):
     mini = ""
     events = ""
     for i, d in enumerate(dungeons.values(), 1):
-        if i < 8:
+        if i < 10:
             endgame += f"`({i})` {d[1][0]} {d[0]}\n"
-        elif i < 17:
+        elif i < 19:
             realmrelated += f"`({i})` {d[1][0]} {d[0]}\n"
-        elif i < 27:
+        elif i < 29:
             midtier += f"`({i})` {d[1][0]} {d[0]}\n"
-        elif i < 37:
+        elif i < 39:
             lowtier += f"`({i})` {d[1][0]} {d[0]}\n"
-        elif i < 45:
+        elif i < 47:
             other += f"`({i})` {d[1][0]} {d[0]}\n"
-        elif i < 51:
+        elif i < 56:
             mini += f"`({i})` {d[1][0]} {d[0]}\n"
         else:
             events += f"`({i})` {d[1][0]} {d[0]}\n"

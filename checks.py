@@ -9,16 +9,21 @@ def is_bot_owner():
         return ctx.author.id == ctx.bot.owner_id
     return commands.check(predicate)
 
-def is_vet_rl_or_higher_check():
-    """Check if user has vet rl or higher roles"""
-    def predicate(ctx):
-        return ctx.author.top_role >= ctx.bot.guild_db.get(ctx.guild.id)[sql.gld_cols.vetrlroleid]
-    return commands.check(predicate)
 
 def is_rl_or_higher_check():
     """Check if user has rl or higher roles"""
     def predicate(ctx):
-        return ctx.author.top_role >= ctx.bot.guild_db.get(ctx.guild.id)[sql.gld_cols.rlroleid]
+        db = ctx.bot.guild_db.get(ctx.guild.id)
+        role = db[sql.gld_cols.rlroleid] if ctx.channel == db[sql.gld_cols.raidcommandschannel] else \
+                db[sql.gld_cols.vetrlroleid] if ctx.channel == db[sql.gld_cols.vetcommandschannel] else db[sql.gld_cols.eventrlid]
+        return ctx.author.top_role >= role
+    return commands.check(predicate)
+
+def is_security_or_higher_check():
+    """Check if user has security or higher roles"""
+    def predicate(ctx):
+        role = ctx.bot.guild_db.get(ctx.guild.id)[sql.gld_cols.securityrole]
+        return ctx.author.top_role >= role
     return commands.check(predicate)
 
 def is_mm_or_higher_check():
@@ -26,7 +31,6 @@ def is_mm_or_higher_check():
     def predicate(ctx):
         return ctx.author.top_role >= ctx.bot.guild_db.get(ctx.guild.id)[sql.gld_cols.mmroleid]
     return commands.check(predicate)
-
 
 def is_role_or_higher(member, role):
     """Base check for if user has a role or higher"""

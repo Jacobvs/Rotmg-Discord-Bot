@@ -94,6 +94,7 @@ async def update_leaderboards(client):
 
         for id in client.serverwleaderboard:
             await update_leaderboard(client, id)
+        await asyncio.sleep(10) # Sleep for 10s so don't get repeated messages
   
 async def update_leaderboard(client, guild_id):
     guild = client.get_guild(guild_id)

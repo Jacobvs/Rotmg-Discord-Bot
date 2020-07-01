@@ -71,13 +71,16 @@ class Raiding(commands.Cog):
             return await ctx.send("Please only attach an image of type 'png' or 'jpg'.", delete_after=10)
         image = io.BytesIO()
         await attachment.save(image, seek_begin=True)
-        setup = VCSelect(self.client, ctx, parse=True)
-        data = await setup.start()
-        if isinstance(data, tuple):
-            (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+        if ctx.author.voice:
+            vcchannel = ctx.author.voice.channel
         else:
-            return
-        await setup_msg.delete()
+            setup = VCSelect(self.client, ctx, parse=True)
+            data = await setup.start()
+            if isinstance(data, tuple):
+                (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+            else:
+                return
+            await setup_msg.delete()
         msg = await ctx.send("Parsing image. This may take a minute...")
         embed = await self.client.loop.run_in_executor(None, functools.partial(parse_image, ctx.author, image, vcchannel))
         await msg.delete()

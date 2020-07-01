@@ -198,7 +198,10 @@ class LogRun:
 
                 try:
                     member = await self.converter.convert(self.ctx, msg.content)
-                    await msg.delete()
+                    try:
+                        await msg.delete()
+                    except discord.NotFound:
+                        pass
                     break
                 except discord.ext.commands.BadArgument:
                     await self.ctx.send(f"The member you specified (`{msg.content}`) was not found.", delete_after=7)

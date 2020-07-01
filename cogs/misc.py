@@ -13,6 +13,7 @@ from discord.utils import get
 import checks
 import embeds
 import sql
+import utils
 from checks import is_dj, is_rl_or_higher_check, is_bot_owner
 from sql import get_num_verified
 
@@ -65,7 +66,8 @@ class Misc(commands.Cog):
 
 
     @commands.command(usage="!stats {@member}")
-    async def stats(self, ctx, member: discord.User=None):
+    async def stats(self, ctx, member: utils.MemberLookupConverter=None):
+        """Check your or someone else's run stats."""
         author = member if member else ctx.author
         if not ctx.guild:
             servers = []
@@ -111,7 +113,9 @@ class Misc(commands.Cog):
                         f"**{data[sql.log_cols.shieldrunes]}**\nHelm Runes: **{data[sql.log_cols.helmrunes]}**", inline=False)\
                         .add_field(name="__**Run Stats**__", value=f"Completed: **{data[sql.log_cols.runsdone]}**\nEvents Completed: "
                         f"**{data[sql.log_cols.eventsdone]}**", inline=False)
-        if author.top_role >= self.client.guild_db.get(serverid)[sql.gld_cols.rlroleid]:
+        erl = self.client.guild_db.get(serverid)[sql.gld_cols.eventrlid]
+        role = erl if erl else self.client.guild_db.get(serverid)[sql.gld_cols.rlroleid]
+        if author.top_role >= role:
             embed.add_field(name="__**Leading Stats**__", value="Successful Runs: "
                         f"**{data[sql.log_cols.srunled]}**\nFailed Runs: **{data[sql.log_cols.frunled]}**\nAssisted: "
                         f"**{data[sql.log_cols.runsassisted]}**\nEvents: **{data[sql.log_cols.eventled]}**\nEvents Assisted: "
@@ -123,22 +127,68 @@ class Misc(commands.Cog):
         await author.send(embed=embed)
 
 
-    @commands.command(aliases=["ahhaha"], usage="!laugh [1 or 2]")
+    @commands.command(aliases=["ahhaha"], usage="!laugh")
     @commands.guild_only()
     @commands.check_any(is_dj(), is_bot_owner())
     @checks.in_voice_channel()
-    async def laugh(self, ctx, option=1):
+    async def laugh(self, ctx):
         """Ah-Ha-hA"""
         voice = await connect_helper(self, ctx)
-        if option != 1 and option != 2:
-            option = 1
-        option -= 1
         client = ctx.guild.voice_client
         if not client.source:
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(self.laughs[option], options=ffmpeg_options['options']),
-                                                  volume=0.75)
+            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/ahhaha.mp3", options=ffmpeg_options['options']),
+                                                  volume=1)
             ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
             await ctx.send("Ah-Ha-hA")
+        else:
+            await ctx.send("Audio is already playing!")
+
+
+    @commands.command(usage="!bully")
+    @commands.guild_only()
+    @commands.check_any(is_dj(), is_bot_owner())
+    @checks.in_voice_channel()
+    async def bully(self, ctx):
+        """Why you bully me?"""
+        voice = await connect_helper(self, ctx)
+        client = ctx.guild.voice_client
+        if not client.source:
+            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/bully-me.mp3", options=ffmpeg_options['options']),
+                                                  volume=1)
+            ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
+            await ctx.send("Why you bully me?")
+        else:
+            await ctx.send("Audio is already playing!")
+
+
+    @commands.command(usage="!roll")
+    @commands.guild_only()
+    @commands.check_any(is_dj(), is_bot_owner())
+    @checks.in_voice_channel()
+    async def roll(self, ctx):
+        """Not quite sure what this is"""
+        voice = await connect_helper(self, ctx)
+        client = ctx.guild.voice_client
+        if not client.source:
+            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/roll.mp3", options=ffmpeg_options['options']), volume=1)
+            ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
+            await ctx.send("youtube.com/watch?v=dQw4w9WgXcQ")
+        else:
+            await ctx.send("Audio is already playing!")
+
+
+    @commands.command(usage="!fbi")
+    @commands.guild_only()
+    @commands.check_any(is_dj(), is_bot_owner())
+    @checks.in_voice_channel()
+    async def fbi(self, ctx):
+        """FBI OPEN UP"""
+        voice = await connect_helper(self, ctx)
+        client = ctx.guild.voice_client
+        if not client.source:
+            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/fbi.mp3", options=ffmpeg_options['options']), volume=1)
+            ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
+            await ctx.send("FBI, OPEN UP")
         else:
             await ctx.send("Audio is already playing!")
 
@@ -153,7 +203,7 @@ class Misc(commands.Cog):
         client = ctx.guild.voice_client
         if not client.source:
             source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/richard.mp3", options=ffmpeg_options['options']),
-                                                  volume=0.5)
+                                                  volume=1)
             ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
             await ctx.send("What the fuck, Richard?")
         else:

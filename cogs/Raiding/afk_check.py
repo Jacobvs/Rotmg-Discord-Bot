@@ -51,9 +51,9 @@ class AfkCheck:
                 return await self.setup_msg.edit(embed=embed)
 
             if msg.content.isdigit():
-                if 0 < int(msg.content) < 52:
+                if 0 < int(msg.content) < 56:
                     break
-            await self.ctx.send("Please choose a number between 1-51!", delete_after=7)
+            await self.ctx.send("Please choose a number between 1-55!", delete_after=7)
 
         self.dungeon_info = utils.dungeon_info(int(msg.content))
         self.dungeontitle = self.dungeon_info[0]
@@ -121,7 +121,7 @@ class AfkCheck:
             except asyncio.TimeoutError:
                 return await self.end_afk(True)
 
-            timeleft = 300 - (datetime.utcnow() - starttime).seconds
+            timeleft = 480 - (datetime.utcnow() - starttime).seconds
             embed = self.afkmsg.embeds[0]
             uid = str(user.id)
             try:
@@ -328,9 +328,18 @@ class AfkCheck:
         await self.afkmsg.add_reaction('<:shard:682365548465487965>')
         await self.afkmsg.add_reaction('❌')
 
-    async def convert_from_headcount(self, hcmsg, dungeoninfo, dungeontitle, emojis):
+    async def convert_from_headcount(self, hcmsg, dungeoninfo, dungeontitle, emojis, raidnum, inraiding, invet, inevents, raiderrole,
+                                     rlrole, hcchannel, vcchannel):
         self.hcmsg = hcmsg
         self.dungeon_info = dungeoninfo
         self.dungeontitle = dungeontitle
         self.emojis = emojis
+        self.raidnum = raidnum
+        self.inraiding = inraiding
+        self.invet = invet
+        self.inevents = inevents
+        self.raiderrole = raiderrole
+        self.rlrole = rlrole
+        self.hcchannel = hcchannel
+        self.vcchannel = vcchannel
         await self.start_afk(True)

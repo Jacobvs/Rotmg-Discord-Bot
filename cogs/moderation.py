@@ -7,6 +7,7 @@ from discord.ext import commands
 
 import checks
 import embeds
+import sql
 import utils
 from checks import manual_verify_channel, has_manage_roles
 from cogs import verification
@@ -43,7 +44,7 @@ class Moderation(commands.Cog):
         if member.voice is None:
             vc = '❌'
         else:
-            vc = "#" + member.voice.channel.name
+            vc = f"`{member.voice.channel.name}`"
 
         if member.nick and " | " in member.nick: # Check if user has an alt account
             names = member.nick.split(" | ")
@@ -53,11 +54,33 @@ class Moderation(commands.Cog):
         else:
             name = ''.join([i for i in member.display_name if i.isalpha()])
             desc = f"Found {member.mention} with the ign: [{name}](https://www.realmeye.com/player/{name})\nVoice Channel: {vc}"
-        embed = discord.Embed(
-            description=desc,
-            color=discord.Color.green()
-        )
-        await ctx.send(embed=embed)
+
+        embed = discord.Embed(description=desc, color=discord.Color.green())
+
+        data = await sql.get_users_punishments(self.client.pool, member.id, ctx.guild.id)
+        if data:
+            pages = []
+            embed.add_field(name="Punishments:", value=f"Found `{len(data)}` punishments in this user's history.\nUse the reactions below "
+                                                       "to navigate through them.")
+            pages.append(embed)
+            for i, r in enumerate(data):
+                requester = await ctx.guild.fetch_member(r[sql.punish_cols.r_uid])
+                active = "✅" if r[sql.punish_cols.active] else "❌"
+                starttime = f"Issued at: `{r[sql.punish_cols.starttime].strftime('%b %d %Y %H:%M:%S')}`"
+                endtime = f"\nEnded at: `{r[sql.punish_cols.endtime].strftime('%b %d %Y %H:%M:%S')}`" if r[sql.punish_cols.endtime] else ""
+                ptype = r[sql.punish_cols.type].capitalize()
+                color = discord.Color.orange() if ptype == "Warn" else discord.Color.red() if ptype == "Suspend" else \
+                    discord.Color.from_rgb(0, 0, 0)
+                pembed = discord.Embed(title=f"Punishment Log #{i+1} - {ptype}", color=color)
+                pembed.description = f"Punished member: {member.mention}\n**{ptype}** issued by {requester.mention}\nActive: {active}"
+                pembed.add_field(name="Reason:", value=r[sql.punish_cols.reason])
+                pembed.add_field(name="Time:", value=starttime+endtime)
+                pages.append(pembed)
+            paginator = utils.EmbedPaginator(self.client, ctx, pages)
+            await paginator.paginate()
+        else:
+            embed.add_field(name="Punishments:", value="No punishment logs found!")
+            await ctx.send(embed=embed)
 
     @commands.command(usage="!purge [num] [ignore_pinned]")
     @commands.guild_only()
@@ -93,17 +116,19 @@ class Moderation(commands.Cog):
             return await ctx.send('Please confirm you would like to do this by running: `!nuke "I confirm this '
                                   'action."`\n**__THIS WILL DELETE ALL MESSAGES IN THE CHANNEL!__**')
 
-    @commands.command(usage="!manual_verify [@member] {optional: ign}")
+    @commands.command(usage="!manual_verify [@member] <ign>")
     @commands.guild_only()
     @commands.check_any(manual_verify_channel(), has_manage_roles())
-    async def manual_verify(self, ctx, member: discord.Member, ign=None):
+    async def manual_verify(self, ctx, member: utils.MemberLookupConverter, ign):
+        """Manually verify someone - INCLUDE THEIR IGN HOW IT'S SPELLED IN-GAME (Including Capitalization)"""
         await ctx.message.delete()
         return await manual_verify_ext(self.client.pool, ctx.guild, member.id, ctx.author, ign)
 
     @commands.command(usage="!manual_verify_deny [@member]")
     @commands.guild_only()
     @commands.check_any(manual_verify_channel(), has_manage_roles())
-    async def manual_verify_deny(self, ctx, member: discord.Member):
+    async def manual_verify_deny(self, ctx, member: utils.MemberLookupConverter):
+        """Deny someone from manual_verification"""
         await ctx.message.delete()
         return await manual_verify_deny_ext(self.client.pool, ctx.guild, member.id, ctx.author)
 
@@ -193,8 +218,11 @@ async def manual_verify_ext(pool, guild, uid, requester, ign=None):
             if status != "stp_1" and status != "stp_2":
                 if status == 'deny_appeal':
                     channel = guild.get_channel(guild_data[gld_cols.manualverifychannel])
-                    message = await channel.fetch_message(user_data[usr_cols.verifyid])
-                    await message.delete()
+                    try:
+                        message = await channel.fetch_message(user_data[usr_cols.verifyid])
+                        await message.delete()
+                    except discord.NotFound:
+                        pass
                 if ign is not None:
                     name = ign
             elif ign is not None:
