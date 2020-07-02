@@ -55,18 +55,18 @@ class EmbedPaginator:
             await msg.add_reaction("⏭️")
 
             starttime = datetime.datetime.utcnow()
-            timeleft = 600  # 10 minute timeout
+            timeleft = 300  # 5 minute timeout
             while True:
                 def check(react, usr):
                     return not usr.bot and react.message.id == msg.id and usr.id == self.ctx.author.id and str(react.emoji) in \
                            ["⏮️", "⬅️", "⏹️", "➡️", "⏭️"]
                 try:
-                    reaction, user = await self.client.wait_for('reaction_add', timeout=timeleft, check=check)  # Wait max 1.5 hours
+                    reaction, user = await self.client.wait_for('reaction_add', timeout=timeleft, check=check)
                 except asyncio.TimeoutError:
                     return await self.end_pagination(msg)
 
                 await msg.remove_reaction(reaction.emoji, self.ctx.author)
-                timeleft = 600 - (datetime.datetime.utcnow() - starttime).seconds
+                timeleft = 300 - (datetime.datetime.utcnow() - starttime).seconds
                 if str(reaction.emoji) == "⬅️" and pagenum != 0:
                     pagenum -= 1
                 elif str(reaction.emoji) == "➡️" and pagenum != (len(self.pages)-1):

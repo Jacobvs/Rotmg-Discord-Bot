@@ -1,7 +1,10 @@
 import json
 from datetime import datetime, timedelta
+from os import listdir
+from os.path import join, isfile
 
 import discord
+import psutil
 from discord.ext import commands
 
 import sql
@@ -28,6 +31,34 @@ class Core(commands.Cog):
     async def uptime(self, ctx):
         uptime_seconds = round((datetime.now() - self.start_time).total_seconds())
         await ctx.send(f"Current Uptime: {'{:0>8}'.format(str(timedelta(seconds=uptime_seconds)))}")
+
+
+    @commands.command(usage="status", description="Retrieve the bot's status.")
+    async def status(self, ctx):
+        embed = discord.Embed(title="Bot Status", color=discord.Color.dark_gold())
+        nverified = await sql.get_num_verified(self.client.pool)
+        embed.add_field(name="Bot latency:", value=f"**`{round(self.client.latency*1000, 2)}`** Milliseconds.", inline=False)
+        embed.add_field(name="Connected Servers:",
+                        value=f"**`{len(self.client.guilds)}`** servers with **`{len(list(self.client.get_all_members()))}`** total members.",
+                        inline=False)
+        embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.", inline=False)
+        lines = line_count('/home/pi/Rotmg-Bot/') + line_count('/home/pi/Rotmg-Bot/cogs') + line_count(
+            '/home/pi/Rotmg-Bot/cogs/Raiding') + line_count('/home/pi/Rotmg-Bot/cogs/Minigames')
+        embed.add_field(name="Lines of Code:", value=(f"**`{lines}`** lines of code."), inline=False)
+        embed.add_field(name="Server Status:",
+                        value=(f"```yaml\nServer: Google Cloud Compute (US East)\nCPU: {psutil.cpu_percent()}% utilization."
+                               f"\nMemory: {psutil.virtual_memory().percent}% utilization."
+                               f"\nDisk: {psutil.disk_usage('/').percent}% utilization."
+                               f"\nNetwork: {round(psutil.net_io_counters().bytes_recv*0.000001)} MB in "
+                               f"/ {round(psutil.net_io_counters().bytes_sent*0.000001)} MB out.```"))
+        if ctx.guild:
+            appinfo = await self.client.application_info()
+            embed.add_field(name=f"Bot author:", value=f"{appinfo.owner.mention} - DM me if something's broken or to request a feature!",
+                            inline=False)
+        else:
+            embed.add_field(name=f"Bot author:", value="__Darkmatter#7321__ - DM me if something's broken or to request a feature!",
+                            inline=False)
+        await ctx.send(embed=embed)
 
 
     @commands.command(usage="rolecount <role>", description="Counts the number of people who have a role.")
@@ -105,7 +136,7 @@ class Core(commands.Cog):
 
     @commands.bot_has_permissions(add_reactions=True)
     @commands.command(usage="help [command/cog]",
-        aliases=["h", "commands"], description="Shows the help menu or information for a specific command or cog when specified.")
+        aliases=["h"], description="Shows the help menu or information for a specific command or cog when specified.")
     async def help(self, ctx, *, opt: str = None):
         if opt:
             command = self.client.get_command(opt.lower())
@@ -157,7 +188,7 @@ class Core(commands.Cog):
             value=f"For a full list of commands, see `{ctx.prefix}help`. Browse through the various commands to get comfortable with using "
                   "them, and as always if you have questions or need help – DM `Darkmatter#7321`!", inline=False, )
         all_pages.append(page)
-        for _, cog_name in enumerate(self.client.cogs):
+        for _, cog_name in enumerate(sorted(self.client.cogs)):
             if cog_name in ["Owner", "Admin"]:
                 continue
             cog = self.client.get_cog(cog_name)
@@ -182,6 +213,20 @@ class Core(commands.Cog):
         paginator = EmbedPaginator(self.client, ctx, all_pages)
         await paginator.paginate()
 
+    @commands.command(name='commands', usage="commands", description="View a full list of all available commands.",
+                      aliases=["cmd"])
+    async def commandlist(self, ctx):
+        embed = discord.Embed(title="Command List", description="A full list of all available commands.\n", color=discord.Color.teal())
+        for _, cog_name in enumerate(sorted(self.client.cogs)):
+            if cog_name in ["Owner", "Admin"]:
+                continue
+            cog = self.client.get_cog(cog_name)
+            cog_commands = cog.get_commands()
+            if len(cog_commands) == 0:
+                continue
+            cmds = "```yml\n" + ", ".join([ctx.prefix + cmd.name for cmd in cog_commands]) + "```"
+            embed.add_field(name=cog.qualified_name + " Commands", value=cmds, inline=False)
+        await ctx.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
@@ -239,3 +284,20 @@ class Core(commands.Cog):
 
 def setup(client):
     client.add_cog(Core(client))
+
+def line_count(path):
+    """Count total lines of code in specified path"""
+    file_list = [join(path, file_p) for file_p in listdir(path) if isfile(join(path, file_p))]
+    total = 0
+    for file_path in file_list:
+        if file_path[-3:] == ".py":  # Ensure only python files are counted
+            try:
+                count = 0
+                with open(file_path, encoding="ascii", errors="surrogateescape") as current_file:
+                    for line in current_file:
+                        count += 1
+            except IOError:
+                return -1
+            if count >= 0:
+                total += count
+    return total
