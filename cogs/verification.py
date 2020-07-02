@@ -162,12 +162,10 @@ class Verification(commands.Cog):
             await channel.send(f"{member.mention} is missing their realmeye code (or api is down).")
 
 
-    @commands.command(usage="!add_verify_msg")
+    @commands.command(usage="add_verify_msg", description="Add the verification message to channel.")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def add_verify_msg(self, ctx):
-        """Add the verification message to channel"""
-
         guild_db = await get_guild(self.client.pool, ctx.guild.id)
         embed = embeds.verification_check_msg(guild_db[gld_cols.reqsmsg], guild_db[gld_cols.supportchannelname])
         message = await ctx.send(embed=embed)
@@ -178,19 +176,17 @@ class Verification(commands.Cog):
         await update_guild(self.client.pool, ctx.guild.id, "verificationid", message.id)
 
 
-    @commands.command(usage="!add_first_subverify")
+    @commands.command(usage="add_first_subverify", description="Add the first sub-verification message to channel.")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def add_first_subverify(self, ctx):
-        """Add the verification message to channel"""
         await subverify_helper(self, ctx, 1)
 
 
-    @commands.command(usage="!add_second_subverify")
+    @commands.command(usage="add_second_subverify", description="Add the second sub-verification message to channel.")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def add_second_subverify(self, ctx):
-        """Add the verification message to channel"""
         await subverify_helper(self, ctx, 2)
 
 
@@ -366,20 +362,12 @@ async def dm_verify_react_handler(self, payload, user_data, user):
         #     await step_1_verify(self.client.pool, payload.user_id, user_data[usr_cols.ign])
     else:
         if str(payload.emoji) == '✅' or str(payload.emoji) == '👍':
-            print(user_data[usr_cols.ign])
             guild_data = await get_guild(self.client.pool, user_data[usr_cols.verifyguild])
-            print(1)
             guild = self.client.get_guild(guild_data[gld_cols.id])
-            print(2)
             channel = guild.get_channel(guild_data[gld_cols.manualverifychannel])
-            print(3)
             key = user_data[usr_cols.verifykey]
-            print(4)
             if not key:
                 key = "`N/A: Re-verification`"
-            print(5)
-
-            print(1)
 
             fame_req = guild_data[gld_cols.nfame]
             n_maxed_req = guild_data[gld_cols.nmaxed]
@@ -391,25 +379,19 @@ async def dm_verify_react_handler(self, payload, user_data, user):
                 async with cs.get('https://rotmg-discord-bot.wm.r.appspot.com/?player={}'.format(user_data[usr_cols.ign]), ssl=False) as r:
                     data = await r.json()  # returns dict
 
-            print(2)
-            print(data)
-
             alive_fame = 0
             n_maxed = 0
             n_stars = int(data["rank"])
             location = data["player_last_seen"]
-            print(10)
 
             for char in data["characters"]:
                 alive_fame += int(char["fame"])
                 if int(char["stats_maxed"]) == 8:
                     n_maxed += 1
-            print(11)
 
             if data["fame"] and data["fame"] != "hidden":
                 alive_fame = int(data["fame"])
 
-            print(12)
             time = ""
             try:
                 time = data['created']
@@ -419,22 +401,17 @@ async def dm_verify_react_handler(self, payload, user_data, user):
                 except KeyError:
                     pass
 
-            print(13)
-            print(time)
             months = 0
             if time != "" and time != "hidden":
-                print(time)
                 days = 0
                 if "years" in time:
                     days += int(time.split(" years")[0].split("~")[1]) * 365
-                    print(days)
                     if "days" in time:
                         days += int(time.split("and ")[1].split(" days")[0])
                     elif 'day' in time:
                         days += 1
                 elif "year" in time:
                     days += int(time.split(" year")[0].split("~")[1]) * 365
-                    print(days)
                     if "days" in time:
                         days += int(time.split("and ")[1].split(" days")[0])
                     elif 'day' in time:
@@ -442,9 +419,7 @@ async def dm_verify_react_handler(self, payload, user_data, user):
                 elif "days" in time:
                     days += int(time.split(" days")[0].split("~")[1])
                 months = days / 30
-                print(months)
 
-            print(3)
             fame_passed = alive_fame >= fame_req
             maxed_passed = n_maxed >= n_maxed_req
             stars_passed = n_stars >= star_req
@@ -456,12 +431,10 @@ async def dm_verify_react_handler(self, payload, user_data, user):
                                                                              alive_fame, fame_req, maxed_passed, n_maxed, n_maxed_req,
                                                                              stars_passed, n_stars, star_req, months_passed, round(months),
                                                                              months_req, private_passed))
-            print(4)
+
             await update_user(self.client.pool, payload.user_id, "status", "deny_appeal")
             await update_user(self.client.pool, payload.user_id, "verifyid", msg.id)
-            print(5)
             await user.send("Your application is being reviewed by staff. Please wait for their decision.")
-            print(6)
             await msg.add_reaction('✅')
             await msg.add_reaction('❌')
         elif str(payload.emoji) == '❌':

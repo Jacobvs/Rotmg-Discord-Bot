@@ -16,16 +16,15 @@ from cogs.Minigames.slots import Slots
 
 
 class Casino(commands.Cog):
+    """Play various casino games against the bot or another member."""
 
     def __init__(self, client):
         self.client = client
 
 
-    @commands.command(usage="!blackjack [bet]", aliases=["bj"])
+    @commands.command(usage="blackjack [bet]", aliases=["bj"],
+                      description="A single hand of Blackjack.\nThe player plays against the dealer (bot) for one hand.")
     async def blackjack(self, ctx, bet: int = 0):
-        """A single hand of Blackjack.
-        The player plays against the dealer (bot) for one hand.
-        """
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -48,9 +47,8 @@ class Casino(commands.Cog):
         await game.play()
         self.client.players_in_game.remove(ctx.author.id)
 
-    @commands.command(usage="!roulette [bet_type] [bet]", aliases=['r'])
+    @commands.command(usage="roulette [bet_type] [bet]", aliases=['r'], description="A classic game of roulette.")
     async def roulette(self, ctx, bet_type: str=None, bet: int=None):
-        """A classic game of roulette"""
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -79,9 +77,8 @@ class Casino(commands.Cog):
         self.client.players_in_game.remove(ctx.author.id)
 
 
-    @commands.command(usage="!slots [bet]", aliases=['slot', 's'])
+    @commands.command(usage="slots [bet]", aliases=['slot', 's'], description="Test your luck on the slot machine!")
     async def slots(self, ctx, bet: int = None):
-        """Test your luck on the slot machine"""
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -104,9 +101,8 @@ class Casino(commands.Cog):
         await game.play()
         self.client.players_in_game.remove(ctx.author.id)
 
-    @commands.command(usage="!coinflip [@member] [bet]", aliases=['cf'])
+    @commands.command(usage="coinflip <member> [bet]", aliases=['cf'], description="Bet against someone in a classic 50/50.")
     async def coinflip(self, ctx, member: utils.MemberLookupConverter, bet: int):
-        """Bet against someone in a classic 50/50"""
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -135,9 +131,8 @@ class Casino(commands.Cog):
         else:
             await ctx.send("You have to place a bet higher than 0!")
 
-    @commands.command(usage="!russianroulette [bet]", aliases=['rr'])
+    @commands.command(usage="russianroulette <bet>", aliases=['rr'], description="Test your luck by starting a game of russian roulette!")
     async def russianroulette(self, ctx, bet: int):
-        """Test your luck by starting a game of russian roulette!"""
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -157,9 +152,8 @@ class Casino(commands.Cog):
             await ctx.send("You have to place a bet higher than 0!")
 
 
-    @commands.command(usage="!balance {optional: @member}", aliases=['bal'])
+    @commands.command(usage="balance [member]", aliases=['bal'], description="Check your casino balance.")
     async def balance(self, ctx, member: utils.MemberLookupConverter=None):
-        """Check your balance"""
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -175,9 +169,8 @@ class Casino(commands.Cog):
         embed.set_footer(text="Use !daily, !work, and !search to get credits.")
         await ctx.send(embed=embed)
 
-    @commands.command(usage="!pay [@member] [amount] {reason}")
+    @commands.command(usage="pay <member> <amount> [reason]", description="Pay someone your hard-earned credits.")
     async def pay(self, ctx, member: utils.MemberLookupConverter, amount: int, *reason):
-        """Pay someone your hard-earned credits."""
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -206,9 +199,9 @@ class Casino(commands.Cog):
             embed.add_field(name="Reason", value=res, inline=False)
         await ctx.send(embed=embed)
 
-    @commands.command(usage="!steal [@member]")
+    @commands.command(usage="steal <member>",
+                      description="Your gambling addiction is strong enough to steal from someone?! What is wrong with you?")
     async def steal(self, ctx, member: utils.MemberLookupConverter):
-        """Your gambling addiction is strong enough to steal from someone?! What is wrong with you?"""
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -262,9 +255,8 @@ class Casino(commands.Cog):
             await msg.edit(embed=embed)
             await asyncio.sleep(1)
 
-    @commands.command(usage="!top")
+    @commands.command(usage="top", description="Get the top 10 balances on this server.")
     async def top(self, ctx):
-        """Get the top 10 balances on this server"""
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -286,9 +278,8 @@ class Casino(commands.Cog):
                             .add_field(name="Top 10 Balances", value=top)
         await ctx.send(embed=embed)
 
-    @commands.command(usage="!cooldowns")
+    @commands.command(usage="cooldowns", description="Check your cooldowns.")
     async def cooldowns(self, ctx):
-        """Check your cooldowns"""
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -308,9 +299,8 @@ class Casino(commands.Cog):
         embed.add_field(name="Cooldowns", value=str)
         return await ctx.send(embed=embed)
 
-    @commands.command(usage="!daily")
+    @commands.command(usage="daily", description="Claim your daily reward.")
     async def daily(self, ctx):
-        """Claim your daily reward"""
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -332,9 +322,8 @@ class Casino(commands.Cog):
         embed.add_field(name="You got 7,500 credits!", value=f"Current balance: **{balance:,}** credits.")
         return await ctx.send(embed=embed)
 
-    @commands.command(usage="!work")
+    @commands.command(usage="work", description="Do something...?")
     async def work(self, ctx):
-        """Do something...?"""
         try:
             await ctx.message.delete()
         except discord.NotFound:
@@ -359,9 +348,8 @@ class Casino(commands.Cog):
         embed.color = discord.Color.green()
         await ctx.send(embed=embed)
 
-    @commands.command(usage="!search")
+    @commands.command(usage="search", description="Look around for money.")
     async def search(self, ctx):
-        """Look around for money"""
         try:
             await ctx.message.delete()
         except discord.NotFound:

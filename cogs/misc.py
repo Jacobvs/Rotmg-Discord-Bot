@@ -4,6 +4,7 @@ from datetime import datetime
 from os import listdir
 from os.path import isfile, join
 
+import aiohttp
 import discord
 import psutil
 import youtube_dl
@@ -65,9 +66,8 @@ class Misc(commands.Cog):
         self.numbers = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
 
 
-    @commands.command(usage="!stats {@member}")
+    @commands.command(usage="stats [member]", description="Check your or someone else's run stats.")
     async def stats(self, ctx, member: utils.MemberLookupConverter=None):
-        """Check your or someone else's run stats."""
         author = member if member else ctx.author
         if not ctx.guild:
             servers = []
@@ -127,12 +127,11 @@ class Misc(commands.Cog):
         await author.send(embed=embed)
 
 
-    @commands.command(aliases=["ahhaha"], usage="!laugh")
+    @commands.command(aliases=["ahhaha"], usage="laugh", description="Ah-Ha-hA")
     @commands.guild_only()
     @commands.check_any(is_dj(), is_bot_owner())
     @checks.in_voice_channel()
     async def laugh(self, ctx):
-        """Ah-Ha-hA"""
         voice = await connect_helper(self, ctx)
         client = ctx.guild.voice_client
         if not client.source:
@@ -144,12 +143,11 @@ class Misc(commands.Cog):
             await ctx.send("Audio is already playing!")
 
 
-    @commands.command(usage="!bully")
+    @commands.command(usage="bully", description="Why you bully me?")
     @commands.guild_only()
     @commands.check_any(is_dj(), is_bot_owner())
     @checks.in_voice_channel()
     async def bully(self, ctx):
-        """Why you bully me?"""
         voice = await connect_helper(self, ctx)
         client = ctx.guild.voice_client
         if not client.source:
@@ -161,12 +159,11 @@ class Misc(commands.Cog):
             await ctx.send("Audio is already playing!")
 
 
-    @commands.command(usage="!roll")
+    @commands.command(usage="roll", description="Not quite sure what this is.")
     @commands.guild_only()
     @commands.check_any(is_dj(), is_bot_owner())
     @checks.in_voice_channel()
     async def roll(self, ctx):
-        """Not quite sure what this is"""
         voice = await connect_helper(self, ctx)
         client = ctx.guild.voice_client
         if not client.source:
@@ -177,12 +174,11 @@ class Misc(commands.Cog):
             await ctx.send("Audio is already playing!")
 
 
-    @commands.command(usage="!fbi")
+    @commands.command(usage="fbi", description="FBI, OPEN UP.")
     @commands.guild_only()
     @commands.check_any(is_dj(), is_bot_owner())
     @checks.in_voice_channel()
     async def fbi(self, ctx):
-        """FBI OPEN UP"""
         voice = await connect_helper(self, ctx)
         client = ctx.guild.voice_client
         if not client.source:
@@ -193,12 +189,11 @@ class Misc(commands.Cog):
             await ctx.send("Audio is already playing!")
 
 
-    @commands.command(usage="!richard")
+    @commands.command(usage="richard", description="RICHARD!")
     @commands.guild_only()
     @commands.check_any(is_dj(), is_bot_owner())
     @checks.in_voice_channel()
     async def richard(self, ctx):
-        """"RICHARD!"""
         voice = await connect_helper(self, ctx)
         client = ctx.guild.voice_client
         if not client.source:
@@ -210,10 +205,9 @@ class Misc(commands.Cog):
             await ctx.send("Audio is already playing!")
 
 
-    @commands.command(usage="!oogabooga")
+    @commands.command(usage="oogabooga", description="The only command you ever need.")
     @commands.check_any(is_rl_or_higher_check(), is_bot_owner())
     async def oogabooga(self, ctx):
-        """The only command you ever need."""
         await ctx.message.delete()
         opts = ["BOOGA OOGA", "ooga boooga", "ooga chacka booga", "boogady oogady", "OOGA BOOGA", "boog.", "oog.", "booga", "ooga"]
         embed = discord.Embed(title=random.choice(opts), description="[Ooga-booga Translator](https://codepen.io/Darkm4tter/full/mNWpBZ)")
@@ -221,31 +215,44 @@ class Misc(commands.Cog):
         await ctx.send(embed=embed)
 
 
-    @commands.command(usage="!whatthefuck")
+    @commands.command(usage="whatthefuck", description="????")
     @commands.check_any(is_rl_or_higher_check(), is_bot_owner())
     async def whatthefuck(self, ctx):
-        """????"""
         await ctx.message.delete()
         embed = discord.Embed(title="w h a t ᵗʰᵉᶠᵘᶜᵏ")
         embed.set_image(url="https://i.imgur.com/qMK83uT.jpg")
         await ctx.send(embed=embed)
 
 
-    @commands.command(usage="!isitgone")
+    @commands.command(usage="isitgone", description="Spooky...")
     @commands.check_any(is_rl_or_higher_check(), is_bot_owner())
     async def isitgone(self, ctx):
-        """Spooky"""
         await ctx.message.delete()
         embed = discord.Embed(title="Is it gone?")
         embed.set_image(url="https://i.imgur.com/tYi5Xjg.jpg")
         await ctx.send(embed=embed)
 
+    @commands.command(usage="comic", description="Get random XKCD Comic.")
+    async def comic(self, ctx):
+        num = random.randint(0, 2326)
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f'https://xkcd.com/{num}/info.0.json', ssl=False) as r:
+                data = await r.json()
 
-    @commands.command(usage='!poll "[title]" [option 1] [option 2]...')
+        if data:
+            embed = discord.Embed(title=data['title'])
+            embed.set_image(url=data['img'])
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("XKCD's servers couldn't be reached. Try again later.")
+
+
+    @commands.command(usage='poll <title> <option 1> <option 2> [option 3]...',
+                      description="Creates a poll with up to 2-10 options\n"
+                                  "For options/titles with more than one word, surround the text with quotes.")
     @commands.guild_only()
     @commands.check_any(is_rl_or_higher_check(), is_bot_owner())
     async def poll(self, ctx, title, *options):
-        """Creates a poll with up to 2-10 options"""
         if len(options) < 2:
             await ctx.message.delete()
             await ctx.send("Please specify at least two options for the poll.", delete_after=4)
@@ -264,9 +271,8 @@ class Misc(commands.Cog):
         # TODO: add option to ping @here or @everyone
 
 
-    @commands.command(usage="!status")
+    @commands.command(usage="status", description="Retrieve the bot's status.")
     async def status(self, ctx):
-        """Retrieve the bot's status"""
         embed = discord.Embed(title="Bot Status", color=discord.Color.dark_gold())
         nverified = await get_num_verified(self.client.pool)
         embed.add_field(name="Bot latency:", value=f"**`{round(self.client.latency*1000, 2)}`** Milliseconds.", inline=False)

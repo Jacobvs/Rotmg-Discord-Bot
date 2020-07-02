@@ -82,7 +82,7 @@ async def on_ready():
 async def build_guild_db():
     bot.guild_db = await sql.construct_guild_database(bot.pool, bot)
 
-@bot.command(usage="!load [cog]")
+@bot.command(usage="load <cog>")
 @commands.is_owner()
 async def load(ctx, extension):
     """Load specified cog"""
@@ -90,7 +90,7 @@ async def load(ctx, extension):
     bot.load_extension(f'cogs.{extension.capitalize()}')
 
 
-@bot.command(usage="!unload [cog]")
+@bot.command(usage="unload <cog>")
 @commands.is_owner()
 async def unload(ctx, extension):
     """Unload specified cog"""
@@ -98,7 +98,7 @@ async def unload(ctx, extension):
     bot.unload_extension(f'cogs.{extension.capitalize()}')
 
 
-@bot.command(usage="!reload [cog/guilds]")
+@bot.command(usage="reload <cog/guilds>")
 @commands.is_owner()
 async def reload(ctx, extension):
     """Reload specified cog"""
@@ -111,14 +111,14 @@ async def reload(ctx, extension):
     await ctx.send('{} has been reloaded.'.format(extension.capitalize()))
 
 
-@bot.command(usage="!fleave <id>")
+@bot.command(usage="fleave <id>")
 @commands.is_owner()
 async def fleave(ctx, id: int):
     server = bot.get_guild(id)
     await server.leave()
     await ctx.send(f"Ooga-Booga has left {server.name}")
 
-@bot.command(usage="!maintenance")
+@bot.command(usage="maintenance")
 @commands.is_owner()
 async def maintenance(ctx):
     if bot.maintenance_mode:

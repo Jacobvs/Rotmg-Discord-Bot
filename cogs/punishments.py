@@ -17,22 +17,21 @@ class Punishments(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @commands.command(usage="!warn <@member> <reason>")
+    @commands.command(usage="warn <member> <reason>", description="Warn a member for breaking the rules.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
     async def warn(self, ctx, member: utils.MemberLookupConverter, *, reason):
-        """Warn a member for breaking the rules"""
         await sql.add_punishment(self.client.pool, member.id, ctx.guild.id, 'warn', ctx.author.id, None, reason)
         await self.send_log(ctx.guild, member, ctx.author, 'warn', None, reason)
         embed = discord.Embed(title="Success!", description=f"`{member.display_name}` was successfully warned for reason:\n{reason}.",
                               color=discord.Color.green())
         await ctx.send(embed=embed)
 
-    @commands.command(usage="!mute <@member> <duration> <reason>")
+    @commands.command(usage="mute <member> <duration> <reason>",
+                      description="Prevent the member from sending messages or adding reactions.")
     @commands.guild_only()
     @checks.is_security_or_higher_check()
     async def mute(self, ctx, member: utils.MemberLookupConverter, duration: utils.Duration, *, reason):
-        """Prevent the member from sending messages or adding reactions."""
         if member.bot:
             return await ctx.send(f'Cannot mute `{member.display_name}` (is a bot).')
         if member.guild_permissions.kick_members:
@@ -61,11 +60,10 @@ class Punishments(commands.Cog):
         await ctx.send(embed=embed)
         self.client.loop.create_task(punishment_handler(self.client, ctx.guild, member, 'mute', tsecs))
 
-    @commands.command(usage='!unmute <@member> {reason}')
+    @commands.command(usage='unmute <member> [reason]', description="Un-mute the specified member.")
     @commands.guild_only()
     @checks.is_security_or_higher_check()
     async def unmute(self, ctx, member: utils.MemberLookupConverter, *, reason=None):
-        """Unmute specified member."""
         if member.bot:
             return await ctx.send(f'Cannot un-mute `{member.display_name}` (is a bot).')
         if member.guild_permissions.kick_members:
@@ -81,11 +79,11 @@ class Punishments(commands.Cog):
                               description=f"`{member.display_name}` was successfully unmuted.", color=discord.Color.green())
         await ctx.send(embed=embed)
 
-    @commands.command(usage='!suspend <@member> <duration> <reason>')
+    @commands.command(usage='suspend <member> <duration> <reason>',
+                      description="Suspend a member, assigning them the suspended role & removing all other roles while suspended.")
     @commands.guild_only()
     @checks.is_security_or_higher_check()
     async def suspend(self, ctx, member: utils.MemberLookupConverter, duration: utils.Duration, *, reason):
-        """Suspend a member, assigning them the suspended role."""
         if member.bot:
             return await ctx.send(f'Cannot suspend `{member.display_name}` (is a bot).')
         if member.guild_permissions.kick_members:
@@ -127,11 +125,10 @@ class Punishments(commands.Cog):
         self.client.loop.create_task(punishment_handler(self.client, ctx.guild, member, 'suspend', tsecs, roles))
 
 
-    @commands.command(usage="!unsuspend <@member> {reason}")
+    @commands.command(usage="unsuspend <member> [reason]", description="Un-suspend the specified member.")
     @commands.guild_only()
     @checks.is_security_or_higher_check()
     async def unsuspend(self, ctx, member: utils.MemberLookupConverter, *, reason=None):
-        """Unsuspend the specified member."""
         if member.bot:
             return await ctx.send(f'Cannot un-suspend `{member.display_name}` (is a bot).')
         if member.guild_permissions.kick_members:

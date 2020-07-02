@@ -18,16 +18,15 @@ from cogs.Raiding.vc_select import VCSelect
 
 
 class Raiding(commands.Cog):
+    """Commands to organize ROTMG Raids & More!"""
 
     def __init__(self, client):
         self.client = client
 
-    @commands.command(usage="!afk <location>")
+    @commands.command(usage="afk <location>", description="Starts an AFK check for the location specified.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
-    # TODO: add check that guild has no running afk up
     async def afk(self, ctx, *, location):
-        """Starts an AFK check for the location specified."""
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             return await ctx.send("You cannot start another AFK while an AFK check is still up or a run log has not been completed.")
         self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
@@ -43,11 +42,10 @@ class Raiding(commands.Cog):
         self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
 
-    @commands.command(usage="!headcount", aliases=["hc"])
+    @commands.command(usage="headcount", aliases=["hc"], description="Starts a headcount.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
     async def headcount(self, ctx):
-        """Starts a headcount for the type of run specified."""
         setup = VCSelect(self.client, ctx, headcount=True)
         data = await setup.start()
         if isinstance(data, tuple):
@@ -57,11 +55,11 @@ class Raiding(commands.Cog):
         hc = Headcount(self.client, ctx, hcchannel, vcchannel, setup_msg, raidnum, inraiding, invet, inevents, raiderrole, rlrole)
         await hc.start()
 
-    @commands.command(usage="!parse (Attach an image of /who list with this command)")
+    @commands.command(usage="parse (Attach an image of /who list with this command)",
+                      description="Parse through members in the run to find crashers.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
     async def parse(self, ctx):
-        """Parse through members in the run"""
         if not ctx.message.attachments:
             return await ctx.send("Please attach an image containing only the result of the /who command!", delete_after=10)
         if len(ctx.message.attachments) > 1:
@@ -86,11 +84,10 @@ class Raiding(commands.Cog):
         await msg.delete()
         await ctx.send(embed=embed)
 
-    @commands.command(usage="!lock")
+    @commands.command(usage="lock", description="Locks the raiding voice channel")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
     async def lock(self, ctx):
-        """Locks the raiding voice channel"""
         setup = VCSelect(self.client, ctx, lock=True)
         data = await setup.start()
         if isinstance(data, tuple):
@@ -98,7 +95,7 @@ class Raiding(commands.Cog):
         else:
             return
         await setup_msg.delete()
-        vc_name = vcchannel.name
+        # vc_name = vcchannel.name
         # if " <-- Join!" in vc_name:
         #     vc_name = vc_name.split(" <")[0]
         #     await vcchannel.edit(name=vc_name)
@@ -107,11 +104,10 @@ class Raiding(commands.Cog):
         await ctx.send(embed=embed)
 
 
-    @commands.command(usage="!unlock")
+    @commands.command(usage="unlock", description="Unlocks the raiding voice channel.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
     async def unlock(self, ctx):
-        """Unlocks the raiding voice channel"""
         setup = VCSelect(self.client, ctx, unlock=True)
         data = await setup.start()
         if isinstance(data, tuple):
@@ -123,11 +119,10 @@ class Raiding(commands.Cog):
         embed = discord.Embed(description=f"{vcchannel.name} Has been Unlocked!", color=discord.Color.green())
         await ctx.send(embed=embed)
 
-    @commands.command(usage="!clean")
+    @commands.command(usage="clean", description="Clean out & lock a voice channel.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
     async def clean(self, ctx):
-        """Clean out & lock a voice channel"""
         setup = VCSelect(self.client, ctx, clean=True)
         data = await setup.start()
         if isinstance(data, tuple):
@@ -148,11 +143,10 @@ class Raiding(commands.Cog):
                               color=discord.Color.green())
         await ctx.send(embed=embed)
 
-    @commands.command(usage="!fametrain <location>", aliases=['ft'])
+    @commands.command(usage="fametrain <location>", aliases=['ft'], description="Start an AFK check for a fametrain.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
     async def fametrain(self, ctx, *, location):
-        """Start an AFK check for a fametrain"""
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             return await ctx.send("You cannot start another AFK while an AFK check is still up.")
         self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
@@ -166,11 +160,10 @@ class Raiding(commands.Cog):
         await ft.start()
         self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
-    @commands.command(usage="!realmclear <location>", aliases=["rc"])
+    @commands.command(usage="realmclear <location>", aliases=["rc"], description="Start an AFK Check for Realm Clearing.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
     async def realmclear(self, ctx, *, location):
-        """Start an AFK Check for Realm Clearing"""
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             return await ctx.send("You cannot start another AFK while an AFK check is still up.")
         self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
@@ -184,12 +177,10 @@ class Raiding(commands.Cog):
         await rc.start()
         self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
-    @commands.command(usage="!markmap/mm [number(s)]", aliases=["mm"])
-    # @commands.cooldown(1, 70, commands.BucketType.guild)
+    @commands.command(usage="markmap <number(s)>", aliases=["mm"], description="Mark the current map with specified numbers.")
     @commands.guild_only()
     @checks.is_mm_or_higher_check()
     async def markmap(self, ctx, *numbers):
-        """Mark the current map with specified numbers"""
         await ctx.message.delete()
         if ctx.author.id in self.client.mapmarkers:
             rc = self.client.mapmarkers[ctx.author.id]
@@ -201,11 +192,10 @@ class Raiding(commands.Cog):
             await ctx.send("You aren't marking for any realm clearing sessions!")
 
 
-    @commands.command(usage="!unmarkmap/umm [number(s)]", aliases=["umm"])
+    @commands.command(usage="unmarkmap <number(s)>", aliases=["umm"], description="Unmark the map with specified numbers.")
     @commands.guild_only()
     @checks.is_mm_or_higher_check()
     async def unmarkmap(self, ctx, *numbers):
-        """Unmark the map with specified numbers"""
         await ctx.message.delete()
         if ctx.author.id in self.client.mapmarkers:
             rc = self.client.mapmarkers[ctx.author.id]
@@ -217,11 +207,10 @@ class Raiding(commands.Cog):
             await ctx.send("You aren't marking for any realm clearing sessions!")
 
 
-    @commands.command(usage="!eventspawn [event]", aliases=['es'])
+    @commands.command(usage="eventspawn <event>", aliases=['es'], description="Mark when an event spawns.")
     @commands.guild_only()
     @checks.is_mm_or_higher_check()
     async def eventspawn(self, ctx, event):
-        """Mark when an event spawns"""
         await ctx.message.delete()
         if ctx.author.id in self.client.mapmarkers:
             rc = self.client.mapmarkers[ctx.author.id]
@@ -233,11 +222,10 @@ class Raiding(commands.Cog):
             await ctx.send("You aren't marking for any realm clearing sessions!")
 
 
-    @commands.command(usage="!uneventspawn [event]", aliases=['ues'])
+    @commands.command(usage="uneventspawn <event>", aliases=['ues'], description="Unmark an event spawn.")
     @commands.guild_only()
     @checks.is_mm_or_higher_check()
     async def uneventspawn(self, ctx, event):
-        """Unmark an event spawn"""
         await ctx.message.delete()
         if ctx.author.id in self.client.mapmarkers:
             rc = self.client.mapmarkers[ctx.author.id]
