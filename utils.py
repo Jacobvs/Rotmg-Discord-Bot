@@ -37,7 +37,7 @@ class MemberLookupConverter(discord.ext.commands.MemberConverter):
         return member
 
 
-class EmbedPaginator():
+class EmbedPaginator:
 
     def __init__(self, client, ctx, pages):
         self.client = client
@@ -48,16 +48,18 @@ class EmbedPaginator():
         if self.pages:
             pagenum = 0
             msg = await self.ctx.send(embed=self.pages[pagenum])
+            await msg.add_reaction("⏮️")
             await msg.add_reaction("⬅️")
             await msg.add_reaction("⏹️")
             await msg.add_reaction("➡️")
+            await msg.add_reaction("⏭️")
 
             starttime = datetime.datetime.utcnow()
             timeleft = 600  # 10 minute timeout
             while True:
                 def check(react, usr):
                     return not usr.bot and react.message.id == msg.id and usr.id == self.ctx.author.id and str(react.emoji) in \
-                           ["⬅️", "⏹️", "➡️"]
+                           ["⏮️", "⬅️", "⏹️", "➡️", "⏭️"]
                 try:
                     reaction, user = await self.client.wait_for('reaction_add', timeout=timeleft, check=check)  # Wait max 1.5 hours
                 except asyncio.TimeoutError:
@@ -69,6 +71,10 @@ class EmbedPaginator():
                     pagenum -= 1
                 elif str(reaction.emoji) == "➡️" and pagenum != (len(self.pages)-1):
                     pagenum += 1
+                elif str(reaction.emoji) == "⏮️":
+                    pagenum = 0
+                elif str(reaction.emoji) == "⏭️":
+                    pagenum = len(self.pages)-1
                 elif str(reaction.emoji) == "⏹️":
                     return await self.end_pagination(msg)
                 else:

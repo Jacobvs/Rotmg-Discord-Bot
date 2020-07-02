@@ -17,11 +17,11 @@ class Logging(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @commands.command(usage="!pop <key/event/vial/helm/shield/sword> <@member> {number}")
+    @commands.command(usage="pop <key/event/vial/helm/shield/sword> <member> [number]",
+                      description="Log when a member pops something for the server.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
     async def pop(self, ctx, type, member: utils.MemberLookupConverter, number: int = 1):
-        """Log key pops"""
         type = type.lower()
         if type not in ["key", "event", "vial", "helm", "shield", "sword"]:
             embed = discord.Embed(title="Error!", description="Please choose a proper key option!\nUsage: `!pop <key/event/vial/helm/"
@@ -36,11 +36,10 @@ class Logging(commands.Cog):
                               color=discord.Color.green())
         await ctx.send(embed=embed)
 
-    @commands.command(usage="!logrun {@member (leader)} {num_runs}")
+    @commands.command(usage="logrun [member (leader)] [num_runs]", description="Log a full run (or multiple runs) manually.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
-    async def logrun(self, ctx, member:discord.Member=None, number=1):
-        """Log a full run manually"""
+    async def logrun(self, ctx, member: utils.MemberLookupConverter=None, number=1):
         if not member:
             member = ctx.author
 
@@ -71,11 +70,10 @@ class Logging(commands.Cog):
                         vialreacts=[], helmreacts=[], shieldreacts=[], swordreacts=[], numruns=number, runleader=member)
         await logrun.start()
         
-    @commands.command(usage="!updateleaderboard")
+    @commands.command(usage="updateleaderboard", description="Manually updates the leaderboard in this server.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
     async def updateleaderboard(self, ctx):
-        """Manually updates the leaderboard"""
         await ctx.message.delete()
         if ctx.guild.id in self.client.serverwleaderboard:
             return await update_leaderboard(self.client, ctx.guild.id)

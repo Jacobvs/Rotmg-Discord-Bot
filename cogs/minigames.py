@@ -1,7 +1,8 @@
-import numpy as np
 import discord
+import numpy as np
 from discord.ext import commands
 
+import utils
 from cogs.Minigames.connect4 import Connect4
 from cogs.Minigames.hangman import Hangman
 from cogs.Minigames.highlow import HighLow
@@ -9,17 +10,16 @@ from cogs.Minigames.tictactoe import TicTacToe
 
 
 class Minigames(commands.Cog):
+    """Play various minigames against the bot or another member!"""
 
     def __init__(self, client):
         self.client = client
 
 
-    @commands.command(usage="!connect4 [member]")
+    @commands.command(usage="connect4 <member>",
+                      description="A game of Connect-4 with another member.\nEach player takes turn in placing a token on the board,\n"
+                                  "the winner is the first to put four tokens in a row.")
     async def connect4(self, ctx, other_player: discord.Member):
-        """A game of Connect-4 with another member.
-        Each player takes turn in placing a token on the board,
-        the winner is the first to put four tokens in a row.
-        """
         if other_player.bot or other_player == ctx.author:
             raise commands.BadArgument('Cannot play a game against that member.')
 
@@ -27,28 +27,21 @@ class Minigames(commands.Cog):
         await game.play()
 
 
-    @commands.command(usage="!hangman")
+    @commands.command(usage="hangman", description="A game of Hangman with a random word.\nYou guess letters by typing them in chat.")
     async def hangman(self, ctx):
-        """A game of Hangman with a random word.
-        You guess letters by typing them in chat.
-        """
         game = Hangman(ctx, self.client)
         await game.play()
 
 
-    @commands.command(usage="!highlow", name='higherlower', aliases=['highlow', 'hilo'])
+    @commands.command(usage="highlow", aliases=['highlow', 'hilo'],
+                      description="A game of Higher-or-Lower.\nThe player plays against the dealer (bot) for half a deck of cards.")
     async def higher_lower(self, ctx):
-        """A game of Higher-or-Lower.
-        The player plays against the dealer (bot) for half a deck of cards.
-        """
         game = HighLow(ctx, self.client)
         await game.play()
 
 
-    @commands.command(usage="!tictactoe [member]", name='tictactoe')
-    async def tic_tac_toe(self, ctx, other_player: discord.Member = None):
-        """A game of Tic-Tac-Toe with another member.
-        """
+    @commands.command(usage="tictactoe <member>", description="A game of Tic-Tac-Toe with another member.")
+    async def tic_tac_toe(self, ctx, other_player: utils.MemberLookupConverter):
         if other_player.bot or other_player == ctx.author:
             raise commands.BadArgument('Cannot play a game against that member.')
 
@@ -56,10 +49,8 @@ class Minigames(commands.Cog):
         await game.play()
 
 
-    @commands.command(usage="!rps [choice]", name='rps', aliases=['rockpaperscissors'])
+    @commands.command(usage="rps <choice>", aliases=['rockpaperscissors'], description="Play a game of Rock Paper Scissors.")
     async def rock_paper_scissors(self, ctx, player_choice=''):
-        """Play a game of Rock Paper Scissors.
-        """
         options_text= ['rock', 'paper', 'scissors']
         options_emoji = [':full_moon:', ':newspaper:', ':scissors:']
 

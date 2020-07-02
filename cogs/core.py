@@ -9,6 +9,7 @@ from checks import is_role_or_higher
 from cogs import verification, raiding, moderation
 from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification, subverify_react_handler
 from sql import get_guild, get_user, add_new_guild, usr_cols, gld_cols
+from utils import EmbedPaginator
 
 states = {}
 rcstates = {}
@@ -23,14 +24,13 @@ class Core(commands.Cog):
         self.start_time = datetime.now()
 
 
-    @commands.command(usage="!uptime")
+    @commands.command(usage="uptime", description="Tells how long the bot has been running.")
     async def uptime(self, ctx):
-        """Tells how long the bot has been running."""
         uptime_seconds = round((datetime.now() - self.start_time).total_seconds())
         await ctx.send(f"Current Uptime: {'{:0>8}'.format(str(timedelta(seconds=uptime_seconds)))}")
 
 
-    @commands.command(usage="!rolecount <role>")
+    @commands.command(usage="rolecount <role>", description="Counts the number of people who have a role.")
     async def rolecount(self, ctx, role: discord.Role):
         embed = discord.Embed(color=role.color).add_field(name=f"Members in {role.name}", value=str(len(role.members)))
         await ctx.send(embed=embed)
@@ -103,42 +103,84 @@ class Core(commands.Cog):
                                           "before attempting to send modmail.")
 
 
-    @commands.command(usage="!help")
-    async def help(self, ctx, *cog):
-        """Gets all cogs and commands"""
-        if not cog:
-            halp = discord.Embed(title='Cogs and Uncatergorized Commands', description='Use `!help *cog*` to find out more about them!')
-            cogs_desc = ''
-            for x in sorted(self.client.cogs):
-                if x != "CommandErrorHandler":
-                    cogs_desc += f'{x}\n'
-            halp.add_field(name='Cogs', value=cogs_desc[0:len(cogs_desc) - 1], inline=False)
-            cmds_desc = ''
-            for y in self.client.walk_commands():
-                if not y.cog_name and not y.hidden:
-                    cmds_desc += ('{} - {}'.format(y.usage, y.help) + '\n')
-            halp.add_field(name='Developer Commands', value=cmds_desc[0:len(cmds_desc) - 1], inline=False)
-            await ctx.send('', embed=halp)
-        else:
-            if len(cog) > 1:
-                halp = discord.Embed(title='Error!', description="That's too many cogs!", color=discord.Color.red())
-                await ctx.message.author.send('', embed=halp)
-            else:
-                found = False
-                for x in self.client.cogs:
-                    for y in cog:
-                        if x == y.capitalize():
-                            halp = discord.Embed(title=cog[0].capitalize() + ' Commands',
-                                                 description=self.client.cogs[y.capitalize()].__doc__)
-                            for c in self.client.get_cog(y.capitalize()).get_commands():
-                                if not c.hidden:
-                                    halp.add_field(name=c.usage, value=c.help, inline=False)
-                            found = True
-                if not found:
-                    halp = discord.Embed(title='Error!', description='Unknown Cog: "' + cog[0].capitalize() + '"',
-                                         color=discord.Color.red())
+    @commands.bot_has_permissions(add_reactions=True)
+    @commands.command(usage="help [command/cog]",
+        aliases=["h", "commands"], description="Shows the help menu or information for a specific command or cog when specified.")
+    async def help(self, ctx, *, opt: str = None):
+        if opt:
+            command = self.client.get_command(opt.lower())
+            if not command:
+                cog = self.client.get_cog(opt.capitalize())
+                if not cog:
+                    return await ctx.send(
+                        embed=discord.Embed(description=f"That command/cog does not exist. Use `{ctx.prefix}help` to see all the commands.",
+                            color=discord.Color.red(), ))
+                cog_commands = cog.get_commands()
+                embed = discord.Embed(title=opt.capitalize(), description=f"{cog.description}\n\n`<>` Indicates a required argument.\n"
+                                                                 "`[]` Indicates an optional argument.\n", color=discord.Color.blue(), )
+                embed.set_author(name=f"{self.client.user.name} Help Menu", icon_url=self.client.user.avatar_url)
+                embed.set_thumbnail(url=self.client.user.avatar_url)
+                embed.set_footer(
+                    text=f"Use the reactions to flip pages | Use {ctx.prefix}help <command> for more information on a command.")
+                for cmd in cog_commands:
+                    if cmd.hidden is False:
+                        name = ctx.prefix + cmd.usage
+                        if len(cmd.aliases) > 1:
+                            name += f" | Aliases – `{'`, `'.join([ctx.prefix + a for a in cmd.aliases])}`"
+                        elif len(cmd.aliases) > 0:
+                            name += f" | Alias – {ctx.prefix+cmd.aliases[0]}"
+                        embed.add_field(name=name, value=cmd.description, inline=False)
+                return await ctx.send(embed=embed)
 
-                await ctx.send(embed=halp)
+            embed = discord.Embed(title=command.name, description=command.description, colour=discord.Color.blue())
+            usage = "\n".join([ctx.prefix + x.strip() for x in command.usage.split("\n")])
+            embed.add_field(name="Usage", value=f"```{usage}```", inline=False)
+            if len(command.aliases) > 1:
+                embed.add_field(name="Aliases", value=f"`{'`, `'.join(command.aliases)}`")
+            elif len(command.aliases) > 0:
+                embed.add_field(name="Alias", value=f"`{command.aliases[0]}`")
+            return await ctx.send(embed=embed)
+        all_pages = []
+        page = discord.Embed(title=f"{self.client.user.name} Help Menu",
+            description="Thank you for using Ooga-Booga! Please direct message `Darkmatter#7321` if you find bugs or have suggestions!",
+            color=discord.Color.blue(), )
+        page.set_thumbnail(url=self.client.user.avatar_url)
+        page.set_footer(text="Use the reactions to flip pages.")
+        all_pages.append(page)
+        page = discord.Embed(title=f"{self.client.user.name} Help Menu", colour=discord.Color.blue())
+        page.set_thumbnail(url=self.client.user.avatar_url)
+        page.set_footer(text="Use the reactions to flip pages.")
+        page.add_field(name="About Ooga-Booga",
+            value="This bot was built to as a way to give back to the ROTMG community by facilitating more organized raids and allowing "
+                  "server owners to create new and exciting raiding discords for the community!", inline=False, )
+        page.add_field(name="Getting Started",
+            value=f"For a full list of commands, see `{ctx.prefix}help`. Browse through the various commands to get comfortable with using "
+                  "them, and as always if you have questions or need help – DM `Darkmatter#7321`!", inline=False, )
+        all_pages.append(page)
+        for _, cog_name in enumerate(self.client.cogs):
+            if cog_name in ["Owner", "Admin"]:
+                continue
+            cog = self.client.get_cog(cog_name)
+            cog_commands = cog.get_commands()
+            if len(cog_commands) == 0:
+                continue
+            page = discord.Embed(title=cog_name, description=f"{cog.description}\n\n`<>` Indicates a required argument.\n"
+                                                             "`[]` Indicates an optional argument.\n",
+                color=discord.Color.blue(), )
+            page.set_author(name=f"{self.client.user.name} Help Menu", icon_url=self.client.user.avatar_url)
+            page.set_thumbnail(url=self.client.user.avatar_url)
+            page.set_footer(text=f"Use the reactions to flip pages | Use {ctx.prefix}help <command> for more information on a command.")
+            for cmd in cog_commands:
+                if cmd.hidden is False:
+                    name = ctx.prefix + cmd.usage
+                    if len(cmd.aliases) > 1:
+                        name += f" | Aliases – `{'`, `'.join([ctx.prefix + a for a in cmd.aliases])}`"
+                    elif len(cmd.aliases) > 0:
+                        name += f" | Alias – `{ctx.prefix+cmd.aliases[0]}`"
+                    page.add_field(name=name, value=cmd.description, inline=False)
+            all_pages.append(page)
+        paginator = EmbedPaginator(self.client, ctx, all_pages)
+        await paginator.paginate()
 
 
     @commands.Cog.listener()
