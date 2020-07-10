@@ -5,6 +5,8 @@ Please contact me on discord (Darkmatter#7321) if you'd like the bot added to yo
 
 If you want to see what I'm working on with the bot, click on the `Projects` tab up top!
 
+FYI - Code & the command writeup may be a bit outdated, I'll do my best to update them frequently but no promises.
+
 -----
 # Requirements
 - [github.com/Jacobvs/Realmeye-API](https://github.com/Jacobvs/RealmEye-API)
