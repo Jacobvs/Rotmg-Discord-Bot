@@ -146,20 +146,20 @@ async def update_guild(pool, id, column, change):
     """Update guild data in rotmg.guilds"""
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
-            sql = "UPDATE rotmg.guilds SET {} = %s WHERE id = {}".format(column, id)
-            await cursor.execute(sql, (change,))
+            sql = f"UPDATE rotmg.guilds SET {column} = %s WHERE id = %s"
+            await cursor.execute(sql, (change, id))
             await conn.commit()
 
-async def get_guild(pool, uid):
+async def get_guild(pool, gid):
     """Return guild data from rotmg.guilds"""
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
-            await cursor.execute("SELECT * from rotmg.guilds WHERE id = {}".format(uid))
+            await cursor.execute(f"SELECT * from rotmg.guilds WHERE id = {gid}")
             data = await cursor.fetchone()
             await conn.commit()
             return data
 
-async def get_all_guilds(pool):
+async def get_guilds(pool):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute("SELECT * from rotmg.guilds")
@@ -168,9 +168,13 @@ async def get_all_guilds(pool):
             return data
 
 
-async def construct_guild_database(pool, client):
-    guilds = await get_all_guilds(pool)
-    guild_db = {}
+async def construct_guild_database(pool, client, guildid=None):
+    if not guildid:
+        guilds = await get_guilds(pool)
+        guild_db = {}
+    else:
+        guild_db = client.guild_db
+        guilds = get_guild(pool, guildid)
     for i, g in enumerate(guilds):
         db = {}
         guild = client.get_guild(g[0])
@@ -481,9 +485,12 @@ class usr_cols(enum.IntEnum):
     alt1 = 7
     alt2 = 8
 
-
-gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 46]
+# Define which DB records are of what type
+# Channels (Text, Voice, Category)
+gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 46, 60, 61]
+# Roles
 gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43, 47, 48, 50, 52, 54, 58]
+
 class gld_cols(enum.IntEnum):
     """Contains References to rotmg.guilds table for easy access"""
     id = 0  # Int
@@ -546,21 +553,5 @@ class gld_cols(enum.IntEnum):
     thirdpopperearlyloc = 57
     rusherrole = 58
     maxrushersgetloc = 59
-
-
-## EVENTS:
-# CREATE EVENT `zero_runs_weekly`
-#     ON SCHEDULE
-#         EVERY 168 HOUR STARTS '2020-06-01 20:00:00'
-#     ON COMPLETION PRESERVE
-#     ENABLE
-# DO BEGIN
-#          UPDATE rotmg.`660344559074541579` SET weeklyruns = 0 WHERE weeklyruns <> 0;
-#          UPDATE rotmg.`678528908429361152` SET weeklyruns = 0 WHERE weeklyruns <> 0;
-#          UPDATE rotmg.`703987028567523468` SET weeklyruns = 0 WHERE weeklyruns <> 0;
-#          UPDATE rotmg.`713655609760940044` SET weeklyruns = 0 WHERE weeklyruns <> 0;
-#          UPDATE rotmg.`660344559074541579` SET weeklyassists = 0 WHERE weeklyassists <> 0;
-#          UPDATE rotmg.`678528908429361152` SET weeklyassists = 0 WHERE weeklyassists <> 0;
-#          UPDATE rotmg.`703987028567523468` SET weeklyassists = 0 WHERE weeklyassists <> 0;
-#          UPDATE rotmg.`713655609760940044` SET weeklyassists = 0 WHERE weeklyassists <> 0;
-# END
+    modmailcategory = 60
+    modmaillogchannel = 61

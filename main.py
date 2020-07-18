@@ -66,7 +66,7 @@ async def on_ready():
     if bot.maintenance_mode:
         await bot.change_presence(status=discord.Status.idle, activity=discord.Game("IN MAINTENANCE MODE!"))
     else:
-        await bot.change_presence(status=discord.Status.online, activity=discord.Game("boooga."))
+        await bot.change_presence(status=discord.Status.online, activity=discord.Game("!modmail"))
     bot.loop.create_task(update_leaderboards(bot))
 
     bot.active_punishments = {}
