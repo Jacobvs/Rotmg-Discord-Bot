@@ -74,7 +74,7 @@ class RealmClear:
 
         await self.setup_msg.delete()
         await self.vcchannel.set_permissions(self.raiderrole, connect=True, view_channel=True, speak=False)
-        embed = embeds.afk_check_base("Realm Clearing", self.ctx.author, False, self.emojis)
+        embed = embeds.afk_check_base("Realm Clearing", self.ctx.author, False, self.emojis, ["<:planewalker:682212363889279091>"])
         embed.color = discord.Color.gold()
         self.afkmsg = await self.hcchannel.send(f"@here `Realm Clearing` {self.emojis[0]} started by {self.ctx.author.mention} "
                                                 f"in {self.vcchannel.name}", embed=embed)

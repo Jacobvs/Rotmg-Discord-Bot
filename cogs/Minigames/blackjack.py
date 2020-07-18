@@ -88,10 +88,10 @@ class Blackjack:
                 else:
                     self.push = True
                     hint_message = 'Push! Both you and the dealer got a Blackjack!'
-            elif self.calculate_score(self.dealer_hand) == 21 and len(self.dealer_hand) == 2:
-                self.playing = False
-                self.player_won = False
-                hint_message = "You lost! The dealer got a Natural Blackjack!"
+            # elif self.calculate_score(self.dealer_hand) == 21 and len(self.dealer_hand) == 2:
+            #     self.playing = False
+            #     self.player_won = False
+            #     hint_message = "You lost! The dealer got a Natural Blackjack!"
             else:
                 hint_message = ('Your score is '
                                 f'**{self.calculate_score(self.player_hand)}**.')

@@ -52,7 +52,7 @@ class Headcount:
             self.thumbnail = "https://static.drips.pw/rotmg/wiki/Environment/Portals/Rainbow%20Road.png"
             await msg.delete()
             await self.setup_msg.delete()
-            embed = embeds.headcount_base(self.dungeontitle, self.ctx.author, False, self.emojis, thumbnail=self.thumbnail)
+            embed = embeds.headcount_base(self.dungeontitle, self.ctx.author, False, self.emojis, [], thumbnail=self.thumbnail)
             embed.description = f"React to {self.emojis[0]} to participate in the run!\nIf you have keys, react to the appropriate emojis " \
                                 f"below!"
             hcmsg = await self.hcchannel.send(f"@here Headcount for `{self.dungeontitle}` {self.emojis[0]} started by "
@@ -70,24 +70,31 @@ class Headcount:
             self.dungeontitle = "Realm Clearing"
             self.emojis = ["<:defaultdungeon:682212333182910503>", "<:trickster:682214467483861023>", "<:Warrior_1:585616162407186433>",
                            "<:ninja_3:585616162151202817>"]
+            self.rusher_emojis = ["<:planewalker:682212363889279091>"]
+            self.hc_color = discord.Color.from_rgb(20, 125, 236)
             self.thumbnail = "https://www.realmeye.com/forum/uploads/default/original/1X/842ee5c4e569c7b7c1b0bf688e465a7435235fc8.png"
         elif num == 62:
             self.dungeontitle = "Fame Train"
             self.emojis = ["<:fame:682209281722024044>", "<:sorcerer:682214487490560010>", "<:necromancer:682214503106215966>",
                            "<:sseal:683815374403141651>", "<:puri:682205769973760001>"]
+            self.rusher_emojis = []
+            self.hc_color = discord.Color.from_rgb(233, 127, 33)
             self.thumbnail = "https://cdn.discordapp.com/attachments/679309966128971797/696452960825376788/fame2.png"
         else:
             self.dungeon_info = utils.dungeon_info(int(msg.content))
             self.keyed_run = True
             self.dungeontitle = self.dungeon_info[0]
             self.emojis = self.dungeon_info[1]
-            self.thumbnail = self.dungeon_info[2]
+            self.rusher_emojis = self.dungeon_info[2]
+            self.hc_color = self.dungeon_info[3]
+            self.thumbnail = self.dungeon_info[4]
         await msg.delete()
         await self.setup_msg.delete()
 
         afkmsg = await self.hcchannel.send(
             f"@here Headcount for `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} for {self.vcchannel.name}",
-            embed=embeds.headcount_base(self.dungeontitle, self.ctx.author, self.keyed_run, self.emojis, self.thumbnail))
+            embed=embeds.headcount_base(self.dungeontitle, self.ctx.author, self.keyed_run, self.emojis, self.rusher_emojis,
+                                        self.thumbnail, self.hc_color))
 
         if 0 < num < 61:
             embed = discord.Embed(title="Headcount", description=f"{self.ctx.author.mention} - your headcount for"
@@ -98,8 +105,11 @@ class Headcount:
                                                                  f" `{self.dungeontitle}` has been started!", color=discord.Color.green())
         hcmsg = await self.ctx.send(embed=embed)
 
-        for emoji in self.emojis:
-            await afkmsg.add_reaction(emoji)
+        for e in self.emojis:
+            await afkmsg.add_reaction(e)
+
+        for e in self.rusher_emojis:
+            await afkmsg.add_reaction(e)
 
         if 0 < num < 61:
             await hcmsg.add_reaction("🔀")

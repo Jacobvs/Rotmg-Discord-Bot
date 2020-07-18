@@ -17,6 +17,14 @@ class Punishments(commands.Cog):
     def __init__(self, client):
         self.client = client
 
+
+    # @commands.command(usage="plogs [member]", description="View/Edit punishment logs for the entire server or specify a person to "
+    #                                                       "view/edit logs for.")
+    # @commands.guild_only()
+    # @commands.has_permissions(administrator=True)
+    # async def plogs(self, ctx, member: utils.MemberLookupConverter = None):
+
+
     @commands.command(usage="warn <member> <reason>", description="Warn a member for breaking the rules.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
@@ -58,12 +66,13 @@ class Punishments(commands.Cog):
                                           f"{duration_formatter(tsecs, 'Mute')}",
                               color=discord.Color.green())
         await ctx.send(embed=embed)
-        self.client.loop.create_task(punishment_handler(self.client, ctx.guild, member, 'mute', tsecs))
+        t = self.client.loop.create_task(punishment_handler(self.client, ctx.guild, member, 'mute', tsecs))
+        self.client.active_punishments[str(ctx.guild.id)+str(member.id)+'mute'] = t
 
-    @commands.command(usage='unmute <member> [reason]', description="Un-mute the specified member.")
+    @commands.command(usage='unmute <member> <reason>', description="Un-mute the specified member.")
     @commands.guild_only()
     @checks.is_security_or_higher_check()
-    async def unmute(self, ctx, member: utils.MemberLookupConverter, *, reason=None):
+    async def unmute(self, ctx, member: utils.MemberLookupConverter, *, reason):
         if member.bot:
             return await ctx.send(f'Cannot un-mute `{member.display_name}` (is a bot).')
         if member.guild_permissions.kick_members:
@@ -73,6 +82,9 @@ class Punishments(commands.Cog):
         already_active = await sql.has_active(self.client.pool, member.id, ctx.guild.id, 'mute')
         if not already_active:
             return await ctx.send(f'Cannot un-mute `{member.display_name}` as they have no active mutes!')
+        if self.client.active_punishments[str(ctx.guild.id)+str(member.id)+'mute']:
+            task = self.client.active_punishments[str(ctx.guild.id)+str(member.id)+'mute']
+            task.cancel()
         await unmute(self.client.pool, ctx.guild, member)
         await send_update_embeds(self.client, ctx.guild, member, True, False, ctx.author, reason)
         embed = discord.Embed(title="Success!",
@@ -122,13 +134,14 @@ class Punishments(commands.Cog):
                               description=f"`{member.display_name}` was successfully suspended for reason:\n{reason}.\nDuration: "
                                           f"{duration_formatter(tsecs, 'Suspended')}", color=discord.Color.green())
         await ctx.send(embed=embed)
-        self.client.loop.create_task(punishment_handler(self.client, ctx.guild, member, 'suspend', tsecs, roles))
+        t = self.client.loop.create_task(punishment_handler(self.client, ctx.guild, member, 'suspend', tsecs, roles))
+        self.client.active_punishments[str(ctx.guild.id)+str(member.id)+'suspend'] = t
 
 
-    @commands.command(usage="unsuspend <member> [reason]", description="Un-suspend the specified member.")
+    @commands.command(usage="unsuspend <member> <reason>", description="Un-suspend the specified member.")
     @commands.guild_only()
     @checks.is_security_or_higher_check()
-    async def unsuspend(self, ctx, member: utils.MemberLookupConverter, *, reason=None):
+    async def unsuspend(self, ctx, member: utils.MemberLookupConverter, *, reason):
         if member.bot:
             return await ctx.send(f'Cannot un-suspend `{member.display_name}` (is a bot).')
         if member.guild_permissions.kick_members:
@@ -138,6 +151,10 @@ class Punishments(commands.Cog):
         already_active = await sql.has_active(self.client.pool, member.id, ctx.guild.id, 'suspend')
         if not already_active:
             return await ctx.send(f'Cannot un-suspend `{member.display_name}` as they have no active suspensions!')
+
+        if self.client.active_punishments[str(ctx.guild.id)+str(member.id)+'suspend']:
+            task = self.client.active_punishments[str(ctx.guild.id)+str(member.id)+'suspend']
+            task.cancel()
         suspendrole = self.client.guild_db.get(ctx.guild.id)[sql.gld_cols.suspendedrole]
         verifiedrole = self.client.guild_db.get(ctx.guild.id)[sql.gld_cols.verifiedroleid]
         roles = await sql.get_suspended_roles(self.client.pool, member.id, ctx.guild)
@@ -172,6 +189,8 @@ class Punishments(commands.Cog):
             embed.timestamp = duration
         if ptype == 'Blacklist':
             embed.set_thumbnail(url='https://media3.giphy.com/media/H99r2HtnYs492/giphy.gif')
+        if ptype == 'Suspension' and guild.id == 703987028567523468:
+            embed.set_thumbnail(url='https://i.imgur.com/ZDuZLx8.gif')
         await channel.send(embed=embed)
         await user.send(f"{ptype} in {guild.name} | {user.mention}", embed=embed)
 
@@ -221,14 +240,16 @@ async def unsuspend(pool, guild, suspend_role, verifiedrole, member, roles):
     await sql.set_unactive(pool, guild.id, member.id, 'suspend')
 
 async def punishment_handler(client, guild, member, ptype, tsecs, roles=None):
-    await asyncio.sleep(tsecs)
-    # TODO: check if still active
-    if ptype == 'mute':
-        await unmute(client.pool, guild, member)
-        await send_update_embeds(client, guild, member, True)
-    elif ptype == 'suspend':
-        suspendrole = client.guild_db.get(guild.id)[sql.gld_cols.suspendedrole]
-        verifiedrole = client.guild_db.get(guild.id)[sql.gld_cols.verifiedroleid]
-        await unsuspend(client.pool, guild, suspendrole, verifiedrole, member, roles)
-        await send_update_embeds(client, guild, member, False)
-
+    try:
+        await asyncio.sleep(tsecs)
+        # TODO: check if still active
+        if ptype == 'mute':
+            await unmute(client.pool, guild, member)
+            await send_update_embeds(client, guild, member, True)
+        elif ptype == 'suspend':
+            suspendrole = client.guild_db.get(guild.id)[sql.gld_cols.suspendedrole]
+            verifiedrole = client.guild_db.get(guild.id)[sql.gld_cols.verifiedroleid]
+            await unsuspend(client.pool, guild, suspendrole, verifiedrole, member, roles)
+            await send_update_embeds(client, guild, member, False)
+    except asyncio.CancelledError:
+        pass

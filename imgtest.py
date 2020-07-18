@@ -1,8 +1,9 @@
-import matplotlib.pyplot as plt
-from matplotlib.patches import Circle
-import json
 import io
+import json
+
+import matplotlib.pyplot as plt
 from PIL import Image
+from matplotlib.patches import Circle
 
 with open("data/world_data_clean.json") as file:
     data = json.load(file)

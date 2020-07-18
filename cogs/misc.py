@@ -1,12 +1,9 @@
 import asyncio
 import random
 from datetime import datetime
-from os import listdir
-from os.path import isfile, join
 
 import aiohttp
 import discord
-import psutil
 import youtube_dl
 from discord.ext import commands
 from discord.utils import get
@@ -16,7 +13,6 @@ import embeds
 import sql
 import utils
 from checks import is_dj, is_rl_or_higher_check, is_bot_owner
-from sql import get_num_verified
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -91,7 +87,7 @@ class Misc(commands.Cog):
                 await msg.clear_reactions()
                 return await msg.edit(embed=embed)
 
-            serverid = servers[self.numbers.index(str(reaction.emoji))].id
+            server = servers[self.numbers.index(str(reaction.emoji))]
             author = servers[self.numbers.index(str(reaction.emoji))].get_member(author.id)
             await msg.delete()
         else:
@@ -102,10 +98,10 @@ class Misc(commands.Cog):
                     author = await converter.convert(ctx, str(member.id))
                 except discord.ext.commands.BadArgument:
                     pass
-            serverid = ctx.guild.id
+            server = ctx.guild
 
-        data = await sql.get_log(self.client.pool, serverid, author.id)
-        embed = discord.Embed(title=f"Stats for {author.display_name}", color=discord.Color.green())
+        data = await sql.get_log(self.client.pool, server.id, author.id)
+        embed = discord.Embed(title=f"Stats for {author.display_name} in {server.name}", color=discord.Color.green())
         embed.set_thumbnail(url=author.avatar_url)
         embed.add_field(name="__**Key Stats**__", value="Popped: "
                         f"**{data[sql.log_cols.pkey]}**\nEvent Keys: **{data[sql.log_cols.eventkeys]}**\nVials: "
@@ -113,8 +109,8 @@ class Misc(commands.Cog):
                         f"**{data[sql.log_cols.shieldrunes]}**\nHelm Runes: **{data[sql.log_cols.helmrunes]}**", inline=False)\
                         .add_field(name="__**Run Stats**__", value=f"Completed: **{data[sql.log_cols.runsdone]}**\nEvents Completed: "
                         f"**{data[sql.log_cols.eventsdone]}**", inline=False)
-        erl = self.client.guild_db.get(serverid)[sql.gld_cols.eventrlid]
-        role = erl if erl else self.client.guild_db.get(serverid)[sql.gld_cols.rlroleid]
+        erl = self.client.guild_db.get(server.id)[sql.gld_cols.eventrlid]
+        role = erl if erl else self.client.guild_db.get(server.id)[sql.gld_cols.rlroleid]
         if author.top_role >= role:
             embed.add_field(name="__**Leading Stats**__", value="Successful Runs: "
                         f"**{data[sql.log_cols.srunled]}**\nFailed Runs: **{data[sql.log_cols.frunled]}**\nAssisted: "
@@ -126,6 +122,43 @@ class Misc(commands.Cog):
             return await ctx.send(embed=embed)
         await author.send(embed=embed)
 
+
+    @commands.command(usage='joke', description='Tell a joke.')
+    async def joke(self, ctx):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get('https://sv443.net/jokeapi/v2/joke/Dark?blacklistFlags=nsfw,religious,political,racist,sexist',
+                              ssl=False) as r:
+                data = await r.json()
+
+        if data and not data['error']:
+            if data['type'] == 'single':
+                embed = discord.Embed(title=data['joke'])
+            else:
+                embed = discord.Embed(title=data['setup'], description=data['delivery'])
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("Bot isn't funny I guess? (Servers couldn't be reached. Try again later.)")
+
+
+    @commands.command(usage='djoke', description="This command doesn't exist..... Shh...")
+    @commands.guild_only()
+    @commands.has_permissions(administrator=True)
+    async def djoke(self, ctx):
+        joke = utils.darkjoke()
+        embed = discord.Embed(title=joke[0], description=joke[1])
+        await ctx.send(embed=embed)
+
+    @commands.command(usage='roast <member>', description="This command doesn't exist either")
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def roast(self, ctx, member: utils.MemberLookupConverter):
+        try:
+            await ctx.message.delete()
+        except discord.NotFound:
+            pass
+        roast = utils.get_roast()
+        embed = discord.Embed(title=roast)
+        await ctx.send(content=member.mention, embed=embed)
 
     @commands.command(aliases=["ahhaha"], usage="laugh", description="Ah-Ha-hA")
     @commands.guild_only()
@@ -271,52 +304,5 @@ class Misc(commands.Cog):
         # TODO: add option to ping @here or @everyone
 
 
-    @commands.command(usage="status", description="Retrieve the bot's status.")
-    async def status(self, ctx):
-        embed = discord.Embed(title="Bot Status", color=discord.Color.dark_gold())
-        nverified = await get_num_verified(self.client.pool)
-        embed.add_field(name="Bot latency:", value=f"**`{round(self.client.latency*1000, 2)}`** Milliseconds.", inline=False)
-        embed.add_field(name="Connected Servers:",
-                        value=f"**`{len(self.client.guilds)}`** servers with **`{len(list(self.client.get_all_members()))}`** total members.",
-                        inline=False)
-        embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.", inline=False)
-        lines = line_count('/home/pi/Rotmg-Bot/')+line_count('/home/pi/Rotmg-Bot/cogs')+line_count('/home/pi/Rotmg-Bot/cogs/Raiding')+\
-                line_count('/home/pi/Rotmg-Bot/cogs/Minigames')
-        embed.add_field(name="Lines of Code:",
-                        value=(f"**`{lines}`** lines of code."), inline=False)
-        embed.add_field(name="Server Status:",
-                        value=(f"```yaml\nServer: Google Cloud Compute (US East)\nCPU: {psutil.cpu_percent()}% utilization."
-                               f"\nMemory: {psutil.virtual_memory().percent}% utilization."
-                               f"\nDisk: {psutil.disk_usage('/').percent}% utilization."
-                               f"\nNetwork: {round(psutil.net_io_counters().bytes_recv*0.000001)} MB in "
-                               f"/ {round(psutil.net_io_counters().bytes_sent*0.000001)} MB out.```"))
-        if ctx.guild:
-            appinfo = await self.client.application_info()
-            embed.add_field(name=f"Bot author:", value=f"{appinfo.owner.mention} - DM me if something's broken or to request a feature!",
-                            inline=False)
-        else:
-            embed.add_field(name=f"Bot author:", value="__Darkmatter#7321__ - DM me if something's broken or to request a feature!",
-                            inline=False)
-        await ctx.send(embed=embed)
-
-
 def setup(client):
     client.add_cog(Misc(client))
-
-
-def line_count(path):
-    """Count total lines of code in specified path"""
-    file_list = [join(path, file_p) for file_p in listdir(path) if isfile(join(path, file_p))]
-    total = 0
-    for file_path in file_list:
-        if file_path[-3:] == ".py":  # Ensure only python files are counted
-            try:
-                count = 0
-                with open(file_path, encoding="ascii", errors="surrogateescape") as current_file:
-                    for line in current_file:
-                        count += 1
-            except IOError:
-                return -1
-            if count >= 0:
-                total += count
-    return total

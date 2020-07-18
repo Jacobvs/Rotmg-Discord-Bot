@@ -33,13 +33,67 @@ async def ign_exists(pool, ign, id):
                 return False
             return True
 
-async def get_user_from_ign(pool, ign):
+async def get_user_from_ign(pool, name):
     """Retrieve User Data From IGN"""
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
-            await cursor.execute("SELECT * from rotmg.users WHERE ign = '{}' AND status = 'verified'".format(ign))
+            sql = "SELECT * from rotmg.users WHERE (ign = %s OR alt1 = %s OR alt2 = %s) AND status = 'verified'"
+            data = (name, name, name)
+            await cursor.execute(sql, data)
             user = await cursor.fetchone()
+
             return user
+
+async def add_alt_name(pool, uid, altname):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "SELECT * from rotmg.users WHERE id = %s AND status = 'verified'"
+            data = (uid)
+            await cursor.execute(sql, data)
+            data = await cursor.fetchone()
+            if not data:
+                return False
+            if data[usr_cols.alt1]:
+                if data[usr_cols.alt2]:
+                    return False
+                else:
+                    t = 'alt2'
+            else:
+                t = 'alt1'
+            sql = f"UPDATE rotmg.users SET {t} = %s WHERE id = %s"
+            data = (altname, uid)
+            await cursor.execute(sql, data)
+            await conn.commit()
+            return True
+
+async def remove_alt_name(pool, uid, altname):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "SELECT * from rotmg.users WHERE id = %s AND status = 'verified'"
+            data = (uid)
+            await cursor.execute(sql, data)
+            data = await cursor.fetchone()
+            if not data:
+                return False
+            movealts=False
+            if data[usr_cols.alt1] and data[usr_cols.alt1].lower() == altname.lower():
+                t = 'alt1'
+                if data[usr_cols.alt2]:
+                    movealts=True
+            elif data[usr_cols.alt2] and data[usr_cols.alt2].lower() == altname.lower():
+                t = 'alt2'
+            else:
+                return False
+
+            if not movealts:
+                sql = f"UPDATE rotmg.users SET {t} = %s WHERE id = %s"
+                data = (None, uid)
+            else:
+                sql = f"UPDATE rotmg.users SET alt1 = %s, alt2 = %s WHERE id = %s"
+                data = (data[usr_cols.alt2], None, uid)
+            await cursor.execute(sql, data)
+            await conn.commit()
+            return True
 
 
 async def add_new_user(pool, user_id, guild_id, verify_id):
@@ -129,6 +183,8 @@ async def construct_guild_database(pool, client):
                         db[j] = guild.get_role(r)
                     else:
                         db[j] = r
+                else:
+                    db[j] = None
             guild_db[g[0]] = db
     return guild_db
 
@@ -287,7 +343,7 @@ async def log_runs(pool, guild_id, member_id, column=1, number=1):
                 await cursor.execute(f"UPDATE rotmg.`{guild_id}` SET {name} = {name} + {number} WHERE id = {member_id}")
             await conn.commit()
 
-            return data
+            return data + number
 
 async def get_log(pool, guild_id, member_id):
     async with pool.acquire() as conn:
@@ -422,10 +478,12 @@ class usr_cols(enum.IntEnum):
     verifykey = 4  # String
     verifyid = 5  # Int
     verifiedguilds = 6  # String (CSV)
+    alt1 = 7
+    alt2 = 8
 
 
 gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 46]
-gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43, 47, 48]
+gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43, 47, 48, 50, 52, 54, 58]
 class gld_cols(enum.IntEnum):
     """Contains References to rotmg.guilds table for easy access"""
     id = 0  # Int
@@ -477,6 +535,17 @@ class gld_cols(enum.IntEnum):
     punishlogchannel = 46
     suspendedrole = 47
     securityrole = 48
+    numpopsfirst = 49
+    firstpopperrole = 50
+    numpopssecond = 51
+    secondpopperrole = 52
+    numpopsthird = 53
+    thirdpopperrole = 54
+    firstpopperearlyloc = 55
+    secondpopperearlyloc = 56
+    thirdpopperearlyloc = 57
+    rusherrole = 58
+    maxrushersgetloc = 59
 
 
 ## EVENTS:

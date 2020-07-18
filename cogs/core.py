@@ -1,12 +1,14 @@
 import json
 from datetime import datetime, timedelta
+from os import listdir
+from os.path import join, isfile
 
 import discord
+import psutil
 from discord.ext import commands
 
 import sql
-from checks import is_role_or_higher
-from cogs import verification, raiding, moderation
+from cogs import verification, moderation
 from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification, subverify_react_handler
 from sql import get_guild, get_user, add_new_guild, usr_cols, gld_cols
 from utils import EmbedPaginator
@@ -18,7 +20,6 @@ rcstates = {}
 class Core(commands.Cog):
     """Houses core commands & listeners for the bot"""
 
-
     def __init__(self, client):
         self.client = client
         self.start_time = datetime.now()
@@ -28,6 +29,41 @@ class Core(commands.Cog):
     async def uptime(self, ctx):
         uptime_seconds = round((datetime.now() - self.start_time).total_seconds())
         await ctx.send(f"Current Uptime: {'{:0>8}'.format(str(timedelta(seconds=uptime_seconds)))}")
+
+
+    @commands.command(usage="report", description="Report a bug or suggest a new feature here!", aliases=['bug','feature','suggest'])
+    async def report(self, ctx):
+        await ctx.send("Please report any bugs you find or suggestions you have here:\n"
+                       "Anyonmous (No login): <https://gitreports.com/issue/Jacobvs/Rotmg-Discord-Bot>\n"
+                       "Github (Preferred): <https://github.com/Jacobvs/Rotmg-Discord-Bot/issues/new/choose>")
+
+
+    @commands.command(usage="status", description="Retrieve the bot's status.")
+    async def status(self, ctx):
+        embed = discord.Embed(title="Bot Status", color=discord.Color.dark_gold())
+        nverified = await sql.get_num_verified(self.client.pool)
+        embed.add_field(name="Bot latency:", value=f"**`{round(self.client.latency*1000, 2)}`** Milliseconds.", inline=False)
+        embed.add_field(name="Connected Servers:",
+                        value=f"**`{len(self.client.guilds)}`** servers with **`{len(list(self.client.get_all_members()))}`** total members.",
+                        inline=False)
+        embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.", inline=False)
+        lines = line_count('/home/pi/Rotmg-Bot/') + line_count('/home/pi/Rotmg-Bot/cogs') + line_count(
+            '/home/pi/Rotmg-Bot/cogs/Raiding') + line_count('/home/pi/Rotmg-Bot/cogs/Minigames')
+        embed.add_field(name="Lines of Code:", value=(f"**`{lines}`** lines of code."), inline=False)
+        embed.add_field(name="Server Status:",
+                        value=(f"```yaml\nServer: 0 GHz Potato\nCPU: {psutil.cpu_percent()}% utilization."
+                               f"\nMemory: {psutil.virtual_memory().percent}% utilization."
+                               f"\nDisk: {psutil.disk_usage('/').percent}% utilization."
+                               f"\nNetwork: {round(psutil.net_io_counters().bytes_recv*0.000001)} MB in "
+                               f"/ {round(psutil.net_io_counters().bytes_sent*0.000001)} MB out.```"))
+        if ctx.guild:
+            appinfo = await self.client.application_info()
+            embed.add_field(name=f"Bot author:", value=f"{appinfo.owner.mention} - DM me if something's broken or to request a feature!",
+                            inline=False)
+        else:
+            embed.add_field(name=f"Bot author:", value="__Darkmatter#7321__ - DM me if something's broken or to request a feature!",
+                            inline=False)
+        await ctx.send(embed=embed)
 
 
     @commands.command(usage="rolecount <role>", description="Counts the number of people who have a role.")
@@ -73,13 +109,13 @@ class Core(commands.Cog):
 
             user_data = await get_user(self.client.pool, message.author.id)
 
-            if user_data is not None:  # TODO: implement modmail
-                if user_data[usr_cols.status] == 'verified' or (
-                        user_data[usr_cols.status] == 'cancelled' and user_data[usr_cols.verifiedguilds] is not None):
-                    msg = "What server would you like to send this modmail to?"
-                    await message.author.send(msg)
-                    return
-                elif user_data[usr_cols.status] == 'stp_1':
+            if user_data is not None:
+                # if user_data[usr_cols.status] == 'verified' or (
+                #         user_data[usr_cols.status] == 'cancelled' and user_data[usr_cols.verifiedguilds] is not None):
+                #     msg = "What server would you like to send this modmail to?"
+                #     await message.author.send(msg)
+                #     return
+                if user_data[usr_cols.status] == 'stp_1':
                     if not message.content.isalpha():
                         return await message.author.send("Please provide your username only. No numbers or symbols", delete_after=10)
                     # if ign_exists(message.content.strip()): TODO: Find a way to fix this
@@ -96,7 +132,10 @@ class Core(commands.Cog):
                     if user_data[usr_cols.status] == 'appeal_denied':
                         await message.author.send(
                             "You have been denied from verifying in this server. Contact a moderator+ if you think this is a mistake.")
-                    else:
+                    # elif user_data[usr_cols.status] == 'verified':
+                    #     await message.author.send('You are already verified. If you are attempting to send modmail, '
+                    #                               'please use the `!mm` command.')
+                    elif user_data[usr_cols.status] == 'stp_2' or user_data[usr_cols.status] == 'stp_3':
                         await message.author.send("You are already verifying, react to the check to continue.", delete_after=10)
             else:
                 await message.author.send("You are not verified in any guilds this bot is in yet. Please verify "
@@ -105,7 +144,7 @@ class Core(commands.Cog):
 
     @commands.bot_has_permissions(add_reactions=True)
     @commands.command(usage="help [command/cog]",
-        aliases=["h", "commands"], description="Shows the help menu or information for a specific command or cog when specified.")
+        aliases=["h"], description="Shows the help menu or information for a specific command or cog when specified.")
     async def help(self, ctx, *, opt: str = None):
         if opt:
             command = self.client.get_command(opt.lower())
@@ -121,7 +160,7 @@ class Core(commands.Cog):
                 embed.set_author(name=f"{self.client.user.name} Help Menu", icon_url=self.client.user.avatar_url)
                 embed.set_thumbnail(url=self.client.user.avatar_url)
                 embed.set_footer(
-                    text=f"Use the reactions to flip pages | Use {ctx.prefix}help <command> for more information on a command.")
+                    text=f"Use {ctx.prefix}help <command> for more information on a command.")
                 for cmd in cog_commands:
                     if cmd.hidden is False:
                         name = ctx.prefix + cmd.usage
@@ -157,7 +196,7 @@ class Core(commands.Cog):
             value=f"For a full list of commands, see `{ctx.prefix}help`. Browse through the various commands to get comfortable with using "
                   "them, and as always if you have questions or need help – DM `Darkmatter#7321`!", inline=False, )
         all_pages.append(page)
-        for _, cog_name in enumerate(self.client.cogs):
+        for _, cog_name in enumerate(sorted(self.client.cogs)):
             if cog_name in ["Owner", "Admin"]:
                 continue
             cog = self.client.get_cog(cog_name)
@@ -182,6 +221,20 @@ class Core(commands.Cog):
         paginator = EmbedPaginator(self.client, ctx, all_pages)
         await paginator.paginate()
 
+    @commands.command(name='commands', usage="commands", description="View a full list of all available commands.",
+                      aliases=["cmd"])
+    async def commandlist(self, ctx):
+        embed = discord.Embed(title="Command List", description="A full list of all available commands.\n", color=discord.Color.teal())
+        for _, cog_name in enumerate(sorted(self.client.cogs)):
+            if cog_name in ["Owner", "Admin"]:
+                continue
+            cog = self.client.get_cog(cog_name)
+            cog_commands = cog.get_commands()
+            if len(cog_commands) == 0:
+                continue
+            cmds = "```yml\n" + ", ".join([ctx.prefix + cmd.name for cmd in cog_commands]) + "```"
+            embed.add_field(name=cog.qualified_name + " Commands", value=cmds, inline=False)
+        await ctx.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
@@ -199,7 +252,14 @@ class Core(commands.Cog):
             subverify_1_msg_id = guild_data[gld_cols.subverify1id]
             subverify_2_msg_id = guild_data[gld_cols.subverify2id]
 
-            if payload.message_id == verify_message_id and str(payload.emoji) == '✅':  # handles verification reacts
+            if payload.message_id in self.client.raid_db[guild.id]['afk']:
+                afk = self.client.raid_db[guild.id]['afk'][payload.message_id]
+                await afk.reaction_handler(payload)
+            elif payload.message_id in self.client.raid_db[guild.id]['cp']:
+                afk = self.client.raid_db[guild.id]['cp'][payload.message_id]
+                await afk.cp_handler(payload)
+
+            elif payload.message_id == verify_message_id and str(payload.emoji) == '✅':  # handles verification reacts
                 return await guild_verify_react_handler(Verification(self.client), payload, user_data, guild_data, user, guild,
                                                         verify_message_id)
             elif payload.message_id == subverify_1_msg_id and (
@@ -208,34 +268,39 @@ class Core(commands.Cog):
             elif payload.message_id == subverify_2_msg_id and (
                     str(payload.emoji) == '✅' or str(payload.emoji) == '❌'):  # handles subverification 2
                 return await subverify_react_handler(Verification(self.client), payload, 2, guild_data, user, guild, subverify_2_msg_id)
-            elif payload.channel_id in [guild_data[gld_cols.raidhc1], guild_data[gld_cols.raidhc2], guild_data[gld_cols.raidhc3],
-                                        guild_data[gld_cols.vethc1]]:  # handles raiding emoji reactions
-                if str(payload.emoji) == '❌' and await is_role_or_higher(guild.get_member(user.id),
-                                                                         self.client.guild_db.get(guild.id)[sql.gld_cols.rlroleid]):
-                    #from cogs.raiding import end_afk_check
-                    return await raiding.end_afk_check(self.client.pool, guild.get_member(user.id), guild, False)
-                #from cogs.raiding import afk_check_reaction_handler
-                return await raiding.afk_check_reaction_handler(self.client.pool, payload, guild.get_member(user.id), guild)
             elif payload.channel_id == guild_data[gld_cols.manualverifychannel]:  # handles manual verificaions
-                if str(payload.emoji) == '✅':
+                if str(payload.emoji) in ['✅', '❌']:
                     channel = guild.get_channel(payload.channel_id)
                     msg = await channel.fetch_message(payload.message_id)
                     uid = msg.content.split(": ")[1]
-                    return await moderation.manual_verify_ext(self.client.pool, guild, uid, user)
-                elif str(payload.emoji) == '❌':
-                    channel = guild.get_channel(payload.channel_id)
-                    msg = await channel.fetch_message(payload.message_id)
-                    uid = int(msg.content.split(": ")[1])
-                    return await moderation.manual_verify_deny_ext(self.client.pool, guild, uid, user)
+                    if str(payload.emoji) == '✅':
+                        return await moderation.manual_verify_ext(self.client.pool, guild, uid, user)
+                    else:
+                        return await moderation.manual_verify_deny_ext(self.client.pool, guild, uid, user)
 
         elif str(payload.emoji) in ['✅', '👍', '❌']:  # handles verification DM reactions
             if user_data is not None:
                 if payload.message_id == user_data[usr_cols.verifyid]:
                     return await dm_verify_react_handler(Verification(self.client), payload, user_data, user)
         # elif str(payload.emoji) in ['✉️','🚫']: # handles modmail (FUTURE)
-        elif payload.emoji.id in raiding.key_ids:  # handles AFK check key reactions
-            return await raiding.confirmed_raiding_reacts(payload, user)
 
 
 def setup(client):
     client.add_cog(Core(client))
+
+def line_count(path):
+    """Count total lines of code in specified path"""
+    file_list = [join(path, file_p) for file_p in listdir(path) if isfile(join(path, file_p))]
+    total = 0
+    for file_path in file_list:
+        if file_path[-3:] == ".py":  # Ensure only python files are counted
+            try:
+                count = 0
+                with open(file_path, encoding="ascii", errors="surrogateescape") as current_file:
+                    for l in current_file:
+                        count += 1
+            except IOError:
+                return -1
+            if count >= 0:
+                total += count
+    return total

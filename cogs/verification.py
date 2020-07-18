@@ -142,7 +142,8 @@ class Verification(commands.Cog):
                     if fame_passed or maxed_passed or stars_passed or months_passed:
                         verified = True
                 if verified:
-                    await complete_verification(self.client.pool, guild, guild_data, member, name, user_data, reverify)
+                    await complete_verification(self.client.pool, guild, guild_data, member, name, user_data, reverify,
+                                                user_data[usr_cols.alt1], user_data[usr_cols.alt2])
                     await channel.send(f"{member.mention} has completed verification.")
                 else:
                     embed = embeds.verification_bad_reqs(guild_data[gld_cols.reqsmsg], fame_passed, maxed_passed, stars_passed,
@@ -220,9 +221,16 @@ async def step_1_verify(pool, user, ign):
     await update_user(pool, user.id, "verifyid", msg.id)
 
 
-async def complete_verification(pool, guild, guild_data, member, name, user_data, reverify):
+async def complete_verification(pool, guild, guild_data, member, name, user_data, reverify, alt1=None, alt2=None):
     role = discord.utils.get(guild.roles, id=guild_data[gld_cols.verifiedroleid])
     tag = member.name
+    alts = ""
+    if alt1:
+        alts += f" | {alt1}"
+    if alt2:
+        alts += f" | {alt2}"
+
+    tag += alts
     try:
         await member.add_roles(role)
         if tag.lower() == name.lower():
@@ -233,7 +241,10 @@ async def complete_verification(pool, guild, guild_data, member, name, user_data
         print("Missing permissions for: {} in guild: {}".format(member.name, guild.name))
 
     embed = embeds.verification_success(guild.name, member.mention)
-    await member.send(embed=embed)
+    try:
+        await member.send(embed=embed)
+    except discord.Forbidden:
+        pass
     guilds = user_data[usr_cols.verifiedguilds]
     if guilds is None:
         guilds = []
@@ -261,13 +272,19 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
         if verified_guilds is not None:
             verified_guilds = verified_guilds.split(",")
             if guild.name in verified_guilds:
-                if status == "appeal_denied":
-                    return await user.send(
-                        "You have been denied from verifying in this server. Contact a moderator+ if you think this is a mistake.")
-                elif user_data[usr_cols.status] == "deny_appeal":
-                    return await user.send(
-                        "You do not meet the requirements of this server, appeal with the check above or contact a moderator+ if you "
-                        "think this is a mistake.")
+                try:
+                    if status == "appeal_denied":
+                        return await user.send(
+                            "You have been denied from verifying in this server. Contact a moderator+ if you think this is a mistake.")
+                    elif user_data[usr_cols.status] == "deny_appeal":
+                        return await user.send(
+                            "You do not meet the requirements of this server, appeal with the check above or contact a moderator+ if you "
+                            "think this is a mistake.")
+                except discord.Forbidden:
+                    ch = self.client.get_channel(payload.channel_id)
+                    await ch.send(
+                        f"{payload.member.mention} - You need to enable DM's from server members to continue with the verification "
+                        "process. Once you do, re-react to the check to continue.", delete_after=15)
 
                 verified = True
                 role = discord.utils.get(guild.roles, id=guild_data[gld_cols.verifiedroleid])
@@ -288,10 +305,22 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
                 await update_user(self.client.pool, user.id, "status", "stp_1")
                 embed = embeds.verification_dm_start()
                 await channel.send(f"{user.mention} is re-verifying after cancelling.")
-                msg = await user.send(embed=embed)
+                try:
+                    msg = await user.send(embed=embed)
+                except discord.Forbidden:
+                    ch = self.client.get_channel(payload.channel_id)
+                    await ch.send(
+                        f"{payload.member.mention} - You need to enable DM's from server members to continue with the verification "
+                        "process. Once you do, re-react to the check to continue.", delete_after=15)
             else:
                 embed = embeds.verification_already_verified_complete(verified_guilds, user_data[usr_cols.ign])
-                msg = await user.send(embed=embed)
+                try:
+                    msg = await user.send(embed=embed)
+                except discord.Forbidden:
+                    ch = self.client.get_channel(payload.channel_id)
+                    await ch.send(
+                        f"{payload.member.mention} - You need to enable DM's from server members to continue with the verification "
+                        "process. Once you do, re-react to the check to continue.", delete_after=15)
                 await msg.add_reaction('👍')
                 await msg.add_reaction('❌')
                 await update_user(self.client.pool, user.id, "verifyid", msg.id)
@@ -303,7 +332,12 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
             embed = discord.Embed(title="Re-verification", value="You were previously denied from verifying with the bot.\n"
                                                                  "React to the 👍 to continue verifying.", color=discord.Color.orange())
             await channel.send(f"{user.mention} is re-verifying after being denied.")
-            msg = await user.send(embed=embed)
+            try:
+                msg = await user.send(embed=embed)
+            except discord.Forbidden:
+                ch = self.client.get_channel(payload.channel_id)
+                await ch.send(f"{payload.member.mention} - You need to enable DM's from server members to continue with the verification "
+                              "process. Once you do, re-react to the check to continue.", delete_after=15)
             await update_user(self.client.pool, user.id, "verifyguild", guild.id)
             await update_user(self.client.pool, user.id, "verifyid", msg.id)
             await update_user(self.client.pool, user.id, "status", "stp_3")
@@ -314,15 +348,30 @@ async def guild_verify_react_handler(self, payload, user_data, guild_data, user,
         elif status != "stp_2" and status != "stp_3":
             embed = embeds.verification_dm_start()
             await channel.send(f"{user.mention} has started the verification process.")
-            msg = await user.send(embed=embed)
+            try:
+                msg = await user.send(embed=embed)
+            except discord.Forbidden:
+                ch = self.client.get_channel(payload.channel_id)
+                await ch.send(f"{payload.member.mention} - You need to enable DM's from server members to continue with the verification "
+                              "process. Once you do, re-react to the check to continue.", delete_after=15)
         else:
-            await user.send("You have already started the verification process, scroll up to find the last message the bot sent regarding "
-                            "verification and continue from there.")
+            try:
+                await user.send("You have already started the verification process, scroll up to find the last message the bot sent "
+                                "regarding verification and continue from there.")
+            except discord.Forbidden:
+                ch = self.client.get_channel(payload.channel_id)
+                await ch.send(f"{payload.member.mention} - You need to enable DM's from server members to continue with the verification "
+                              "process. Once you do, re-react to the check to continue.", delete_after=15)
 
     else:
         embed = embeds.verification_dm_start()
         await channel.send(f"{user.mention} has started the verification process.")
-        msg = await user.send(embed=embed)
+        try:
+            msg = await user.send(embed=embed)
+        except discord.Forbidden:
+            ch = self.client.get_channel(payload.channel_id)
+            await ch.send(f"{payload.member.mention} - You need to enable DM's from server members to continue with the verification "
+                          "process. Once you do, re-react to the check to continue.", delete_after=15)
 
     if user_data is None:
         await add_new_user(self.client.pool, payload.user_id, guild.id, msg.id)

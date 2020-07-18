@@ -6,17 +6,18 @@ import sql
 
 
 class VCSelect:
-    def __init__(self, client, ctx, headcount=False, lock=False, unlock=False, clean=False, parse=False):
+    def __init__(self, client, ctx, headcount=False, lock=False, unlock=False, clean=False, parse=False, log=False):
         self.client = client
         self.ctx = ctx
         self.headcount = headcount
         self.parse = parse
         title = "Headcount Setup" if headcount else "Lock Selection" if lock else "Unlock Selection" if unlock else "Cleaning Selection" if\
-            clean else "Parsing Setup" if parse else "AFK-Check Setup"
+            clean else "Parsing Setup" if parse else "Key Pop Announcement" if log else "AFK-Check Setup"
         description = "Please choose what channel you'd like to start this headcount in." if headcount else\
             "Please choose which channel you'd like to lock." if lock else "Please choose which channel you'd like to unlock." if unlock\
             else "Please choose which channel you'd like to clean." if clean else "Please choose which channel you'd like to parse for." if\
-                parse else "Please choose what channel you'd like to start this afk check in."
+            parse else "Please choose which channel to announce the key pop in." if log else\
+            "Please choose what channel you'd like to start this afk check in."
         self.locationembed = discord.Embed(title=title,
                                            description=description,
                                            color=discord.Color.green())
@@ -108,17 +109,14 @@ class VCSelect:
                 self.raidnum = 0
                 self.hcchannel = self.guild_db.get(sql.gld_cols.raidhc1)
                 self.vcchannel = self.guild_db.get(sql.gld_cols.raidvc1)
-                self.client.raid_db[self.ctx.guild.id]["raiding"][0] = self
             elif reaction.emoji == "2️⃣":
                 self.raidnum = 1
                 self.hcchannel = self.guild_db.get(sql.gld_cols.raidhc2)
                 self.vcchannel = self.guild_db.get(sql.gld_cols.raidvc2)
-                self.client.raid_db[self.ctx.guild.id]["raiding"][1] = self
             else:
                 self.raidnum = 2
                 self.hcchannel = self.guild_db.get(sql.gld_cols.raidhc3)
                 self.vcchannel = self.guild_db.get(sql.gld_cols.raidvc3)
-                self.client.raid_db[self.ctx.guild.id]["raiding"][2] = self
         elif self.invet:
             self.raiderrole = self.guild_db.get(sql.gld_cols.vetroleid)
             self.rlrole = self.guild_db.get(sql.gld_cols.vetrlroleid)
@@ -126,12 +124,10 @@ class VCSelect:
                 self.raidnum = 0
                 self.hcchannel = self.guild_db.get(sql.gld_cols.vethc1)
                 self.vcchannel = self.guild_db.get(sql.gld_cols.vetvc1)
-                self.client.raid_db[self.ctx.guild.id]["vet"][0] = self
             elif reaction.emoji == "2️⃣":
                 self.raidnum = 1
                 self.hcchannel = self.guild_db.get(sql.gld_cols.vethc2)
                 self.vcchannel = self.guild_db.get(sql.gld_cols.vetvc2)
-                self.client.raid_db[self.ctx.guild.id]["vet"][1] = self
         elif self.inevents:
             self.raiderrole = self.guild_db.get(sql.gld_cols.raiderroleid)
             self.rlrole = self.guild_db.get(sql.gld_cols.eventrlid)
@@ -139,12 +135,10 @@ class VCSelect:
                 self.raidnum = 0
                 self.hcchannel = self.guild_db.get(sql.gld_cols.eventhc1)
                 self.vcchannel = self.guild_db.get(sql.gld_cols.eventvc1)
-                self.client.raid_db[self.ctx.guild.id]["events"][0] = self
             elif reaction.emoji == "2️⃣":
                 self.raidnum = 1
                 self.hcchannel = self.guild_db.get(sql.gld_cols.eventhc2)
                 self.vcchannel = self.guild_db.get(sql.gld_cols.eventvc2)
-                self.client.raid_db[self.ctx.guild.id]["events"][1] = self
 
         await self.setup_msg.clear_reactions()
 

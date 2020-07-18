@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 
+import aiohttp
 import discord
 from discord.ext import commands
 
@@ -79,6 +80,82 @@ class Moderation(commands.Cog):
         else:
             embed.add_field(name="Punishments:", value="No punishment logs found!")
             await ctx.send(embed=embed)
+
+
+    @commands.command(usage='addalt <member> <altname>', description="Add an alternate account to a user (limit 2).")
+    @commands.guild_only()
+    @checks.is_security_or_higher_check()
+    async def addalt(self, ctx, member: utils.MemberLookupConverter, altname):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f'https://rotmg-discord-bot.wm.r.appspot.com/?player={altname}', ssl=False) as r:
+                if r.status == 403:
+                    print("ERROR: API ACCESS FORBIDDEN")
+                    await ctx.send(f"<@{self.client.owner_id}> ERROR: API ACCESS REVOKED!.")
+                data = await r.json()  # returns dict
+        if not data:
+            return await ctx.send("There was an issue retrieving realmeye data. Please try the command later.")
+        if 'error' in data:
+            embed = discord.Embed(title='Error!', description=f"There were no players found on realmeye with the name `{altname}`.",
+                                  color=discord.Color.red())
+            return await ctx.send(embed=embed)
+
+        cleaned_name = str(data["player"])
+        res = await sql.add_alt_name(self.client.pool, member.id, cleaned_name)
+        if not res:
+            embed = discord.Embed(title="Error!", description="The user specified already has 2 alts added!", color=discord.Color.red())
+            return await ctx.send(embed=embed)
+
+        name = member.display_name
+
+        if cleaned_name.lower() in name.lower():
+            if res:
+                embed = discord.Embed(title="Success!", description=f"The alt with the name `{cleaned_name}` was already added to "
+                                                                    f"{member.mention}'s name, but was added to the database.")
+            else:
+                embed = discord.Embed(title="Error!", description="The user specified already has this alt linked to their name!",
+                                  color=discord.Color.red())
+            return await ctx.send(embed=embed)
+
+        name += f" | {cleaned_name}"
+        try:
+            await member.edit(nick=name)
+        except discord.Forbidden:
+            return await ctx.send("There was an error adding the alt to this person's name (Perms).\n"
+                           f"Please copy this and add it to their name manually: ` | {cleaned_name}`\n{member.mention}")
+
+        embed = discord.Embed(title="Success!", description=f"`{cleaned_name}` was added as an alt to {member.mention}.",
+                              color=discord.Color.green())
+        await ctx.send(embed=embed)
+
+
+    @commands.command(usage='removealt <member> <altname>', description="Remove an alt from a player.")
+    @commands.guild_only()
+    @checks.is_security_or_higher_check()
+    async def removealt(self, ctx, member: utils.MemberLookupConverter, altname):
+        res = await sql.remove_alt_name(self.client.pool, member.id, altname)
+
+        if not res:
+            embed = discord.Embed(title="Error!", description=f"The user specified doesn't have an alt in the database called `{altname}`!",
+                                  color=discord.Color.red())
+            await ctx.send(embed=embed)
+
+        clean_names = []
+        if altname.lower() in member.display_name.lower():
+            names = member.display_name.split(" | ")
+            for n in names:
+                if n.lower() != altname.lower():
+                    clean_names.append(n)
+        nname = " | ".join(clean_names)
+
+        try:
+            await member.edit(nick=nname)
+        except discord.Forbidden:
+            return await ctx.send("There was an error adding the alt to this person's name (Perms).\n"
+                                  f"Please copy this and replace their nickname manually: ` | {nname}`\n{member.mention}")
+
+        embed = discord.Embed(title="Success!", description=f"`{altname}` was removed as an alt to {member.mention}.",
+                              color=discord.Color.green())
+        await ctx.send(embed=embed)
 
     @commands.command(usage="purge <num> [ignore_pinned]",
                       description="Removes [num] messages from the channel, ignore_pinned = 0 to ignore, 1 to delete pinned")
@@ -167,7 +244,7 @@ async def manual_verify_ext(pool, guild, uid, requester, ign=None):
     else:
         return await channel.send("Please specify an IGN for this user.")
 
-    await verification.complete_verification(pool, guild, guild_data, member, name, user_data, True)
+    await verification.complete_verification(pool, guild, guild_data, member, name, user_data, False)
     embed = discord.Embed(
         description=f"✅ {member.mention} ***has been manually verified by*** {requester.mention}***.***",
         color=discord.Color.green())

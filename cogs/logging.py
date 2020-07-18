@@ -9,6 +9,7 @@ import embeds
 import sql
 import utils
 from cogs.Raiding.logrun import LogRun
+from cogs.Raiding.vc_select import VCSelect
 
 
 class Logging(commands.Cog):
@@ -30,8 +31,10 @@ class Logging(commands.Cog):
 
         col = sql.log_cols.pkey if type == "key" else sql.log_cols.eventkeys if type == "event" else sql.log_cols.vials if type == "vial"\
             else sql.log_cols.helmrunes if type == "helm" else sql.log_cols.shieldrunes if type == "shield" else sql.log_cols.swordrunes
-        await sql.log_runs(self.client.pool, ctx.guild.id, member.id, col, number)
+        num = await sql.log_runs(self.client.pool, ctx.guild.id, member.id, col, number)
 
+        if type != 'event':
+            await utils.check_pops(self.client, ctx, member, number, num, type=type)
         embed = discord.Embed(title="Key Logged!", description=f"Successfully logged {number} popped {type}(s) for {member.mention}",
                               color=discord.Color.green())
         await ctx.send(embed=embed)
@@ -43,6 +46,17 @@ class Logging(commands.Cog):
         if not member:
             member = ctx.author
 
+        setup = VCSelect(self.client, ctx)
+        data = await setup.start()
+        if isinstance(data, tuple):
+            (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+        else:
+            return
+
+        try:
+            await setup_msg.delete()
+        except discord.NotFound:
+            pass
         r_msg = await ctx.send(embed=embeds.dungeon_select())
         def dungeon_check(m):
             return m.author == ctx.author and m.channel == ctx.channel and m.content.isdigit()
@@ -56,9 +70,9 @@ class Logging(commands.Cog):
                 return await r_msg.edit(embed=embed)
 
             if msg.content.isdigit():
-                if 0 < int(msg.content) < 51:
+                if 0 < int(msg.content) < 56:
                     break
-            await ctx.send("Please choose a number between 1-50!", delete_after=7)
+            await ctx.send("Please choose a number between 1-55!", delete_after=7)
 
         await r_msg.delete()
         dungeon_info = utils.dungeon_info(int(msg.content))
@@ -66,8 +80,8 @@ class Logging(commands.Cog):
         dungeontitle = dungeon_info[0]
         emojis = dungeon_info[1]
         guild_db = self.client.guild_db.get(ctx.guild.id)
-        logrun = LogRun(self.client, ctx, emojis, [], dungeontitle, [member.id], guild_db.get(sql.gld_cols.rlroleid), events=False,
-                        vialreacts=[], helmreacts=[], shieldreacts=[], swordreacts=[], numruns=number, runleader=member)
+        logrun = LogRun(self.client, ctx, emojis, [], dungeontitle, [member.id], guild_db.get(sql.gld_cols.rlroleid), hcchannel,
+                        events=inevents, vialreacts=[], helmreacts=[], shieldreacts=[], swordreacts=[], numruns=number, runleader=member)
         await logrun.start()
         
     @commands.command(usage="updateleaderboard", description="Manually updates the leaderboard in this server.")
@@ -76,6 +90,9 @@ class Logging(commands.Cog):
     async def updateleaderboard(self, ctx):
         await ctx.message.delete()
         if ctx.guild.id in self.client.serverwleaderboard:
+            embed = discord.Embed(title="Success!", description="The leaderboards are being updated & will be posted soon!",
+                                  color=discord.Color.green())
+            await ctx.send(embed=embed)
             return await update_leaderboard(self.client, ctx.guild.id)
         return await ctx.send("This server does not have leaderboards enabled! Contact Darkmattr#7321 to enable them.", delete_after=7)
         

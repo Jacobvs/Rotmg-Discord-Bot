@@ -1,7 +1,7 @@
 import asyncio
 
-import numpy as np
 import discord
+import numpy as np
 
 import utils
 

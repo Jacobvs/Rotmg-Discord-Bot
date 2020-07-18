@@ -10,6 +10,8 @@ from discord.ext import commands
 from pytesseract import pytesseract
 
 import checks
+import sql
+import utils
 from cogs.Raiding.afk_check import AfkCheck
 from cogs.Raiding.fametrain import FameTrain
 from cogs.Raiding.headcount import Headcount
@@ -83,6 +85,30 @@ class Raiding(commands.Cog):
         embed = await self.client.loop.run_in_executor(None, functools.partial(parse_image, ctx.author, image, vcchannel))
         await msg.delete()
         await ctx.send(embed=embed)
+
+    @commands.command(usage='addrusher <name>', description="Adds the rusher role to someone.")
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def addrusher(self, ctx, member: utils.MemberLookupConverter):
+        rusherrole = self.client.guild_db.get(ctx.guild.id)[sql.gld_cols.rusherrole]
+        if not rusherrole:
+            return await ctx.send("This server does not have a rusher role configured! Contact Darkmattr if you believe this to "
+                                  "be a mistake!")
+
+        try:
+            await member.add_roles(rusherrole)
+        except discord.Forbidden:
+            return await ctx.send(f"A permissions error occcured while adding the rusher role to {member.mention}.")
+
+        embed = discord.Embed(title="Success!", description=f"{member.mention} was given the rusher role by {ctx.author.display_name}!",
+                              color=discord.Color.green())
+        await ctx.send(embed=embed)
+        try:
+            embed.title = "Congratulations!"
+            await member.send(content=member.mention, embed=embed)
+        except discord.Forbidden:
+            pass
+
 
     @commands.command(usage="lock", description="Locks the raiding voice channel")
     @commands.guild_only()
