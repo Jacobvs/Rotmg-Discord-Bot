@@ -41,7 +41,7 @@ class Minigames(commands.Cog):
 
 
     @commands.command(usage="tictactoe <member>", description="A game of Tic-Tac-Toe with another member.")
-    async def tic_tac_toe(self, ctx, other_player: utils.MemberLookupConverter):
+    async def tictactoe(self, ctx, other_player: utils.MemberLookupConverter):
         if other_player.bot or other_player == ctx.author:
             raise commands.BadArgument('Cannot play a game against that member.')
 
@@ -49,7 +49,7 @@ class Minigames(commands.Cog):
         await game.play()
 
 
-    @commands.command(usage="rps <choice>", aliases=['rockpaperscissors'], description="Play a game of Rock Paper Scissors.")
+    @commands.command(usage="rps <choice>", aliases=['rockpaperscissors', 'rps'], description="Play a game of Rock Paper Scissors.")
     async def rock_paper_scissors(self, ctx, player_choice=''):
         options_text= ['rock', 'paper', 'scissors']
         options_emoji = [':full_moon:', ':newspaper:', ':scissors:']

@@ -1,13 +1,16 @@
+import asyncio
 import json
 from datetime import datetime, timedelta
 from os import listdir
 from os.path import join, isfile
 
+import aiohttp
 import discord
 import psutil
 from discord.ext import commands
 
 import sql
+import utils
 from cogs import verification, moderation
 from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification, subverify_react_handler
 from sql import get_guild, get_user, add_new_guild, usr_cols, gld_cols
@@ -33,9 +36,103 @@ class Core(commands.Cog):
 
     @commands.command(usage="report", description="Report a bug or suggest a new feature here!", aliases=['bug','feature','suggest'])
     async def report(self, ctx):
-        await ctx.send("Please report any bugs you find or suggestions you have here:\n"
-                       "Anyonmous (No login): <https://gitreports.com/issue/Jacobvs/Rotmg-Discord-Bot>\n"
-                       "Github (Preferred): <https://github.com/Jacobvs/Rotmg-Discord-Bot/issues/new/choose>")
+        embed = discord.Embed(title="Is this a feature or a bug?", description="Select 💎 if it's a feature, 🦟 if it's a bug.", color=discord.Color.gold())
+        msg = await ctx.send(embed=embed)
+        await msg.add_reaction("💎")
+        await msg.add_reaction("🦟")
+
+        def check(react, usr):
+            return usr.id == ctx.author.id and react.message.id == msg.id and str(react.emoji) in ["💎", "🦟"]
+
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', timeout=1800, check=check)  # Wait 1/2 hr max
+        except asyncio.TimeoutError:
+            embed = discord.Embed(title="Timed out!", description="You didn't choose an option in time!",
+                                  color=discord.Color.red())
+            await msg.delete()
+            return await ctx.send(embed=embed)
+
+        if str(reaction.emoji) == '💎':
+           label = 'Feature'
+        else:
+           label = 'Bug'
+
+        if label == 'Feature':
+            desc = "```**Is your feature request related to a problem? Please describe.**\nA clear and concise description of what the problem is. " \
+                   "Ex. I'm always frustrated when [...]\n\n**How would the feature work? Describe**\nAdd a description about how the feature would work " \
+                   "(e.g. commands, interactions, etc)\n\n**Describe the ideal implementation.**\nA clear and concise description of what you want to happen.\n\n" \
+                   "**Describe alternatives you've considered**\nA clear and concise description of any alternative solutions or features you've considered.\n\n" \
+                   "**Additional context**\nAdd any other context or a screenshot about the feature request here.\n```"
+        else:
+            desc = "```**Describe the bug**\nA clear and concise description of what the bug is.\n\n**To Reproduce**\nSteps to reproduce the behavior:\n1. (list all steps)\n" \
+                   "**Expected behavior**\nA clear and concise description of what you expected to happen.\n\n**Screenshot**\nIf applicable, add a screenshot/image to help " \
+                   "explain your problem.\n\n**What server & channel did this occur in?**\nServer:\nChannel:\n```"
+        embed = discord.Embed(title="Please copy the template & fill it out", description=desc, color= discord.Color.gold())
+        await msg.clear_reactions()
+        await msg.edit(embed=embed)
+
+        while True:
+            imageb = None
+            def member_check(m):
+                return m.author.id == ctx.author.id and m.channel == msg.channel
+            try:
+               issuemsg = await self.client.wait_for('message', timeout=1800, check=member_check)
+            except asyncio.TimeoutError:
+                embed = discord.Embed(title="Timed out!", description="You didn't write your report in time!", color=discord.Color.red())
+                await msg.edit(embed=embed)
+
+            content = str(issuemsg.content)
+            if not content:
+                content = "No issue content provided."
+            if issuemsg.attachments:
+                imageb = issuemsg.attachments[0] if issuemsg.attachments[0].height else None
+                if not imageb:
+                    await ctx.send("Please only send images as attachments.", delete_after=7)
+                    continue
+                else:
+                    imageb = await imageb.read()
+                    await issuemsg.delete()
+                    break
+            else:
+                await issuemsg.delete()
+                break
+
+        if imageb:
+            img_data = await utils.image_upload(imageb, ctx, is_rc=False)
+            if not img_data:
+                return await ctx.send(
+                    "There was an issue communicating with the image server, try again and if the issue persists – contact the developer.",
+                    delete_after=10)
+
+            image = img_data["secure_url"]
+            content += f"\n\nUploaded Image:\n{image}"
+
+        title = '[FEATURE] ' if label == 'Feature' else '[BUG] '
+        title += f'Submitted by {ctx.author.display_name}'
+
+        header = {'Authorization': f'token {self.client.gh_token}'}
+        payload = {
+            "title": title,
+            'body': content,
+            'assignee': 'Jacobvs',
+            'labels': [label]
+        }
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
+                async with cs.request("POST", "https://api.github.com/repos/Ooga-Booga-Bot/Rotmg-Discord-Bot/issues", json=payload, headers=header) as r:
+                    if r.status != 201:
+                        print("GH ISSUE UPLOAD ERROR:")
+                        print(r)
+                        print(await r.json())
+                        return None
+                    else:
+                        res = await r.json()
+        except asyncio.TimeoutError:
+            return await ctx.send("There was an issue uploading the issue, please retry the command.", delete_after=10)
+
+        embed = discord.Embed(title="Thank You!", description="I (Darkmattr) appreciate that you took the time to fill out a report/suggestion!\nI've been notified & will get to "
+                                                              f"it as soon as possible.\n\nTrack the status of your issue here:\n{res['html_url']}", color=discord.Color.green())
+        await msg.edit(embed=embed)
 
 
     @commands.command(usage="status", description="Retrieve the bot's status.")
