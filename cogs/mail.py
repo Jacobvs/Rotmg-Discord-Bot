@@ -9,14 +9,14 @@ import sql
 import utils
 
 
-class Mmail(commands.Cog):
+class Mail(commands.Cog):
     """Modmail Related Commands & Configuration"""
 
     def __init__(self, client):
         self.client = client
 
 
-    @commands.command(usage='modmail', description='Send a modmail.', aliases=['mail', 'mod'])
+    @commands.command(usage='modmail', description='Send a modmail.', aliases=['mmail', 'mod'])
     async def modmail(self, ctx):
         mail_message = ModmailMessage(self.client, ctx)
         await mail_message.start()
@@ -80,9 +80,9 @@ class Mmail(commands.Cog):
             await ctx.send(embed=embed)
 
 
-    @commands.command(usage="reply <response>", description="Reply to a modmail. Must be used in the modmail channel you wish to respond to.", aliases=['respond'])
+    @commands.command(usage="reply", description="Reply to a modmail. Must be used in the modmail channel you wish to respond to.", aliases=['respond'])
     @commands.guild_only()
-    async def reply(self, ctx, *, response=None):
+    async def reply(self, ctx):
         await ctx.message.delete()
 
         modmail_category = self.client.guild_db[ctx.guild.id][sql.gld_cols.modmailcategory]
@@ -99,39 +99,56 @@ class Mmail(commands.Cog):
         msgembed = discord.Embed(title="Response", description="Please type out your response to the modmail.", color=discord.Color.gold())
         member = ctx.guild.get_member(int(ctx.channel.topic.split(" - ")[0].split("Channel ")[1]))
         msg = None
-        images = []
 
         while True:
-            if not response:
-                if not msg:
-                    msg = await ctx.send(embed=msgembed)
+            images = []
+            txt_file = None
+            if not msg:
+                msg = await ctx.send(embed=msgembed)
 
-                def member_check(m):
-                    return m.author.id == ctx.author.id and m.channel == ctx.channel
-                try:
-                    mailmsg = await self.client.wait_for('message', timeout=1800, check=member_check)
-                except asyncio.TimeoutError:
-                    embed = discord.Embed(title="Timed out!", description="You didn't write your response in time!", color=discord.Color.red())
-                    return await msg.edit(embed=embed)
+            def member_check(m):
+                return m.author.id == ctx.author.id and m.channel == ctx.channel
+            try:
+                mailmsg = await self.client.wait_for('message', timeout=1800, check=member_check)
+            except asyncio.TimeoutError:
+                embed = discord.Embed(title="Timed out!", description="You didn't write your response in time!", color=discord.Color.red())
+                return await msg.edit(embed=embed)
 
-                response = str(mailmsg.content)
-                if mailmsg.attachments:
-                    images = [i.url for i in mailmsg.attachments]
-                await mailmsg.delete()
+            response = str(mailmsg.content)
+            if mailmsg.attachments:
+                images = [i.url for i in mailmsg.attachments if i.height]
+                if not images:
+                    txt_files = [a for a in mailmsg.attachments if a.filename.split('.')[1].lower() == 'txt']
+                    if len(txt_files) < 1:
+                        await ctx.send("Please only send images or .txt files for proof.", delete_after=7)
+                        continue
+                    elif len(txt_files) > 1:
+                        await ctx.send("Please only attach 1 .txt file for proof.", delete_after=7)
+                        continue
+                    txt_file = await txt_files[0].to_file()
+                    bytes = await txt_files[0].read()
+                    text = str(bytes, encoding='utf-8')
+                    if len(text) > 1:
+                        response += f"\n**--File ({txt_files[0].filename})--**\n"
+                        response += text
+            await mailmsg.delete()
 
             if msg:
                 await msg.delete()
 
             mailembed = discord.Embed(title=f"Modmail Response from {ctx.author.name} -> {member.name}", description="If this looks correct, please press the ✅ to send the "
                                       "message, otherwise press the 🔄 emoji to change your message.", color=discord.Color.gold())
+            if len(response) > 4096:
+                response = response[:4055]
+                response += "\n**Message Continues in File Below.**"
             if len(response) <= 1024:
                 mailembed.add_field(name="Response:", value=response, inline=False)
             else:
                 lines = textwrap.wrap(response, width=1024)  # Wrap message before max len of field of 1024
                 for i, l in enumerate(lines):
-                    mailembed.add_field(name=f"Response (pt. {i+1})", value=l)
+                    mailembed.add_field(name=f"Response (pt. {i+1})", value=l, inline=False)
             if images:
-                mailembed.add_field(name="Proof Images:", value=f"{len(images)} Images will be attached to this response.")
+                mailembed.add_field(name="Proof Images:", value=f"{len(images)} Images will be attached to this response.", inline=False)
             mailembed.set_footer(text="Modmail response written at ")
             mailembed.timestamp = datetime.datetime.utcnow()
 
@@ -154,7 +171,6 @@ class Mmail(commands.Cog):
             if str(reaction.emoji) == '✅':
                 break
             else:
-                response = None
                 await msg.edit(embed=msgembed)
 
 
@@ -192,6 +208,7 @@ class Mmail(commands.Cog):
             mailembed.title = f"Anonmous Response from Staff in {ctx.guild.name}"
 
         mailembed.set_thumbnail(url="https://www.bootgum.com/wp-content/uploads/2018/07/Email_Open_550px-1.gif")
+        mailembed.color = discord.Color.teal()
         mailembed.description = "To respond again to this message, use the `!modmail` command."
         await member.send(content=member.mention, embed=mailembed)
 
@@ -200,6 +217,9 @@ class Mmail(commands.Cog):
             embed.set_image(url=img)
             await ctx.send(embed=embed)
             await member.send(embed=embed)
+
+        if txt_file:
+            await member.send(file=txt_file)
 
 
     @commands.command(usage='close <reason>', description="Close a modmail thread")
@@ -234,7 +254,7 @@ class Mmail(commands.Cog):
 
 
 def setup(client):
-    client.add_cog(Mmail(client))
+    client.add_cog(Mail(client))
 
 
 class ModmailMessage:
@@ -247,31 +267,34 @@ class ModmailMessage:
         if not self.ctx.guild:
             servers = []
             for g in self.client.guilds:
-                if g.get_member(self.ctx.author.id):
-                    servers.append(g)
-            serverstr = ""
-            for i, s in enumerate(servers[:10]):
-                serverstr += self.numbers[i] + " - " + s.name + "\n"
-            embed = discord.Embed(description="What server would you like to send modmail to?\n" + serverstr,
-                                  color=discord.Color.gold())
-            msg = await self.ctx.author.send(embed=embed)
-            for e in self.numbers[:len(servers)]:
-                await msg.add_reaction(e)
+                if self.client.guild_db[g.id][sql.gld_cols.modmailcategory]:
+                    if g.get_member(self.ctx.author.id):
+                        servers.append(g)
+            if len(servers) > 1:
+                serverstr = ""
+                for i, s in enumerate(servers[:10]):
+                    serverstr += self.numbers[i] + " - " + s.name + "\n"
+                embed = discord.Embed(description="What server would you like to send modmail to?\n" + serverstr,
+                                      color=discord.Color.gold())
+                msg = await self.ctx.author.send(embed=embed)
+                for e in self.numbers[:len(servers)]:
+                    await msg.add_reaction(e)
 
-            def check(react, usr):
-                return usr.id == self.ctx.author.id and react.message.id == msg.id and str(react.emoji) in self.numbers[:len(servers)]
+                def check(react, usr):
+                    return usr.id == self.ctx.author.id and react.message.id == msg.id and str(react.emoji) in self.numbers[:len(servers)]
 
-            try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=1800, check=check)  # Wait 1/2 hr max
-            except asyncio.TimeoutError:
-                embed = discord.Embed(title="Timed out!", description="You didn't choose a server in time!",
-                                      color=discord.Color.red())
+                try:
+                    reaction, user = await self.client.wait_for('reaction_add', timeout=1800, check=check)  # Wait 1/2 hr max
+                except asyncio.TimeoutError:
+                    embed = discord.Embed(title="Timed out!", description="You didn't choose a server in time!",
+                                          color=discord.Color.red())
+                    await msg.delete()
+                    return await self.ctx.author.send(embed=embed)
+
+                server = servers[self.numbers.index(str(reaction.emoji))]
                 await msg.delete()
-                return await self.ctx.author.send(embed=embed)
-
-            server = servers[self.numbers.index(str(reaction.emoji))]
-            await msg.delete()
-
+            else:
+                server = servers[0]
         else:
             try:
                 await self.ctx.message.delete()
@@ -340,11 +363,13 @@ class ModmailMessage:
             aboutmember = None
 
         embed = discord.Embed(title="Describe your issue", description="Send a message with your modmail to this channel. Please be as descriptive as possible & include "
-                                                                       "an attached image/video showing proof if you have it.", color=discord.Color.gold())
+                                                                       "an attached image/video showing proof if you have it.\nIf the message is over 2k characters, "
+                                                                       "send it as a .txt file (as discord will suggest).", color=discord.Color.gold())
         msg = await self.ctx.author.send(embed=embed)
 
         while True:
             images = []
+            txt_file = None
             def member_check(m):
                 return m.author.id == self.ctx.author.id and m.channel == dmchannel
             try:
@@ -358,19 +383,37 @@ class ModmailMessage:
             if not content:
                 content = "No mail content provided."
             if mailmsg.attachments:
-                images = [i.url for i in mailmsg.attachments]
+                images = [i.url for i in mailmsg.attachments if i.height]
+                if not images:
+                    txt_files = [a for a in mailmsg.attachments if a.filename.split('.')[1].lower() == 'txt']
+                    if len(txt_files) < 1:
+                        await self.ctx.author.send("Please only send images or .txt files for proof.", delete_after=7)
+                        continue
+                    elif len(txt_files) > 1:
+                        await self.ctx.author.send("Please only attach 1 .txt file for proof.", delete_after=7)
+                        continue
+                    txt_file = await txt_files[0].to_file()
+                    bytes = await txt_files[0].read()
+                    text = str(bytes, encoding='utf-8')
+                    if len(text) > 1:
+                        content += f"\n**--File ({txt_files[0].filename})--**\n"
+                        content += text
             mailembed = discord.Embed(title=f"Modmail from {self.ctx.author.name} -> {server.name}", description="If this looks correct, please press the ✅ to send the message, "
                                     "otherwise press the 🔄 emoji to change your message.", color=discord.Color.gold())
+
+            if len(content) > 4096:
+                content = content[:4055]
+                content += "\n**Message Continues in File Below.**"
             if len(content) <= 1024:
                 mailembed.add_field(name="Content:", value=content, inline=False)
             else:
                 lines = textwrap.wrap(content, width=1024)  # Wrap message before max len of field of 1024
                 for i, l in enumerate(lines):
-                    mailembed.add_field(name=f"Content (pt. {i+1})", value=l)
+                    mailembed.add_field(name=f"Content (pt. {i+1})", value=l, inline=False)
             if images:
-                mailembed.add_field(name="Proof Images:", value=f"{len(images)} Image will be attached to this response.")
+                mailembed.add_field(name="Proof Images:", value=f"{len(images)} Image will be attached to this response.", inline=False)
             if aboutmember:
-                mailembed.add_field(name="Regarding:", value=f"This modmail is regarding {aboutmember.nick}")
+                mailembed.add_field(name="Regarding:", value=f"This modmail is regarding {aboutmember.nick}", inline=False)
             mailembed.set_footer(text="Modmail written at ")
             mailembed.timestamp = datetime.datetime.utcnow()
 
@@ -403,9 +446,11 @@ class ModmailMessage:
         if self.ctx.author.id in user_ids:
             index = user_ids.index(self.ctx.author.id)+1
             modmail_channel = modmail_category.text_channels[index]
+            created = False
         else:
             modmail_channel = await modmail_category.create_text_channel(name=str(self.ctx.author), topic=f"Modmail Channel"
                                                                          f" {self.ctx.author.id} - DO NOT CHANGE THIS!")
+            created = True
 
         # Sort channels alphabetically by name
         by_name = sorted(modmail_category.text_channels, key=lambda c: c.name)
@@ -422,17 +467,26 @@ class ModmailMessage:
         mailembed.description = f"To reply to this message, use the `{self.ctx.prefix}reply` command, or to close this thread use `{self.ctx.prefix}close <reason>`.\nFrom:" \
                                 f" {self.ctx.author.mention}"
         mailembed.set_thumbnail(url="https://www.bootgum.com/wp-content/uploads/2018/07/Email_Open_550px-1.gif")
+        mailembed.color = discord.Color.green()
         await modmail_channel.send(embed=mailembed)
         for i, img in enumerate(images, start=1):
             embed = discord.Embed(title=f"Proof #{i}")
             embed.set_image(url=img)
             await modmail_channel.send(embed=embed)
+        if txt_file:
+            await modmail_channel.send(file=txt_file)
 
-        embed = discord.Embed(title="New Ticket", description=f"Ticket opened in {modmail_channel.mention}.", color=discord.Color.green())
+        title = "New Ticket" if created else "Response"
+        desc = "opened in" if created else "responded to"
+        color = discord.Color.green() if created else discord.Color.teal()
+
+
+        embed = discord.Embed(title=title, description=f"Ticket {desc} `{modmail_channel.name}`.", color=discord.Color.green())
         embed.set_author(name=self.ctx.author.display_name, icon_url=self.ctx.author.avatar_url)
         embed.set_footer(text="Opened at ")
         embed.timestamp = datetime.datetime.utcnow()
         await modmail_log_channel.send(embed=embed)
+
 
         embed = discord.Embed(title="Success!", description="Your message was sent successfully! Please be patient, staff will respond as soon as possible.",
                               color=discord.Color.green())
