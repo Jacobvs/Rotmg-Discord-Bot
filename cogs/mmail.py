@@ -99,6 +99,7 @@ class Mmail(commands.Cog):
         msgembed = discord.Embed(title="Response", description="Please type out your response to the modmail.", color=discord.Color.gold())
         member = ctx.guild.get_member(int(ctx.channel.topic.split(" - ")[0].split("Channel ")[1]))
         msg = None
+        images = []
 
         while True:
             if not response:
@@ -114,6 +115,8 @@ class Mmail(commands.Cog):
                     return await msg.edit(embed=embed)
 
                 response = str(mailmsg.content)
+                if mailmsg.attachments:
+                    images = [i.url for i in mailmsg.attachments]
                 await mailmsg.delete()
 
             if msg:
@@ -127,6 +130,8 @@ class Mmail(commands.Cog):
                 lines = textwrap.wrap(response, width=1024)  # Wrap message before max len of field of 1024
                 for i, l in enumerate(lines):
                     mailembed.add_field(name=f"Response (pt. {i+1})", value=l)
+            if images:
+                mailembed.add_field(name="Proof Images:", value=f"{len(images)} Images will be attached to this response.")
             mailembed.set_footer(text="Modmail response written at ")
             mailembed.timestamp = datetime.datetime.utcnow()
 
@@ -178,7 +183,7 @@ class Mmail(commands.Cog):
         if anonymous:
             mailembed.title += " (Sent Anonymously)"
 
-        mailembed.description = "To close this thread, use the `close` command."
+        mailembed.description = f"To close this thread, use the `{ctx.prefix}close` command."
 
         await msg.delete()
         await ctx.send(embed=mailembed)
@@ -189,6 +194,12 @@ class Mmail(commands.Cog):
         mailembed.set_thumbnail(url="https://www.bootgum.com/wp-content/uploads/2018/07/Email_Open_550px-1.gif")
         mailembed.description = "To respond again to this message, use the `!modmail` command."
         await member.send(content=member.mention, embed=mailembed)
+
+        for i, img in enumerate(images, start=1):
+            embed = discord.Embed(title=f"Proof #{i}")
+            embed.set_image(url=img)
+            await ctx.send(embed=embed)
+            await member.send(embed=embed)
 
 
     @commands.command(usage='close <reason>', description="Close a modmail thread")
@@ -210,7 +221,7 @@ class Mmail(commands.Cog):
         member = ctx.guild.get_member(int(ctx.channel.topic.split(" - ")[0].split("Channel ")[1]))
 
         embed = discord.Embed(title="Ticket closed", description=f"Closed by {ctx.author.mention} for reason:\n\n{reason}.", color=discord.Color.red())
-        embed.set_author(name=member.name, icon_url=member.avatar_url)
+        embed.set_author(name=member.display_name, icon_url=member.avatar_url)
         embed.set_footer(text="Closed at ")
         embed.timestamp = datetime.datetime.utcnow()
         await modmail_log_channel.send(embed=embed)
@@ -329,10 +340,11 @@ class ModmailMessage:
             aboutmember = None
 
         embed = discord.Embed(title="Describe your issue", description="Send a message with your modmail to this channel. Please be as descriptive as possible & include "
-                                                                       "**links** (not attachments) to images/videos of proof if you have them.", color=discord.Color.gold())
+                                                                       "an attached image/video showing proof if you have it.", color=discord.Color.gold())
         msg = await self.ctx.author.send(embed=embed)
 
         while True:
+            images = []
             def member_check(m):
                 return m.author.id == self.ctx.author.id and m.channel == dmchannel
             try:
@@ -343,6 +355,10 @@ class ModmailMessage:
                 return await self.ctx.author.send(embed=embed)
 
             content = str(mailmsg.content)
+            if not content:
+                content = "No mail content provided."
+            if mailmsg.attachments:
+                images = [i.url for i in mailmsg.attachments]
             mailembed = discord.Embed(title=f"Modmail from {self.ctx.author.name} -> {server.name}", description="If this looks correct, please press the ✅ to send the message, "
                                     "otherwise press the 🔄 emoji to change your message.", color=discord.Color.gold())
             if len(content) <= 1024:
@@ -351,6 +367,8 @@ class ModmailMessage:
                 lines = textwrap.wrap(content, width=1024)  # Wrap message before max len of field of 1024
                 for i, l in enumerate(lines):
                     mailembed.add_field(name=f"Content (pt. {i+1})", value=l)
+            if images:
+                mailembed.add_field(name="Proof Images:", value=f"{len(images)} Image will be attached to this response.")
             if aboutmember:
                 mailembed.add_field(name="Regarding:", value=f"This modmail is regarding {aboutmember.nick}")
             mailembed.set_footer(text="Modmail written at ")
@@ -401,12 +419,17 @@ class ModmailMessage:
             await modmail_channel.edit(overwrites=over)
             mailembed.set_field_at(len(mailembed.fields)-1, name="Regarding:", value=f"This modmail is regarding {aboutmember.mention}")
 
-        mailembed.description = f"To reply to this message, use the `reply` command, or to close this thread use `close <reason>`.\nFrom: {self.ctx.author.mention}"
+        mailembed.description = f"To reply to this message, use the `{self.ctx.prefix}reply` command, or to close this thread use `{self.ctx.prefix}close <reason>`.\nFrom:" \
+                                f" {self.ctx.author.mention}"
         mailembed.set_thumbnail(url="https://www.bootgum.com/wp-content/uploads/2018/07/Email_Open_550px-1.gif")
         await modmail_channel.send(embed=mailembed)
+        for i, img in enumerate(images, start=1):
+            embed = discord.Embed(title=f"Proof #{i}")
+            embed.set_image(url=img)
+            await modmail_channel.send(embed=embed)
 
         embed = discord.Embed(title="New Ticket", description=f"Ticket opened in {modmail_channel.mention}.", color=discord.Color.green())
-        embed.set_author(name=self.ctx.author, icon_url=self.ctx.author.avatar_url)
+        embed.set_author(name=self.ctx.author.display_name, icon_url=self.ctx.author.avatar_url)
         embed.set_footer(text="Opened at ")
         embed.timestamp = datetime.datetime.utcnow()
         await modmail_log_channel.send(embed=embed)
