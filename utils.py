@@ -464,8 +464,11 @@ async def check_pops(client, ctx, member, changed_amount, num, type=None, emoji=
         await hcchannel.send(desc)
 
 
-async def image_upload(binary, ctx):
-    payload = {'file': binary, 'upload_preset': 'rotmg-rc-maps'}
+async def image_upload(binary, sendable, is_rc=True):
+    if is_rc:
+        payload = {'file': binary, 'upload_preset': 'rotmg-rc-maps'}
+    else:
+        payload = {'file': binary, 'upload_preset': 'gh_issues'}
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
             async with cs.request("POST", "https://api.cloudinary.com/v1_1/darkmattr/image/upload", data=payload) as r:
@@ -476,7 +479,7 @@ async def image_upload(binary, ctx):
                 else:
                     res = await r.json()
     except asyncio.TimeoutError:
-        return await ctx.send("There was an issue uploading the image, please retry the command.", delete_after=10)
+        return await sendable.send("There was an issue uploading the image, please retry the command.", delete_after=10)
     return res
 
 
@@ -675,3 +678,138 @@ def rand_dungon_keys():
             '<:reefKey:561251664388947968>', '<:thicketKey:561248917208039434>', '<:hudlKey:711444346334871643>',
             '<:habbyKey:711444346263830559>']
     return keys
+
+
+def darkjoke():
+    jokes = [('Killing black people is like saying the n word',
+              'Black people do it all the time but get angry when a white person joins in'),
+             ('How do you get a school shooting to happen at a Black school?', 'Call the cops'),
+             ("When someone says rape jokes aren’t funny, I don't care","It's not like I asked for their consent anyway"),
+             ('What did the jew say when he was recaptured by the nazis?', "Auschwitz, here we go again"),
+             ("Terrorism makes no sense. Commit suicide and might get 72 virgins?", "Become a Catholic priest and get them now"), (
+             "Whenever I see a woman driving a bus I smile and think about how far we as a society have come",
+             "And then I wait for the next bus"),
+             ("People are like teeth", "White ones are better, most are yellow, and black ones don’t work"),
+             ("What’s the difference between Me and Cancer", "My dad didn’t beat cancer"), (
+             "I don't understand why Obama had to make speeches behind bullet-proof glass",
+             "I mean, I know he's black and all, but I highly doubt he'll shoot anyone"), (
+             "What's the difference between science and religion?",
+             "One builds planes and skyscrapers, and the other brings them together"),
+             ("Does my Thai girlfriend have a penis?", "Something inside me says yes"),
+             ("Congrats to Mac miller", "More than one year sober"),
+             ("How do you start a rave?", "Throw a flashbang into the epilepsy ward"),
+             ("I wish my lawn was a 16 year old girl", "Because then it could just cut itself"),
+             ("What do people and sharks have in common?", "All the great ones are white"),
+             ("Why are there no black priests?", "We called them 'father' and they suddenly disappeared"),
+             ("What's a word that starts with an 'N' and ends with an 'R' that you don't want to call a black person?", "Neighbor"),
+             ("What's the good thing about FaceApp?", "Kids with cancer can see themselves older"),
+             ("What's 6 miles long and has an IQ of 10?", "A parade in pakistan"),
+             ("What’s faster than a black man with your tv?", "His brother with your Xbox"),
+             ("I don’t believe in evolution", "If it were real, black people would be bulletproof by now"), (
+             "My first football game was a lot like how I lost my virginity", "I was bloody and sore at the end, but at least my dad came"),
+             ("I love my girlfriend <3", "But she can be 4 too"),
+             ("Why are black people's bones so fragile?", "Because their dads never came back with the milk"),
+             ("Why do black people get hit by cars more in the winter?", "Because they’re easier to see"),
+             ("What do you call a fat woman with a rape whistle?", "Optimistic"),
+             ("I beat my wife and got arrested for destruction of property"),
+             ("What’s the worst thing about vegetables?", "You can’t eat the wheelchair."),
+             ("After being strangled, which organ in the female body remains warm after death?", "My cock."),
+             ("What activity do 9 out of 10 people like to take part in?", "Gang rape."),
+             ("What's the difference between Jews and money?", "I'd care if I lost 6 million dollars."),
+             ("Whats the difference between Isaac Newton and the baby I just stabbed to death?", "Isaac Newton died a virgin."),
+             ("Whats the best rated hotel?", "Auschwitz, 6 million stars"),
+             ("I like my women like I like my wine", "Twelve years old and in my basement"), ("What does the w in muslim stand for?"
+                                                                                              "women's rights"),
+             ("Why are all runners in the Olympics black?", "Because when they hear the gun, they run faster"),
+             ("What's the difference between a black man and a bench?", "One can support a family"),
+             ("Why should you be scared of white people in prison?", "Because you know they're actually in there for a reason"),
+             ("Why don't black people get presents on christmas?", "Because jails haven't needed chimneys since the holocaust"),
+             ("Women aren't objects", "Because objects actually have value"),
+             ("A group of blacks and whites are playing basketball in prison. Who wins?", "The blacks win because of home advantage"),
+             ("Why are Americans so stupid?", "Because the ones that go to school get shot"),
+             ("What can children cure?", "Erectile Disfunction"),
+             ("What’s red, 4 inches long, and makes my girlfriend cry when I feed it to her?", "Her miscarriage"),
+             ("What is the difference between Santa and a jew?", "Santa goes down the chimney"),
+             ("What's the difference between a Jew and a bullet?", "A bullet leaves the chamber")]
+    return random.choice(jokes)
+
+def get_roast():
+    roasts = [
+        "at least my mom pretends to love me",
+        "Don't play hard to get when you are hard to want",
+        "Don't you worry your pretty little head about it. The operative word being little. Not pretty.",
+        "God wasted a good asshole when he put teeth in your mouth",
+        "Goddamn did your parents dodge a bullet when they abandoned you.",
+        "I can't even call you ugly, because nature has already beaten me to it.",
+        "I don't have the time, or the crayons to explain this to you.",
+        "I hope you win the lottery and lose your ticket.",
+        "I once smelled a dog fart that had more personality than you.",
+        "I want to call you a douche, but that would be unfair and unrealistic. Douches are often found near vaginas.",
+        "I wonder if you'd be able to speak more clearly if your parents were second cousins instead of first.",
+        "I would call you a cunt, but you lack the warmth or the depth.",
+        "I would rather be friends with Ajit Pai than you.",
+        "I'd love to stay and chat but I'd rather have type-2 diabetes",
+        "I'm just surprised you haven't yet retired from being a butt pirate.",
+        "I'm not mad. I'm just... disappointed.",
+        "I've never met someone who's at once so thoughtless, selfish, and uncaring of other people's interests, "
+        "while also having such lame and boring interests of his own. You don't have friends, because you shouldn't.",
+        "I’m betting your keyboard is crusty from all that Cheeto-dust finger typing, you goddamn neckbeard. ",
+        "If 'unenthusiastic handjob' had a face, your profile picture would be it.",
+        "If there was a single intelligent thought in your head it would have died from loneliness.",
+        "If you were a potato you'd be a stupid potato.",
+        "If you were an inanimate object, you'd be a participation trophy.",
+        "If you where any stupider we'd have to water you",
+        "If you're dad wasn't so much of a pussy, he'd have come out of the closet before he had you.",
+        "Jesus Christ it looks like your face was on fire and someone tried to put it out with an ice pick",
+        "Mr. Rogers would be disappointed in you.",
+        "Next time, don't take a laxative before you type because you just took a steaming stinking dump right on the page. "
+        "Now wipe that shit up and don't fuck it up like your life.",
+        "Not even your dog loves you. He's just faking it.",
+        "Once upon a time, Santa Claus was asked what he thought of your mom, your sister and your grandma, "
+        "and thus his catchphrase was born.",
+        "People don't even pity you.",
+        "People like you are the reason God doesn't talk to us anymore",
+        "Take my lowest priority and put yourself beneath it.",
+        "The IQ test only goes down to zero but you make a really compelling case for negative numbers",
+        "The only thing you're fucking is natural selection",
+        "There are two ugly people in this chat, and you're both of them.",
+        "There will never be enough middle fingers in this world for you",
+        "They don't make a short enough bus in the world for a person like you.",
+        "Those aren't acne scars, those are marks from the hanger.",
+        "Twelve must be difficult for you. I don’t mean BEING twelve, I mean that being your IQ.",
+        "We all dislike you, but not quite enough that we bother to think about you.",
+        "Were you born a cunt, or is it something you have to commit yourself to every morning?",
+        "When you die, people will struggle to think of nice things to say about you.",
+        "Why don’t you crawl back to whatever micro-organism cesspool you came from, "
+        "and try not to breath any of our oxygen on the way there",
+        "You are a pizza burn on the roof of the world's mouth.",
+        "You are dumber than a block of wood and not nearly as useful",
+        "You are like the end piece of bread in a loaf, everyone touches you but no one wants you",
+        "You have a face made for radio",
+        "You have more dick in your personality than you do in your pants",
+        "You have the face of a bulldog licking piss off a stinging nettle.",
+        "You know they say 90% of dust is dead human skin? That's what you are to me.",
+        "You look like your father would be disappointed in you. If he stayed.",
+        "You losing your virginity is like a summer squash growing in the middle of winter. Never happening.",
+        "You may think people like being around you- but remember this: there is a difference between being liked and being tolerated.",
+        "You might want to get a colonoscopy for all that butthurt",
+        "You should put a condom on your head, because if you're going to act like a dick you better dress like one too.",
+        "You're an example of why animals eat their young.",
+        "You're impossible to underestimate",
+        "You're kinda like Rapunzel except instead of letting down your hair you let down everyone in your life",
+        "You're like a penny on the floor of a public restroom - filthy, untouchable and practically worthless.",
+        "You're like a square blade, all edge and no point.",
+        "You're not pretty enough to be this dumb",
+        "You're objectively unattractive.",
+        "You're so dense, light bends around you.",
+        "You're so salty you would sink in the Dead Sea",
+        "You're so stupid you couldn't pour piss out of a boot if the directions were written on the heel",
+        "You're such a pussy that fucking you wouldn't be gay.",
+        "Your birth certificate is an apology letter from the abortion clinic.",
+        "Your memes are trash.",
+        "Your mother may have told you that you could be anything you wanted, but a douchebag wasn't what she meant."]
+    return random.choice(roasts)
+
+
+async def only_role_higher_channel(guild, channel, role):
+    roles = guild.roles

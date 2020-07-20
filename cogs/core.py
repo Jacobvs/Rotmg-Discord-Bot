@@ -139,20 +139,25 @@ class Core(commands.Cog):
     async def status(self, ctx):
         embed = discord.Embed(title="Bot Status", color=discord.Color.dark_gold())
         nverified = await sql.get_num_verified(self.client.pool)
-        embed.add_field(name="Bot latency:", value=f"**`{round(self.client.latency*1000, 2)}`** Milliseconds.", inline=False)
+        embed.add_field(name="Bot latency:", value=f"**`{round(self.client.latency*1000, 2)}`** Milliseconds.")
+        mcount = 0
+        for g in self.client.guilds:
+            mcount += g.member_count
         embed.add_field(name="Connected Servers:",
-                        value=f"**`{len(self.client.guilds)}`** servers with **`{len(list(self.client.get_all_members()))}`** total members.",
-                        inline=False)
-        embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.", inline=False)
+                        value=f"**`{len(self.client.guilds)}`** servers with **`{mcount}`** total members.")
+        embed.add_field(name="\u200b", value="\u200b")
+        embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.")
         lines = line_count('/home/pi/Rotmg-Bot/') + line_count('/home/pi/Rotmg-Bot/cogs') + line_count(
             '/home/pi/Rotmg-Bot/cogs/Raiding') + line_count('/home/pi/Rotmg-Bot/cogs/Minigames')
-        embed.add_field(name="Lines of Code:", value=(f"**`{lines}`** lines of code."), inline=False)
+        embed.add_field(name="Lines of Code:", value=(f"**`{lines}`** lines of code."))
+        embed.add_field(name="\u200b", value="\u200b")
         embed.add_field(name="Server Status:",
                         value=(f"```yaml\nServer: 0 GHz Potato\nCPU: {psutil.cpu_percent()}% utilization."
                                f"\nMemory: {psutil.virtual_memory().percent}% utilization."
                                f"\nDisk: {psutil.disk_usage('/').percent}% utilization."
                                f"\nNetwork: {round(psutil.net_io_counters().bytes_recv*0.000001)} MB in "
-                               f"/ {round(psutil.net_io_counters().bytes_sent*0.000001)} MB out.```"))
+                               f"/ {round(psutil.net_io_counters().bytes_sent*0.000001)} MB out.```"), inline=False)
+        embed.add_field(name="Development Progress", value="To see what I'm working on, click here:\nhttps://github.com/Ooga-Booga-Bot/Rotmg-Discord-Bot/projects/1", inline=False)
         if ctx.guild:
             appinfo = await self.client.application_info()
             embed.add_field(name=f"Bot author:", value=f"{appinfo.owner.mention} - DM me if something's broken or to request a feature!",
@@ -199,9 +204,6 @@ class Core(commands.Cog):
         if message.guild is None and message.author != self.client.user:
             # If DM is a command
             if message.content[0] == '!':
-                # TODO: implement proper checks
-                if message.author.id not in self.client.variables.get('allowed_user_ids'):
-                    await message.author.send('You do not have the permissions to use this command in a DM context.')
                 return
 
             user_data = await get_user(self.client.pool, message.author.id)
@@ -357,6 +359,9 @@ class Core(commands.Cog):
                 await afk.cp_handler(payload)
 
             elif payload.message_id == verify_message_id and str(payload.emoji) == '✅':  # handles verification reacts
+                blacklisted = await sql.get_blacklist(self.client.pool, user.id, payload.guild_id, 'verification')
+                if blacklisted:
+                    return await user.send("You have been blacklisted from verifying in this server! Contact a security+ if you believe this to be a mistake!")
                 return await guild_verify_react_handler(Verification(self.client), payload, user_data, guild_data, user, guild,
                                                         verify_message_id)
             elif payload.message_id == subverify_1_msg_id and (

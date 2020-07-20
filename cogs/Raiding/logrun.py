@@ -109,7 +109,7 @@ class LogRun:
         if self.events:
             await self.msg.clear_reactions()
             embed = discord.Embed(title="Chain #", description="If you chained, please specify the number of runs chained. "
-                                    "If the chain was longer than 5, react to the 🔄 emoji to specify how many you chained.",
+                                    "If the chain was longer than 5, react to the 🔄 emoji to specify how many you chained.\nIf you didn't chain, press the ❌",
                                   color=discord.Color.gold())
             await self.msg.edit(embed=embed)
             emojis = self.numbers[1:5]

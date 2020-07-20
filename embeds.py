@@ -90,7 +90,7 @@ def verification_manual_verify(user, ign, code, fame, nfame, nfamereq, maxed, nm
     embed.add_field(name="Stars", value=bool_to_emoji(stars) + f" ({nstars}/{nstarsreq} stars)", inline=True)
     embed.add_field(name="Account Creation Date", value=bool_to_emoji(months) + f" ({nmonths}/{nmonthsreq} months)", inline=True)
     embed.add_field(name="Private Location", value=bool_to_emoji(private), inline=True)
-    embed.add_field(name='\a', value='\a', inline=True)
+    embed.add_field(name="\u200b", value="\u200b", inline=True)
     embed.add_field(name='Command:', value=f'To manually verify them use the check, to deny them use the X.', inline=False)
     return embed
 

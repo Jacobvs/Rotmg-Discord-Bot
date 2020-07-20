@@ -56,13 +56,11 @@ class Moderation(commands.Cog):
 
         embed = discord.Embed(description=desc, color=discord.Color.green())
 
-        data = await sql.get_users_punishments(self.client.pool, member.id, ctx.guild.id)
-        if data:
-            pages = []
-            embed.add_field(name="Punishments:", value=f"Found `{len(data)}` punishments in this user's history.\nUse the reactions below "
-                                                       "to navigate through them.")
-            pages.append(embed)
-            for i, r in enumerate(data):
+        pdata = await sql.get_users_punishments(self.client.pool, member.id, ctx.guild.id)
+        bdata = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id)
+        pages = []
+        if pdata:
+            for i, r in enumerate(pdata, start=1):
                 requester = await ctx.guild.fetch_member(r[sql.punish_cols.r_uid])
                 active = "✅" if r[sql.punish_cols.active] else "❌"
                 starttime = f"Issued at: `{r[sql.punish_cols.starttime].strftime('%b %d %Y %H:%M:%S')}`"
@@ -70,15 +68,31 @@ class Moderation(commands.Cog):
                 ptype = r[sql.punish_cols.type].capitalize()
                 color = discord.Color.orange() if ptype == "Warn" else discord.Color.red() if ptype == "Suspend" else \
                     discord.Color.from_rgb(0, 0, 0)
-                pembed = discord.Embed(title=f"Punishment Log #{i+1} - {ptype}", color=color)
+                pembed = discord.Embed(title=f"Punishment Log #{i} - {ptype}", color=color)
                 pembed.description = f"Punished member: {member.mention}\n**{ptype}** issued by {requester.mention}\nActive: {active}"
-                pembed.add_field(name="Reason:", value=r[sql.punish_cols.reason])
+                pembed.add_field(name="Reason:", value=r[sql.punish_cols.reason], inline=False)
                 pembed.add_field(name="Time:", value=starttime+endtime)
                 pages.append(pembed)
+        if bdata:
+            for i, r in enumerate(bdata, start=1):
+                requester = await ctx.guild.fetch_member(r[sql.blacklist_cols.rid])
+                active = "✅"
+                starttime = f"Issued at: `{r[sql.blacklist_cols.issuetime].strftime('%b %d %Y %H:%M:%S')}`"
+                btype = r[sql.blacklist_cols.type].capitalize()
+                color = discord.Color.from_rgb(0, 0, 0)
+                bembed = discord.Embed(title=f"Blacklist Log #{i} - {btype}", color=color)
+                bembed.description = f"Punished member: {member.mention}\n**{btype}** blacklist issued by {requester.mention}\nActive: {active}"
+                bembed.add_field(name="Reason:", value=r[sql.blacklist_cols.reason], inline=False)
+                bembed.add_field(name="Time:", value=starttime)
+                pages.append(bembed)
+        if pdata or bdata:
+            embed.add_field(name="Punishments:", value=f"Found `{len(pdata)}` Punishments in this user's history.\nFound `{len(bdata)}` Blacklists in this users history.\nUse the "
+                                                       "reactions below to navigate through them.")
+            pages.insert(0, embed)
             paginator = utils.EmbedPaginator(self.client, ctx, pages)
             await paginator.paginate()
         else:
-            embed.add_field(name="Punishments:", value="No punishment logs found!")
+            embed.add_field(name="Punishments:", value="No punishment or blacklist logs found!")
             await ctx.send(embed=embed)
 
 

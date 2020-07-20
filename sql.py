@@ -95,6 +95,44 @@ async def remove_alt_name(pool, uid, altname):
             await conn.commit()
             return True
 
+async def get_blacklist(pool, uid, gid, type=None):
+    """Get Blacklist entry for user or get all entries"""
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            if type:
+                sql = "SELECT * FROM rotmg.blacklist WHERE uid = %s AND gid = %s AND type = %s"
+                data = (uid, gid, type)
+                await cursor.execute(sql, data)
+                await conn.commit()
+                res = await cursor.fetchone()
+                return True if res else False
+            else:
+                sql = "SELECT * FROM rotmg.blacklist WHERE uid = %s AND gid = %s"
+                data = (uid, gid)
+                await cursor.execute(sql, data)
+                await conn.commit()
+                res = await cursor.fetchall()
+                return res
+
+
+async def add_blacklist(pool, uid, gid, rid, type, reason):
+    """Add Blacklist entry for user"""
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "INSERT INTO rotmg.blacklist (uid, gid, rid, type, reason) VALUES (%s, %s, %s, %s, %s)"
+            data = (uid, gid, rid, type, reason)
+            await cursor.execute(sql, data)
+            await conn.commit()
+
+async def remove_blacklist(pool, uid, gid, type):
+    """Add Blacklist entry for user"""
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "DELETE FROM rotmg.blacklist WHERE uid = %s AND gid = %s AND type = %s"
+            data = (uid, gid, type)
+            await cursor.execute(sql, data)
+            await conn.commit()
+
 
 async def add_new_user(pool, user_id, guild_id, verify_id):
     """Create record of user data in rotmg.users"""
@@ -445,6 +483,14 @@ class punish_cols(enum.IntEnum):
     reason = 6
     active = 7
     roles = 8
+
+class blacklist_cols(enum.IntEnum):
+    uid = 0
+    gid = 1
+    rid = 2
+    type = 3
+    reason = 4
+    issuetime = 5
 
 class log_cols(enum.IntEnum):
     id = 0

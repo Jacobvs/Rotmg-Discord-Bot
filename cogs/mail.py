@@ -116,7 +116,7 @@ class Mail(commands.Cog):
 
             response = str(mailmsg.content)
             if mailmsg.attachments:
-                images = [i.url for i in mailmsg.attachments if i.height]
+                images = [i for i in mailmsg.attachments if i.height]
                 if not images:
                     txt_files = [a for a in mailmsg.attachments if a.filename.split('.')[1].lower() == 'txt']
                     if len(txt_files) < 1:
@@ -131,7 +131,19 @@ class Mail(commands.Cog):
                     if len(text) > 1:
                         response += f"\n**--File ({txt_files[0].filename})--**\n"
                         response += text
-            await mailmsg.delete()
+                else:
+                    images = [await utils.image_upload(await i.read(), ctx, is_rc=False) for i in images]
+            if not response and not images:
+                await ctx.send('Please type something out or attach an image.')
+                continue
+            if not response:
+                response = "No response provided, look at image(s) below."
+
+
+            try:
+                await mailmsg.delete()
+            except discord.NotFound:
+                pass
 
             if msg:
                 await msg.delete()
@@ -214,7 +226,7 @@ class Mail(commands.Cog):
 
         for i, img in enumerate(images, start=1):
             embed = discord.Embed(title=f"Proof #{i}")
-            embed.set_image(url=img)
+            embed.set_image(url=img["secure_url"])
             await ctx.send(embed=embed)
             await member.send(embed=embed)
 
@@ -307,6 +319,17 @@ class ModmailMessage:
             return await self.ctx.author.send("This server does not have modmail setup yet! Contact an upper level staff if you believe this to be a mistake!")
         modmail_log_channel = self.client.guild_db[server.id][sql.gld_cols.modmaillogchannel]
 
+        blacklisted = await sql.get_blacklist(self.client.pool, self.ctx.author.id, server.id, 'modmail')
+        if blacklisted:
+            embed = discord.Embed(title="Modmail attempt (Blacklisted!)", description=f"{self.ctx.author.mention} was prevented from sending modmail due to blacklist.",
+                                  color=discord.Color.orange())
+            embed.set_author(name=self.ctx.author.display_name, icon_url=self.ctx.author.avatar_url)
+            embed.set_footer(text="Attempted at ")
+            embed.timestamp = datetime.datetime.utcnow()
+            await modmail_log_channel.send(embed=embed)
+            return await self.ctx.author.send("You have been blacklisted from sending modmail in this server! Contact a security+ if you believe this to be a mistake!")
+
+
         embed = discord.Embed(title="Is the modmail about a specific member?", description="If this message is "
                             "regarding someone in the server, please react to the ✅ emoji, otherwise react to the ❌.",
                             color=discord.Color.gold())
@@ -383,7 +406,7 @@ class ModmailMessage:
             if not content:
                 content = "No mail content provided."
             if mailmsg.attachments:
-                images = [i.url for i in mailmsg.attachments if i.height]
+                images = [i for i in mailmsg.attachments if i.height]
                 if not images:
                     txt_files = [a for a in mailmsg.attachments if a.filename.split('.')[1].lower() == 'txt']
                     if len(txt_files) < 1:
@@ -398,6 +421,8 @@ class ModmailMessage:
                     if len(text) > 1:
                         content += f"\n**--File ({txt_files[0].filename})--**\n"
                         content += text
+                else:
+                    images = [await utils.image_upload(await i.read(), self.ctx.author, is_rc=False) for i in images]
             mailembed = discord.Embed(title=f"Modmail from {self.ctx.author.name} -> {server.name}", description="If this looks correct, please press the ✅ to send the message, "
                                     "otherwise press the 🔄 emoji to change your message.", color=discord.Color.gold())
 
@@ -471,7 +496,7 @@ class ModmailMessage:
         await modmail_channel.send(embed=mailembed)
         for i, img in enumerate(images, start=1):
             embed = discord.Embed(title=f"Proof #{i}")
-            embed.set_image(url=img)
+            embed.set_image(url=img["secure_url"])
             await modmail_channel.send(embed=embed)
         if txt_file:
             await modmail_channel.send(file=txt_file)
@@ -481,7 +506,7 @@ class ModmailMessage:
         color = discord.Color.green() if created else discord.Color.teal()
 
 
-        embed = discord.Embed(title=title, description=f"Ticket {desc} `{modmail_channel.name}`.", color=discord.Color.green())
+        embed = discord.Embed(title=title, description=f"Ticket {desc} `{modmail_channel.name}` by {self.ctx.author.mention}.", color=discord.Color.green())
         embed.set_author(name=self.ctx.author.display_name, icon_url=self.ctx.author.avatar_url)
         embed.set_footer(text="Opened at ")
         embed.timestamp = datetime.datetime.utcnow()

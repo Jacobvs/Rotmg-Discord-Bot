@@ -164,6 +164,75 @@ class Punishments(commands.Cog):
                               description=f"`{member.display_name}` was successfully un-suspended.", color=discord.Color.green())
         await ctx.send(embed=embed)
 
+    @commands.command(usage='vblacklist <member> <reason>', description="Blacklist a user from verifying in this server.")
+    @commands.guild_only()
+    @checks.is_security_or_higher_check()
+    async def vblacklist(self, ctx, member: utils.MemberLookupConverter, *, reason):
+        if member.bot:
+            return await ctx.send(f'Cannot vblacklist `{member.display_name}` (is a bot).')
+        if member.guild_permissions.kick_members:
+            return await ctx.send(f'Cannot vblacklist `{member.display_name}` due to roles.')
+        if not reason:
+            reason = "No reason specified"
+        exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'verification')
+        if exists:
+            return await ctx.send(f"That member ({member.mention}) already has an active verification blacklist!")
+        await sql.add_blacklist(self.client.pool, member.id, ctx.guild.id, ctx.author.id, 'verification', reason)
+        embed = discord.Embed(title="Success!", description=f"{member.mention} was successfully blacklisted from verification!", color=discord.Color.green())
+        embed.add_field(name="Requester:", value=ctx.author.mention)
+        await ctx.send(embed=embed)
+
+    @commands.command(usage='mblacklist <member> <reason>', description="Blacklist a user from sending modmail in this server.")
+    @commands.guild_only()
+    @checks.is_security_or_higher_check()
+    async def mblacklist(self, ctx, member: utils.MemberLookupConverter, *, reason):
+        if member.bot:
+            return await ctx.send(f'Cannot mblacklist `{member.display_name}` (is a bot).')
+        if member.guild_permissions.kick_members:
+            return await ctx.send(f'Cannot mblacklist `{member.display_name}` due to roles.')
+        if not reason:
+            reason = "No reason specified"
+        exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'modmail')
+        if exists:
+            return await ctx.send(f"That member ({member.mention}) already has an active modmail blacklist!")
+        await sql.add_blacklist(self.client.pool, member.id, ctx.guild.id, ctx.author.id, 'modmail', reason)
+        embed = discord.Embed(title="Success!", description=f"{member.mention} was successfully blacklisted from sending modmail!", color=discord.Color.green())
+        embed.add_field(name="Requester:", value=ctx.author.mention)
+        await ctx.send(embed=embed)
+
+    @commands.command(usage='unvblacklist <member>', description="Un-Blacklist a user from verifying in this server.")
+    @commands.guild_only()
+    @checks.is_security_or_higher_check()
+    async def unvblacklist(self, ctx, member: utils.MemberLookupConverter):
+        if member.bot:
+            return await ctx.send(f'Cannot un-vblacklist `{member.display_name}` (is a bot).')
+        if member.guild_permissions.kick_members:
+            return await ctx.send(f'Cannot un-vblacklist `{member.display_name}` due to roles.')
+        exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'verification')
+        if not exists:
+            return await ctx.send(f"That member ({member.mention}) doesn't have an active verification blacklist!")
+        await sql.remove_blacklist(self.client.pool, member.id, ctx.guild.id, 'verification')
+        embed = discord.Embed(title="Success!", description=f"{member.mention} was successfully un-blacklisted from verification!", color=discord.Color.green())
+        embed.add_field(name="Requester:", value=ctx.author.mention)
+        await ctx.send(embed=embed)
+
+    @commands.command(usage='unmblacklist <member>', description="Un-Blacklist a user from sending modmail in this server.")
+    @commands.guild_only()
+    @checks.is_security_or_higher_check()
+    async def unmblacklist(self, ctx, member: utils.MemberLookupConverter):
+        if member.bot:
+            return await ctx.send(f'Cannot un-mblacklist `{member.display_name}` (is a bot).')
+        if member.guild_permissions.kick_members:
+            return await ctx.send(f'Cannot un-mblacklist `{member.display_name}` due to roles.')
+        exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'modmail')
+        if not exists:
+            return await ctx.send(f"That member ({member.mention}) doesn't have an active modmail blacklist!")
+        await sql.remove_blacklist(self.client.pool, member.id, ctx.guild.id, 'modmail')
+        embed = discord.Embed(title="Success!", description=f"{member.mention} was successfully un-blacklisted from modmail!", color=discord.Color.green())
+        embed.add_field(name="Requester:", value=ctx.author.mention)
+        await ctx.send(embed=embed)
+
+
     #TODO: Add change duration command
     #TODO: add proof optional to punishment
 
