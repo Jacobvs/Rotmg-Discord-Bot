@@ -207,20 +207,25 @@ def headcount_base(run_title, requester, keyed_run, emojis, rusher_emojis, thumb
     return embed
 
 
-def afk_check_base(run_title, requester, keyed_run: bool, emojis, rusher_emojis, thumbnail=None, color=discord.Color.teal()):
+def afk_check_base(run_title, requester, keyed_run: bool, emojis, confirm_emojis, rusher_emojis, thumbnail=None, color=discord.Color.teal()):
     if keyed_run:
         desc = (f"To join, **connect to the raiding channel by clicking its name** and react to: {emojis[0]}\n"
                 f"If you have a key, react to {emojis[1]}\n"
-                "To indicate your class or gear choices, react to the appropriate emoji's below\n")
+                "To indicate your class or gear choices, react below\n\n")
     else:
         desc = (f"To join, **connect to the raiding channel by clicking its name** and react to: {emojis[0]}\n"
-                "To indicate your class or gear choices, react to the appropriate emoji's below\n")
+                "To indicate your class or gear choices, react below\n\n")
+    if confirm_emojis:
+        if len(confirm_emojis) > 1:
+            desc += "Please bring one of these items if you have them: " + "".join(confirm_emojis) + "\n"
+        else:
+            desc += f"If you have a {rusher_emojis[0]}, please bring it!\n"
     if rusher_emojis:
         if len(rusher_emojis) > 1:
             desc += "If you are able to rush, react to one of these emojis: " + "".join(rusher_emojis) + "\n"
         else:
             desc += "If you are rushing, please react to: " + rusher_emojis[0] + "\n"
-    desc += "If you are nitroboosting or have key popper early loc, react to: <:shard:682365548465487965>\n" \
+    desc += "\nIf you are nitroboosting or have key popper early loc, react to: <:shard:682365548465487965>\n" \
             "To end the AFK check as a leader, react to ❌"
     embed = discord.Embed(description=desc, color=color)
     if thumbnail:
@@ -248,10 +253,12 @@ def aborted_afk(run_title, requester, thumbnail):
     return embed
 
 
-def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run, rushers=False):
+def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run, rushers=False, reactions=False):
     embed = discord.Embed(description=f"**[AFK Check]({msg_url}) control panel for `{run_title}`**", color=discord.Color.teal())
     embed.add_field(name="Location of run:", value=location, inline=False)
     embed.add_field(name="Nitro Boosters:", value="`None`", inline=False)
+    if reactions:
+        embed.add_field(name="Confirmed Reactions:", value="No Confirmed Reactions", inline=False)
     if rushers:
         embed.add_field(name="Confirmed Rushers:", value="No Confirmed Rushers", inline=False)
     if keyed_run:

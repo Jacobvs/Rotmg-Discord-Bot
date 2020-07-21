@@ -85,9 +85,10 @@ class Headcount:
             self.keyed_run = True
             self.dungeontitle = self.dungeon_info[0]
             self.emojis = self.dungeon_info[1]
-            self.rusher_emojis = self.dungeon_info[2]
-            self.hc_color = self.dungeon_info[3]
-            self.thumbnail = self.dungeon_info[4]
+            self.confirmreactions = self.dungeon_info[2]
+            self.rusher_emojis = self.dungeon_info[3]
+            self.hc_color = self.dungeon_info[4]
+            self.thumbnail = self.dungeon_info[5]
         await msg.delete()
         await self.setup_msg.delete()
 

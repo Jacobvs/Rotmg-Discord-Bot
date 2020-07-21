@@ -165,13 +165,6 @@ async def add_new_guild(pool, guild_id, guild_name):
             data = (guild_id, guild_name, 0, 0, 0, 0, False, True, "", 0, 0, 0)
             await cursor.execute(sql, data)
             await conn.commit()
-            sql = f"create table rotmg.`{guild_id}` (id bigint not null primary key, pkey int default '0' null, vials int default '0'"\
-                  "null, helmrunes int default '0' null, shieldrunes int default '0' null, swordrunes int default '0' null, eventkeys int"\
-                  "default '0' null, runsdone int default '0' null, eventsdone int default '0' null, srunled int default '0' null, frunled"\
-                  "int default '0' null, eventled int default '0' null, runsassisted int default '0' null, eventsassisted int default '0'"\
-                  "null, weeklyruns int default '0' null, weeklyassists int default '0' null);"
-            await cursor.execute(sql)
-            await conn.commit()
             sql = "INSERT INTO `rotmg`.`casino_top` (`guildid`, `1_id`, `1_bal`, `2_id`, `2_bal`, `3_id`, `3_bal`, `4_id`, `4_bal`," \
                   " `5_id`, `5_bal`, `6_id`, `6_bal`, `7_id`, `7_bal`, `8_id`, `8_bal`, `9_id`, `9_bal`, `10_id`, `10_bal`) VALUES " \
                   f"({guild_id}, NULL, DEFAULT, NULL, DEFAULT, NULL, DEFAULT, NULL, DEFAULT, NULL, DEFAULT, NULL, DEFAULT, NULL, " \
@@ -361,11 +354,11 @@ async def get_top_balances(pool, guild_id):
 async def log_runs(pool, guild_id, member_id, column=1, number=1):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
-            await cursor.execute(f"SELECT * from rotmg.`{guild_id}` WHERE id = {member_id}")
+            await cursor.execute(f"SELECT * from rotmg.logging WHERE uid = {member_id} AND gid = {guild_id}")
             data = await cursor.fetchone()
             await conn.commit()
             if not data:
-                await cursor.execute(f"INSERT INTO rotmg.`{guild_id}`(id) VALUES({member_id})")
+                await cursor.execute(f"INSERT INTO rotmg.logging(uid, gid) VALUES({member_id}, {guild_id})")
                 await conn.commit()
                 data = 0
             else:
@@ -376,13 +369,13 @@ async def log_runs(pool, guild_id, member_id, column=1, number=1):
                 else "srunled" if column == 9 else "frunled" if column == 10 else "eventled" if column == 11 else "runsassisted" if\
                 column == 12 else "eventsassisted"
             if column == 9 or column == 10 or column == 11:
-                await cursor.execute(f"UPDATE rotmg.`{guild_id}` SET {name} = {name} + {number}, weeklyruns = weeklyruns + {number} "
-                                     f"WHERE id = {member_id}")
+                await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number}, weeklyruns = weeklyruns + {number} "
+                                     f"WHERE uid = {member_id} AND gid = {guild_id}")
             elif column == 12:
-                await cursor.execute(f"UPDATE rotmg.`{guild_id}` SET {name} = {name} + {number}, weeklyassists = weeklyassists + {number} "
-                                     f"WHERE id = {member_id}")
+                await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number}, weeklyassists = weeklyassists + {number} "
+                                     f"WHERE uid = {member_id} AND gid = {guild_id}")
             else:
-                await cursor.execute(f"UPDATE rotmg.`{guild_id}` SET {name} = {name} + {number} WHERE id = {member_id}")
+                await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number} WHERE uid = {member_id} AND gid = {guild_id}")
             await conn.commit()
 
             return data + number
@@ -390,13 +383,13 @@ async def log_runs(pool, guild_id, member_id, column=1, number=1):
 async def get_log(pool, guild_id, member_id):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
-            await cursor.execute(f"SELECT * from rotmg.`{guild_id}` WHERE id = {member_id}")
+            await cursor.execute(f"SELECT * from rotmg.logging WHERE uid = {member_id} AND gid = {guild_id}")
             data = await cursor.fetchone()
             await conn.commit()
             if not data:
-                await cursor.execute(f"INSERT INTO rotmg.`{guild_id}`(id) VALUES({member_id})")
+                await cursor.execute(f"INSERT INTO rotmg.logging (uid, gid) VALUES({member_id}, {guild_id})")
                 await conn.commit()
-                await cursor.execute(f"SELECT * from rotmg.`{guild_id}` WHERE id = {member_id}")
+                await cursor.execute(f"SELECT * from rotmg.logging WHERE uid = {member_id} AND gid = {guild_id}")
                 data = await cursor.fetchone()
             return data
 
@@ -408,9 +401,9 @@ async def get_top_10_logs(pool, guild_id, column, only_10=True):
                 column == 8 else "srunled" if column == 9 else "frunled" if column == 10 else "eventled" if column == 11 else \
                 "runsassisted" if column == 12 else "eventsassisted" if column == 13 else "weeklyruns" if column == 14 else "weeklyassists"
             if only_10:
-                await cursor.execute(f"SELECT * from rotmg.`{guild_id}` ORDER BY {name} DESC LIMIT 10")
+                await cursor.execute(f"SELECT * from rotmg.logging WHERE gid = {guild_id} ORDER BY {name} DESC LIMIT 10")
             else:
-                await cursor.execute(f"SELECT * from rotmg.`{guild_id}` ORDER BY {name} DESC")
+                await cursor.execute(f"SELECT * from rotmg.logging WHERE gid = {guild_id} ORDER BY {name} DESC")
             data = await cursor.fetchall()
             await conn.commit()
             return list(data)
@@ -418,7 +411,7 @@ async def get_top_10_logs(pool, guild_id, column, only_10=True):
 async def get_0_runs(pool, guild_id):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
-            await cursor.execute(f"SELECT * from rotmg.`{guild_id}` WHERE weeklyruns = 0")
+            await cursor.execute(f"SELECT * from rotmg.logging WHERE gid = {guild_id} AND weeklyruns = 0")
             data = await cursor.fetchall()
             await conn.commit()
             return list(data)
@@ -494,21 +487,22 @@ class blacklist_cols(enum.IntEnum):
 
 class log_cols(enum.IntEnum):
     id = 0
-    pkey = 1
-    vials = 2
-    helmrunes = 3
-    shieldrunes = 4
-    swordrunes = 5
-    eventkeys = 6
-    runsdone = 7
-    eventsdone = 8
-    srunled = 9
-    frunled = 10
-    eventled = 11
-    runsassisted = 12
-    eventsassisted = 13
-    weeklyruns = 14
-    weeklyassists = 15
+    gid = 1
+    pkey = 2
+    vials = 3
+    helmrunes = 4
+    shieldrunes = 5
+    swordrunes = 6
+    eventkeys = 7
+    runsdone = 8
+    eventsdone = 9
+    srunled = 10
+    frunled = 11
+    eventled = 12
+    runsassisted = 13
+    eventsassisted = 14
+    weeklyruns = 15
+    weeklyassists = 16
 
 class casino_cols(enum.IntEnum):
     id = 0

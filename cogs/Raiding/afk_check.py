@@ -35,6 +35,7 @@ class AfkCheck:
         self.potentialkeys = []
         self.userswloc = []
         self.rushers = {}
+        self.confirmedreactions = {}
         self.numrushers = 0
         self.firstpopperearlyloc = True if self.guild_db[sql.gld_cols.firstpopperearlyloc] == 1 else False
         self.secondpopperearlyloc = True if self.guild_db[sql.gld_cols.secondpopperearlyloc] == 1 else False
@@ -44,6 +45,9 @@ class AfkCheck:
                                            description="Please choose what channel you'd like to start this afk check in.",
                                            color=discord.Color.green())
         self.dungeonembed = embeds.dungeon_select()
+        self.iswoland = ctx.guild.id == 666063675416641539
+        if self.iswoland:
+            self.crackerjack = ctx.guild.get_role(666071594069655577)
 
 
     async def start(self):
@@ -77,9 +81,10 @@ class AfkCheck:
 
 
     async def start_afk(self, convert_from_hc=False):
-        self.rusher_emojis = self.dungeon_info[2]
-        self.afk_color = self.dungeon_info[3]
-        self.afk_img = self.dungeon_info[4]
+        self.confirmreactions = self.dungeon_info[2]
+        self.rusher_emojis = self.dungeon_info[3]
+        self.afk_color = self.dungeon_info[4]
+        self.afk_img = self.dungeon_info[5]
 
         # Setup Reaction
         if self.dungeontitle == "Void" or self.dungeontitle == "Full-Skip Void":
@@ -99,13 +104,13 @@ class AfkCheck:
         if not convert_from_hc:
             self.afkmsg = await self.hcchannel.send(f"@here `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} "
                                                 f"in {self.vcchannel.name}", embed=embeds.
-                                                afk_check_base(self.dungeontitle, self.ctx.author, True, self.emojis, self.rusher_emojis,
+                                                afk_check_base(self.dungeontitle, self.ctx.author, True, self.emojis, self.confirmreactions, self.rusher_emojis,
                                                                self.afk_img, self.afk_color))
         else:
             await self.hcmsg.clear_reactions()
             await self.hcmsg.edit(content=f"@here `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} "
                                     f"in {self.vcchannel.name} (Converted from headcount)",
-                                  embed=embeds.afk_check_base(self.dungeontitle, self.ctx.author, True, self.emojis, self.rusher_emojis,
+                                  embed=embeds.afk_check_base(self.dungeontitle, self.ctx.author, True, self.emojis, self.confirmreactions, self.rusher_emojis,
                                                               self.afk_img, self.afk_color))
             pingmsg = await self.hcchannel.send(f"@here `{self.dungeontitle}` {self.emojis[0]} re-ping (Headcount -> AFK)")
             await pingmsg.delete()
@@ -114,7 +119,8 @@ class AfkCheck:
 
         asyncio.get_event_loop().create_task(self.add_emojis())
         rush = True if self.rusher_emojis else False
-        cp = embeds.afk_check_control_panel(self.afkmsg.jump_url, self.location, self.dungeontitle, self.emojis[1], True, rushers=rush)
+        cmojis = True if self.confirmreactions else False
+        cp = embeds.afk_check_control_panel(self.afkmsg.jump_url, self.location, self.dungeontitle, self.emojis[1], True, rushers=rush, reactions=cmojis)
         self.cpmsg = await self.ctx.send(embed=cp)
 
         await self.cpmsg.add_reaction("📝")
@@ -152,7 +158,7 @@ class AfkCheck:
                     or (self.secondpopperrole in payload.member.roles and self.secondpopperrole and self.secondpopperearlyloc)
                     or (self.thirdpopperrole in payload.member.roles and self.thirdpopperrole and self.thirdpopperearlyloc)
                            else False) and payload.member.display_name not in self.nitroboosters:
-                    await payload.member.send(f"The location for this run is: {self.location}")
+                    await payload.member.send(f"Confirmed {payload.emoji}. The location for this run is:\n***{self.location}***\nPlease get to the location soon.")
                     if payload.member not in self.userswloc:
                         self.userswloc.append(payload.member)
                     if payload.member.display_name not in self.nitroboosters:
@@ -210,7 +216,9 @@ class AfkCheck:
                             await self.dm_handler("<:HelmRune:708191783825178674>", payload.member,
                                                   "Do you have a Helm Rune you are willing to pop for this run? If so react to the "
                                                   "<:HelmRune:708191783825178674> emoji.", self.potentialhelm, self.helmrunes, helm=True)
-
+            if str(payload.emoji) in self.confirmreactions:
+                await self.dm_handler(str(payload.emoji), payload.member, f"Please confirm your reaction by pressing: {payload.emoji}.", confirm_list=self.confirmedreactions,
+                                      confirm_emoji=True)
             if str(payload.emoji) in self.rusher_emojis:
                 if self.numrushers < self.maxrushers:
                     if self.guild_db[sql.gld_cols.rusherrole] and not self.guild_db[sql.gld_cols.rusherrole] in payload.member.roles:
@@ -250,7 +258,7 @@ class AfkCheck:
                 pass
 
             for m in self.userswloc:
-                await m.send(f"The location has changed to {self.location}.\nPlease get to the new location as soon as possible.")
+                await m.send(f"The location has changed to **{self.location}**.\nPlease get to the new location as soon as possible.")
 
             cp = self.cpmsg.embeds[0]
             cp.set_field_at(0, name="Location of run:", value=self.location, inline=False)
@@ -270,7 +278,7 @@ class AfkCheck:
 
 
     async def dm_handler(self, emoji, member, desc, pot_list=None, confirm_list=None, key=False, vial=False, helm=False, shield=False,
-                         sword=False, rush=False):
+                         sword=False, rush=False, confirm_emoji=False):
         if pot_list != None:
             pot_list.append(member)
         msg = await member.send(desc)
@@ -298,20 +306,34 @@ class AfkCheck:
             else:
                 self.rushers[emoji] = [member.mention]
             self.numrushers += 1
+        elif confirm_emoji:
+            mstring = member.mention
+            if self.iswoland and self.crackerjack in member.roles:
+                mstring += "⭐"
+
+            if emoji in self.confirmedreactions:
+                self.confirmedreactions[emoji].append(mstring)
+            else:
+                self.confirmedreactions[emoji] = [member.mention]
+
+
         elif confirm_list != None:
             confirm_list.append(member)
 
-        if not rush:
+        if rush:
+            await member.send(f"Confirmed {emoji}. The location for this run is:\n***{self.location}***\nPlease get to the location soon.")
+        elif confirm_emoji:
+            await member.send(f"Confirmed {emoji}. Thanks! Please wait for the run to start.")
+        else:
             await member.send(f"Confirmed {emoji}. The location for this run is:\n***{self.location}***\nPlease get to the location and "
                               f"trade `{self.ctx.author.display_name}`.")
-        else:
-            await member.send(f"Confirmed {emoji}. The location for this run is:\n***{self.location}***\nPlease get to the location soon.")
-        if member not in self.userswloc:
+        if not confirm_emoji and member not in self.userswloc:
             self.userswloc.append(member)
 
-        if key or vial or helm or shield or sword or rush:
+        if key or vial or helm or shield or sword or confirm_emoji or rush:
             cp = self.cpmsg.embeds[0]
-            add = 1 if self.rusher_emojis else 0
+            add = 1 if self.confirmreactions else 0
+            add += 1 if self.rusher_emojis else 0
             if key:
                 if len(self.keyreacts) == 1:
                     cp.set_field_at(2+add, name="Current Keys:", value=f"Main {self.emojis[1]}: {self.keyreacts[0].mention}"
@@ -350,13 +372,20 @@ class AfkCheck:
                     cp.set_field_at(3+add, name="Sword Rune:", value=f"Main <:SwordRune:708191783405879378>: {self.swordrunes[0].mention}"
                                                                  f"\nBackup <:SwordRune:708191783405879378>: {self.swordrunes[1].mention}",
                                     inline=True)
+            elif confirm_emoji:
+                s = ""
+                for k in self.confirmedreactions:
+                    s += k + " - "
+                    s += " | ".join(self.confirmedreactions[k])
+                    s += "\n"
+                cp.set_field_at(2, name="Confirmed Reactions", value=s, inline=False)
             else:
                 s = ""
                 for k in self.rushers:
                     s += k + " - "
-                    s += ", ".join(self.rushers[k])
+                    s += " | ".join(self.rushers[k])
                     s += "\n"
-                cp.set_field_at(2, name="Confirmed Rushers", value=s, inline=False)
+                cp.set_field_at(1+add, name="Confirmed Rushers", value=s, inline=False)
 
             await self.cpmsg.edit(embed=cp)
 
@@ -451,6 +480,8 @@ class AfkCheck:
 
     async def add_emojis(self):
         for e in self.emojis:
+            await self.afkmsg.add_reaction(e)
+        for e in self.confirmreactions:
             await self.afkmsg.add_reaction(e)
         for e in self.rusher_emojis:
             await self.afkmsg.add_reaction(e)

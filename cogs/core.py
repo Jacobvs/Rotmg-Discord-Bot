@@ -35,7 +35,11 @@ class Core(commands.Cog):
 
 
     @commands.command(usage="report", description="Report a bug or suggest a new feature here!", aliases=['bug','feature','suggest'])
+    @commands.guild_only()
     async def report(self, ctx):
+        blacklisted = await sql.get_blacklist(self.client.pool, self.ctx.author.id, ctx.guild.id, 'reporting')
+        if blacklisted:
+            return await ctx.author.send("You have been blacklisted from sending a report or suggestion! Contact a security+ if you believe this to be a mistake!")
         embed = discord.Embed(title="Is this a feature or a bug?", description="Select 💎 if it's a feature, 🦟 if it's a bug.", color=discord.Color.gold())
         msg = await ctx.send(embed=embed)
         await msg.add_reaction("💎")
