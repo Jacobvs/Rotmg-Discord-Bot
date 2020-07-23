@@ -46,7 +46,11 @@ class VCSelect:
             if three:
                 s += "3️⃣ - " + three.name + "\n"
                 emojis.append("3️⃣")
-            if one or two or three:
+            four = self.guild_db.get(sql.gld_cols.raidvc4)
+            if four:
+                s += "4️⃣ - " + four.name + "\n"
+                emojis.append("4️⃣")
+            if one or two or three or four:
                 self.inraiding = True
 
             self.locationembed.add_field(name="Available Channels:", value=s)
@@ -60,11 +64,19 @@ class VCSelect:
             if one:
                 s += "1️⃣ - " + one.name + "\n"
                 emojis.append("1️⃣")
-                self.invet = True
             two = self.guild_db.get(sql.gld_cols.vetvc2)
             if two:
                 s += "2️⃣ - " + two.name + "\n"
                 emojis.append("2️⃣")
+            three = self.guild_db.get(sql.gld_cols.vetvc3)
+            if three:
+                s += "3️⃣ - " + three.name + "\n"
+                emojis.append("3️⃣")
+            four = self.guild_db.get(sql.gld_cols.vetvc4)
+            if four:
+                s += "4️⃣ - " + four.name + "\n"
+                emojis.append("4️⃣")
+            if one or two or three or four:
                 self.invet = True
             self.locationembed.add_field(name="Available Channels:", value=s)
             self.setup_msg = await self.ctx.send(embed=self.locationembed)
@@ -77,11 +89,19 @@ class VCSelect:
             if one:
                 s += "1️⃣ - " + one.name + "\n"
                 emojis.append("1️⃣")
-                self.inevents = True
             two = self.guild_db.get(sql.gld_cols.eventvc2)
             if two:
                 s += "2️⃣ - " + two.name + "\n"
                 emojis.append("2️⃣")
+            three = self.guild_db.get(sql.gld_cols.eventvc3)
+            if three:
+                s += "3️⃣ - " + three.name + "\n"
+                emojis.append("3️⃣")
+            four = self.guild_db.get(sql.gld_cols.eventvc4)
+            if four:
+                s += "4️⃣ - " + four.name + "\n"
+                emojis.append("4️⃣")
+            if one or two or three or four:
                 self.inevents = True
             self.locationembed.add_field(name="Available Channels:", value=s)
             self.setup_msg = await self.ctx.send(embed=self.locationembed)
@@ -92,7 +112,7 @@ class VCSelect:
 
 
         def location_check(react, usr):
-            return usr == self.ctx.author and react.message.id == self.setup_msg.id and react.emoji in ['1️⃣', '2️⃣', '3️⃣']
+            return usr == self.ctx.author and react.message.id == self.setup_msg.id and react.emoji in ['1️⃣', '2️⃣', '3️⃣', '4️⃣']
 
 
         try:
@@ -113,10 +133,14 @@ class VCSelect:
                 self.raidnum = 1
                 self.hcchannel = self.guild_db.get(sql.gld_cols.raidhc2)
                 self.vcchannel = self.guild_db.get(sql.gld_cols.raidvc2)
-            else:
+            elif reaction.emoji == "3️⃣":
                 self.raidnum = 2
                 self.hcchannel = self.guild_db.get(sql.gld_cols.raidhc3)
                 self.vcchannel = self.guild_db.get(sql.gld_cols.raidvc3)
+            else:
+                self.raidnum = 3
+                self.hcchannel = self.guild_db.get(sql.gld_cols.raidhc4)
+                self.vcchannel = self.guild_db.get(sql.gld_cols.raidvc4)
         elif self.invet:
             self.raiderrole = self.guild_db.get(sql.gld_cols.vetroleid)
             self.rlrole = self.guild_db.get(sql.gld_cols.vetrlroleid)
@@ -128,6 +152,14 @@ class VCSelect:
                 self.raidnum = 1
                 self.hcchannel = self.guild_db.get(sql.gld_cols.vethc2)
                 self.vcchannel = self.guild_db.get(sql.gld_cols.vetvc2)
+            elif reaction.emoji == "3️⃣":
+                self.raidnum = 2
+                self.hcchannel = self.guild_db.get(sql.gld_cols.vethc3)
+                self.vcchannel = self.guild_db.get(sql.gld_cols.vetvc3)
+            else:
+                self.raidnum = 3
+                self.hcchannel = self.guild_db.get(sql.gld_cols.vethc4)
+                self.vcchannel = self.guild_db.get(sql.gld_cols.vetvc4)
         elif self.inevents:
             self.raiderrole = self.guild_db.get(sql.gld_cols.raiderroleid)
             self.rlrole = self.guild_db.get(sql.gld_cols.eventrlid)
@@ -139,6 +171,14 @@ class VCSelect:
                 self.raidnum = 1
                 self.hcchannel = self.guild_db.get(sql.gld_cols.eventhc2)
                 self.vcchannel = self.guild_db.get(sql.gld_cols.eventvc2)
+            elif reaction.emoji == "3️⃣":
+                self.raidnum = 2
+                self.hcchannel = self.guild_db.get(sql.gld_cols.eventhc3)
+                self.vcchannel = self.guild_db.get(sql.gld_cols.eventvc3)
+            else:
+                self.raidnum = 3
+                self.hcchannel = self.guild_db.get(sql.gld_cols.eventhc4)
+                self.vcchannel = self.guild_db.get(sql.gld_cols.eventvc4)
 
         await self.setup_msg.clear_reactions()
 

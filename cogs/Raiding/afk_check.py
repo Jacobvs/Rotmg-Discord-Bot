@@ -120,7 +120,8 @@ class AfkCheck:
         asyncio.get_event_loop().create_task(self.add_emojis())
         rush = True if self.rusher_emojis else False
         cmojis = True if self.confirmreactions else False
-        cp = embeds.afk_check_control_panel(self.afkmsg.jump_url, self.location, self.dungeontitle, self.emojis[1], True, rushers=rush, reactions=cmojis)
+        cp = embeds.afk_check_control_panel(self.afkmsg.jump_url, self.location, self.dungeontitle, self.emojis[1], True, rushers=rush, reactions=cmojis,
+                                            vc_name=self.vcchannel.name)
         self.cpmsg = await self.ctx.send(embed=cp)
 
         await self.cpmsg.add_reaction("📝")
@@ -157,14 +158,14 @@ class AfkCheck:
                    (True if (self.firstpopperrole in payload.member.roles and self.firstpopperrole and self.firstpopperearlyloc)
                     or (self.secondpopperrole in payload.member.roles and self.secondpopperrole and self.secondpopperearlyloc)
                     or (self.thirdpopperrole in payload.member.roles and self.thirdpopperrole and self.thirdpopperearlyloc)
-                           else False) and payload.member.display_name not in self.nitroboosters:
+                           else False) and payload.member not in self.nitroboosters:
                     await payload.member.send(f"Confirmed {payload.emoji}. The location for this run is:\n***{self.location}***\nPlease get to the location soon.")
                     if payload.member not in self.userswloc:
                         self.userswloc.append(payload.member)
                     if payload.member.display_name not in self.nitroboosters:
-                        self.nitroboosters.append(payload.member.display_name)
+                        self.nitroboosters.append(payload.member)
                     cp = self.cpmsg.embeds[0]
-                    cp.set_field_at(1, name="Nitro Boosters", value=str(self.nitroboosters), inline=True)
+                    cp.set_field_at(1, name="Nitro Boosters", value=" | ".join([m.mention for m in self.nitroboosters]), inline=True)
                     await self.cpmsg.edit(embed=cp)
             elif str(payload.emoji) == "❌" and payload.member.top_role >= self.rlrole:
                 self.autoendtask.cancel()
@@ -225,8 +226,12 @@ class AfkCheck:
                         return await payload.member.send("You don't have the required rusher role to get early location. Feel free to rush "
                                                   "regardless and ask an rl to give you the rusher role after – "
                                                   "or pm the RL to ask for location.")
-                    await self.dm_handler(str(payload.emoji), payload.member, "Are you willing & able to rush for this run? If so, "
-                                          f"react to the {payload.emoji} emoji.", confirm_list=self.rushers, rush=True)
+                    if self.dungeontitle == "Oryx 3":
+                        desc = f"Are you able to bring a trickster & know how to use it properly? If so - react to the: {payload.emoji}."
+                    else:
+                        desc = f"Are you willing & able to rush for this run? If so, react to the {payload.emoji} emoji."
+
+                    await self.dm_handler(str(payload.emoji), payload.member, desc, confirm_list=self.rushers, rush=True)
                 else:
                     await payload.member.send("We already have enough rushers for this run! You can ask the rl for location if "
                                               "extra rushers may be needed.")
@@ -272,6 +277,7 @@ class AfkCheck:
             await self.afkmsg.edit(embed=embed)
             await self.cpmsg.remove_reaction("🗺️", payload.member)
             await self.cpmsg.remove_reaction("🗺️", self.client.user)
+            await self.ctx.send(f"Location has been revealed by {payload.member.mention}!")
         elif str(payload.emoji) == "❌":
             self.autoendtask.cancel()
             await self.post_afk(False, payload.member)
@@ -301,20 +307,25 @@ class AfkCheck:
             if self.numrushers >= self.maxrushers:
                 return await usr.send("We already have enough rushers for this run! You can ask the rl for location if extra rushers "
                                       "may be needed.")
+
+            mstring = str(member.mention)
+            if self.iswoland and self.crackerjack in member.roles:
+                mstring += "⭐"
+
             if emoji in self.rushers:
-                self.rushers[emoji].append(member.mention)
+                self.rushers[emoji].append(mstring)
             else:
-                self.rushers[emoji] = [member.mention]
+                self.rushers[emoji] = [mstring]
             self.numrushers += 1
         elif confirm_emoji:
-            mstring = member.mention
+            mstring = str(member.mention)
             if self.iswoland and self.crackerjack in member.roles:
                 mstring += "⭐"
 
             if emoji in self.confirmedreactions:
                 self.confirmedreactions[emoji].append(mstring)
             else:
-                self.confirmedreactions[emoji] = [member.mention]
+                self.confirmedreactions[emoji] = [mstring]
 
 
         elif confirm_list != None:
@@ -385,7 +396,8 @@ class AfkCheck:
                     s += k + " - "
                     s += " | ".join(self.rushers[k])
                     s += "\n"
-                cp.set_field_at(1+add, name="Confirmed Rushers", value=s, inline=False)
+                name = "Confirmed Tricksters" if self.dungeontitle == "Oryx 3" else "Confirmed Rushers"
+                cp.set_field_at(1+add, name=name, value=s, inline=False)
 
             await self.cpmsg.edit(embed=cp)
 
@@ -399,15 +411,15 @@ class AfkCheck:
         await self.vcchannel.set_permissions(self.raiderrole, connect=False, view_channel=True, speak=False)
         seconds_left = 30
         for m in self.vcchannel.members:
-            if m.id not in self.raiderids and not m.bot:
+            if m.id not in self.raiderids and not m.bot and m.top_role < self.rlrole:
                 await m.edit(voice_channel=None)
 
         cpembd = self.cpmsg.embeds[0]
         cpembd.remove_field(len(cpembd.fields)-1)
         if ended:
-            cpembd.description = f"**AFK Check Ended by** {ended.mention}"
+            cpembd.description = f"**AFK Check Ended by** {ended.mention} | Raid running in `{self.vcchannel.name}`"
         else:
-            cpembd.description = "**AFK Check Ended Automatically**"
+            cpembd.description = f"**AFK Check Ended Automatically** | Raid running in `{self.vcchannel.name}`"
         cpembd.set_footer(text="AFK Check Ended at ")
         cpembd.timestamp = datetime.utcnow()
         await self.cpmsg.edit(embed=cpembd)

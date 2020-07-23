@@ -209,6 +209,8 @@ class Casino(commands.Cog):
         if member.bot or member == ctx.author:
             raise commands.BadArgument('You cannot steal from yourself or bots!')
         p1_data = await sql.get_casino_player(self.client.pool, ctx.author.id)
+        if not p1_data:
+            return await ctx.send(f"{ctx.author.mention} You haven't played in the casino yet! Do `{ctx.prefix}daily` to get started!")
         cooldown = p1_data[sql.casino_cols.stealcooldown]
         if cooldown > datetime.utcnow():
             (hours, minutes, seconds) = timedeltaformatter(cooldown - datetime.utcnow())
@@ -220,6 +222,8 @@ class Casino(commands.Cog):
         if p1_bal < 0:
             return await ctx.send(f"You're in debt and can't steal! Current balance: **{p1_bal:,}** credits.", delete_after=10)
         p2_data = await sql.get_casino_player(self.client.pool, member.id)
+        if not p2_data:
+            return await ctx.send(f"{member.mention} Hasn't played the casino yet!")
         p2_bal = p2_data[sql.casino_cols.balance]
         if p2_bal < 1000:
             return await ctx.send(f"{member.mention} is too poor to be stolen from! Their bank account has **{p2_bal:,}** credits in it.")

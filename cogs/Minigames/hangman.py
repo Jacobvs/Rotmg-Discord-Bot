@@ -65,13 +65,12 @@ class Hangman:
             valid = (message.author == self.ctx.author and \
                 message.channel == self.ctx.channel) and \
                 (len(message.content) == 1 or \
-                message.content.lower() == 'cancel')
+                message.content.lower() == 'cancel') or message.content.lower() == self.word_to_guess
             return valid
 
         hint_message = 'Guess the word! Enter a letter to begin.'
         self.update_embed(hint_message)
         self.message_game = await self.ctx.send(embed=self.embed)
-
         while self.chances > 0 and not self.won:
 
             try:
@@ -89,6 +88,9 @@ class Hangman:
 
             if guess.lower() == 'cancel':
                 break
+
+            elif guess.lower() == self.word_to_guess:
+                self.good_guesses = [c for c in self.word_to_guess]
 
             elif guess not in VALID_CHARACTERS:
                 hint_message = 'Please enter a single letter'

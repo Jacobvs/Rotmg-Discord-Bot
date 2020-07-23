@@ -32,10 +32,10 @@ class LogRun:
         self.pkeymember = None
         self.startembed = discord.Embed(title=f"Log this Run: {ctx.author.display_name}",
                                         description="Press the ✅ reaction when you finish the run to log it in the database.\nTo cancel "
-                                                    "logging if you didn't do the run, press the ❌",
+                                                    "logging if you didn't do the run, press the 🗑️",
                                         color=discord.Color.gold())
         reacts = ""
-        for i, r in enumerate(self.keyreacts):
+        for i, r in enumerate(self.keyreacts[:5]):
             reacts += f"{self.numbers[i]} - {r.mention}\n"
         self.keyembed = discord.Embed(title=f"Key Pop: {ctx.author.display_name}",
                                       description=f"Users who confirmed key ({self.emojis[1]}) with the bot:\n"+reacts,
@@ -53,19 +53,19 @@ class LogRun:
     async def start(self):
         self.msg = await self.ctx.send(content=self.ctx.author.mention, embed=self.startembed)
         await self.msg.add_reaction("✅")
-        await self.msg.add_reaction("❌")
+        await self.msg.add_reaction("🗑️")
 
         def check(react, usr):
-            return usr == self.ctx.author and react.message.id == self.msg.id and (str(react.emoji) == "✅" or str(react.emoji) == '❌')
+            return usr == self.ctx.author and react.message.id == self.msg.id and (str(react.emoji) == "✅" or str(react.emoji) == '🗑️')
 
         try:
-            reaction, user = await self.client.wait_for('reaction_add', timeout=3600, check=check)  # Wait 1 hr max
+            reaction, user = await self.client.wait_for('reaction_add', timeout=7200, check=check)  # Wait 2 hr max
         except asyncio.TimeoutError:
             embed = discord.Embed(title="Timed out!", description="You didn't log this run in time!", color=discord.Color.red())
             await self.msg.clear_reactions()
             return await self.msg.edit(embed=embed)
 
-        if str(reaction.emoji) == '❌':
+        if str(reaction.emoji) == '🗑️':
             embed = discord.Embed(title="Cancelled!", description=f"{self.ctx.author.mention} cancelled this log.",
                                   color=discord.Color.red())
             await self.msg.clear_reactions()
@@ -121,7 +121,7 @@ class LogRun:
                                                                                        str(react.emoji) == '🔄' or str(react.emoji) == "❌")
 
             try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=3600, check=check)  # Wait 1 hr max
+                reaction, user = await self.client.wait_for('reaction_add', timeout=7200, check=check)  # Wait 1 hr max
             except asyncio.TimeoutError:
                 embed = discord.Embed(title="Timed out!", description="You didn't log this run in time!", color=discord.Color.red())
                 await self.msg.clear_reactions()
@@ -140,7 +140,7 @@ class LogRun:
                     return m.author == self.ctx.author and m.channel == self.ctx.channel
                 while True:
                     try:
-                        msg = await self.client.wait_for('message', timeout=1800, check=number_check)
+                        msg = await self.client.wait_for('message', timeout=7200, check=number_check)
                     except asyncio.TimeoutError:
                         embed = discord.Embed(title="Timed out!", description="You didn't choose a member in time!",
                                               color=discord.Color.red())
@@ -175,7 +175,7 @@ class LogRun:
                                     str(react.emoji) == "✅" or str(react.emoji) == "❌")
 
                     try:
-                        reaction, user = await self.client.wait_for('reaction_add', timeout=3600, check=check)  # Wait 1 hr max
+                        reaction, user = await self.client.wait_for('reaction_add', timeout=7200, check=check)  # Wait 1 hr max
                     except asyncio.TimeoutError:
                         embed = discord.Embed(title="Timed out!", description="You didn't log this run in time!", color=discord.Color.red())
                         await self.msg.clear_reactions()
@@ -211,7 +211,7 @@ class LogRun:
                 return usr == self.ctx.author and react.message.id == self.msg.id and (str(react.emoji) == "✅" or str(react.emoji) == "❌")
 
             try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=3600, check=check)  # Wait 1 hr max
+                reaction, user = await self.client.wait_for('reaction_add', timeout=7200, check=check)  # Wait 1 hr max
             except asyncio.TimeoutError:
                 embed = discord.Embed(title="Timed out!", description="You didn't log this run in time!", color=discord.Color.red())
                 await self.msg.clear_reactions()
@@ -270,7 +270,7 @@ class LogRun:
             return usr == self.ctx.author and react.message.id == self.msg.id and str(react.emoji) in emojis
 
         try:
-            reaction, user = await self.client.wait_for('reaction_add', timeout=1800, check=check)  # Wait 1/2 hr max
+            reaction, user = await self.client.wait_for('reaction_add', timeout=7200, check=check)  # Wait 1/2 hr max
         except asyncio.TimeoutError:
             embed = discord.Embed(title="Timed out!", description="You didn't log this run in time!", color=discord.Color.red())
             await self.msg.clear_reactions()
@@ -291,7 +291,7 @@ class LogRun:
 
             while True:
                 try:
-                    msg = await self.client.wait_for('message', timeout=1800, check=member_check)
+                    msg = await self.client.wait_for('message', timeout=7200, check=member_check)
                 except asyncio.TimeoutError:
                     embed = discord.Embed(title="Timed out!", description="You didn't choose a member in time!", color=discord.Color.red())
                     await self.msg.clear_reactions()

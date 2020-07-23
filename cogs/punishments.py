@@ -59,7 +59,10 @@ class Punishments(commands.Cog):
         for channel in ctx.guild.text_channels:
             permissions = channel.permissions_for(member)
             if permissions.read_messages:
-                await channel.set_permissions(member, overwrite=overwrite, reason=reason)
+                try:
+                    await channel.set_permissions(member, overwrite=overwrite, reason=reason)
+                except discord.Forbidden:
+                    pass
 
         embed = discord.Embed(title="Success!",
                               description=f"`{member.display_name}` was successfully muted for reason:\n{reason}.\nDuration: "
@@ -233,6 +236,8 @@ class Punishments(commands.Cog):
             return await ctx.send(f'Cannot un-vblacklist `{member.display_name}` (is a bot).')
 
         if ctx.author.id not in self.client.owner_ids:
+            if ctx.author.id == member.id:
+                return await ctx.send(f'You cannot un-blacklist yourself!')
             if member.guild_permissions.kick_members:
                 return await ctx.send(f'Cannot un-vblacklist `{member.display_name}` due to roles.')
         exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'verification')
@@ -251,6 +256,8 @@ class Punishments(commands.Cog):
             return await ctx.send(f'Cannot un-mblacklist `{member.display_name}` (is a bot).')
 
         if ctx.author.id not in self.client.owner_ids:
+            if ctx.author.id == member.id:
+                return await ctx.send(f'You cannot un-blacklist yourself!')
             if member.guild_permissions.kick_members:
                 return await ctx.send(f'Cannot un-mblacklist `{member.display_name}` due to roles.')
         exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'modmail')
@@ -269,6 +276,8 @@ class Punishments(commands.Cog):
             return await ctx.send(f'Cannot un-rblacklist `{member.display_name}` (is a bot).')
 
         if ctx.author.id not in self.client.owner_ids:
+            if ctx.author.id == member.id:
+                return await ctx.send(f'You cannot un-blacklist yourself!')
             if member.guild_permissions.kick_members:
                 return await ctx.send(f'Cannot un-rblacklist `{member.display_name}` due to roles.')
         exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'reporting')
@@ -344,7 +353,10 @@ async def unmute(pool, guild, member):
     for channel in guild.text_channels:
         permissions = channel.permissions_for(member)
         if permissions.read_messages:
-            await channel.set_permissions(member, overwrite=None)
+            try:
+                await channel.set_permissions(member, overwrite=None)
+            except discord.Forbidden:
+                pass
     await sql.set_unactive(pool, guild.id, member.id, 'mute')
 
 

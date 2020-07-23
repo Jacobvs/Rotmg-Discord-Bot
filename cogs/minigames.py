@@ -1,4 +1,3 @@
-import discord
 import numpy as np
 from discord.ext import commands
 
@@ -19,7 +18,7 @@ class Minigames(commands.Cog):
     @commands.command(usage="connect4 <member>",
                       description="A game of Connect-4 with another member.\nEach player takes turn in placing a token on the board,\n"
                                   "the winner is the first to put four tokens in a row.")
-    async def connect4(self, ctx, other_player: discord.Member):
+    async def connect4(self, ctx, other_player: utils.MemberLookupConverter):
         if other_player.bot or other_player == ctx.author:
             raise commands.BadArgument('Cannot play a game against that member.')
 

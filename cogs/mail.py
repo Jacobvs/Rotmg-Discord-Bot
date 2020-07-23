@@ -236,7 +236,7 @@ class Mail(commands.Cog):
 
     @commands.command(usage='close <reason>', description="Close a modmail thread")
     @commands.guild_only()
-    async def close(self, ctx, *, reason):
+    async def close(self, ctx, *, reason=None):
         await ctx.message.delete()
 
         modmail_category = self.client.guild_db[ctx.guild.id][sql.gld_cols.modmailcategory]
@@ -249,6 +249,9 @@ class Mail(commands.Cog):
 
         if not ctx.channel.topic or "Modmail Channel" not in ctx.channel.topic:
             return await ctx.send("Please use this command in a channel for modmail threads below!")
+
+        if not reason:
+            reason = "No reason specified."
 
         member = ctx.guild.get_member(int(ctx.channel.topic.split(" - ")[0].split("Channel ")[1]))
 
@@ -482,7 +485,10 @@ class ModmailMessage:
         min_position = min(by_name, key=lambda c: c.position).position
         for new_pos, ch in enumerate(by_name, start=min_position):
             if new_pos != ch.position:
-                await ch.edit(position=new_pos)
+                try:
+                    await ch.edit(position=new_pos)
+                except discord.Forbidden:
+                    break
 
         if aboutmember:
             over = modmail_channel.overwrites.update({aboutmember: discord.PermissionOverwrite(read_messages=False)})

@@ -63,7 +63,22 @@ class Misc(commands.Cog):
 
 
     @commands.command(usage="stats [member]", description="Check your or someone else's run stats.")
-    async def stats(self, ctx, member: utils.MemberLookupConverter=None):
+    async def stats(self, ctx, member:utils.MemberLookupConverter =None):
+        # if member:
+        #     converter = utils.MemberLookupConverter()
+        #     mem = await converter.convert(ctx, member, is_logging=True)
+        #     if isinstance(mem, int):
+        #         uid = mem
+        #         try:
+        #             mem = await self.client.fetch_user(mem)
+        #         except discord.NotFound:
+        #             return await ctx.send("Found member in database with id of: {mem} - but the user account has since been deleted!")
+        #     else:
+        #         uid = mem.id
+        # else:
+        #     mem = None
+        #     uid = ctx.author.id
+
         author = member if member else ctx.author
         if not ctx.guild:
             servers = []
@@ -91,16 +106,35 @@ class Misc(commands.Cog):
             author = servers[self.numbers.index(str(reaction.emoji))].get_member(author.id)
             await msg.delete()
         else:
-            await ctx.message.delete()
-            if member:
-                converter = discord.ext.commands.MemberConverter()
-                try:
-                    author = await converter.convert(ctx, str(member.id))
-                except discord.ext.commands.BadArgument:
-                    pass
+            try:
+                await ctx.message.delete()
+            except discord.NotFound:
+                pass
             server = ctx.guild
 
         data = await sql.get_log(self.client.pool, server.id, author.id)
+        # if all(v == 0 for v in data[2:]):
+        #     other_id = uid
+        #     if " | " in member.display_name:
+        #         names = member.display_name.split(" | ")
+        #         for n in names:
+        #             name = ''.join([c for c in n if c.isalpha()])
+        #             o_id = await sql.get_user_from_ign(self.client.pool, name)
+        #             if other_id:
+        #                 other_id = o_id[0]
+        #                 break
+        #     else:
+        #         name = ''.join([c for c in member.display_name if c.isalpha()])
+        #         o_id = await sql.get_user_from_ign(self.client.pool, name)
+        #         if other_id:
+        #             other_id = o_id[0]
+        #
+        #     other_data = await sql.get_log(self.client.pool, server.id, other_id)
+        #     if not all(v == 0 for v in other_data[2:]):
+        #         data = other_data
+
+
+
         embed = discord.Embed(title=f"Stats for {author.display_name} in {server.name}", color=discord.Color.green())
         embed.set_thumbnail(url=author.avatar_url)
         embed.add_field(name="__**Key Stats**__", value="Popped: "
@@ -142,7 +176,7 @@ class Misc(commands.Cog):
 
     @commands.command(usage='djoke', description="This command doesn't exist..... Shh...")
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
+    @commands.is_owner()
     async def djoke(self, ctx):
         joke = utils.darkjoke()
         embed = discord.Embed(title=joke[0], description=joke[1])
@@ -286,17 +320,17 @@ class Misc(commands.Cog):
     @commands.guild_only()
     @commands.check_any(is_rl_or_higher_check(), is_bot_owner())
     async def poll(self, ctx, title, *options):
+        try:
+            await ctx.message.delete()
+        except discord.NotFound:
+            pass
         if len(options) < 2:
-            await ctx.message.delete()
-            await ctx.send("Please specify at least two options for the poll.", delete_after=4)
-            return
+            options = ["Yes", "No"]
         if len(options) > 10:
-            await ctx.message.delete()
             await ctx.send("Please specify at most 10 options for the poll.", delete_after=4)
             return
 
         embed = embeds.poll(title, options)  # Get poll embed
-        await ctx.message.delete()  # delete command message
         msg = await ctx.send(embed=embed)
         for i in range(len(options)):  # add reactions to poll
             await msg.add_reaction(self.numbers[i])

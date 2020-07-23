@@ -41,7 +41,6 @@ async def get_user_from_ign(pool, name):
             data = (name, name, name)
             await cursor.execute(sql, data)
             user = await cursor.fetchone()
-
             return user
 
 async def add_alt_name(pool, uid, altname):
@@ -527,7 +526,7 @@ class usr_cols(enum.IntEnum):
 
 # Define which DB records are of what type
 # Channels (Text, Voice, Category)
-gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 46, 60, 61]
+gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 46, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71]
 # Roles
 gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43, 47, 48, 50, 52, 54, 58]
 
@@ -595,3 +594,13 @@ class gld_cols(enum.IntEnum):
     maxrushersgetloc = 59
     modmailcategory = 60
     modmaillogchannel = 61
+    raidhc4 = 62
+    raidvc4 = 63
+    vethc3 = 64
+    vetvc3 = 65
+    vethc4 = 66
+    vetvc4 = 67
+    eventhc3 = 68
+    eventvc3 = 69
+    eventhc4 = 70
+    eventvc4 = 71

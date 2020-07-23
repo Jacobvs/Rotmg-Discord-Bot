@@ -37,16 +37,17 @@ class Core(commands.Cog):
     @commands.command(usage="report", description="Report a bug or suggest a new feature here!", aliases=['bug','feature','suggest'])
     @commands.guild_only()
     async def report(self, ctx):
-        blacklisted = await sql.get_blacklist(self.client.pool, self.ctx.author.id, ctx.guild.id, 'reporting')
+        blacklisted = await sql.get_blacklist(self.client.pool, ctx.author.id, ctx.guild.id, 'reporting')
         if blacklisted:
             return await ctx.author.send("You have been blacklisted from sending a report or suggestion! Contact a security+ if you believe this to be a mistake!")
-        embed = discord.Embed(title="Is this a feature or a bug?", description="Select 💎 if it's a feature, 🦟 if it's a bug.", color=discord.Color.gold())
+        embed = discord.Embed(title="Is this a report a feature or a bug?", description="Select 💎 if it's a feature, 🦟 if it's a bug.\n❌ to cancel.", color=discord.Color.gold())
         msg = await ctx.send(embed=embed)
         await msg.add_reaction("💎")
         await msg.add_reaction("🦟")
+        await msg.add_reaction("❌")
 
         def check(react, usr):
-            return usr.id == ctx.author.id and react.message.id == msg.id and str(react.emoji) in ["💎", "🦟"]
+            return usr.id == ctx.author.id and react.message.id == msg.id and str(react.emoji) in ["💎", "🦟", "❌"]
 
         try:
             reaction, user = await self.client.wait_for('reaction_add', timeout=1800, check=check)  # Wait 1/2 hr max
@@ -58,6 +59,10 @@ class Core(commands.Cog):
 
         if str(reaction.emoji) == '💎':
            label = 'Feature'
+        elif str(reaction.emoji) == '❌':
+            embed = discord.Embed(title="Cancelled!", description="You cancelled this report!",
+                                  color=discord.Color.red())
+            return await msg.edit(embed=embed)
         else:
            label = 'Bug'
 
@@ -71,7 +76,7 @@ class Core(commands.Cog):
             desc = "```**Describe the bug**\nA clear and concise description of what the bug is.\n\n**To Reproduce**\nSteps to reproduce the behavior:\n1. (list all steps)\n" \
                    "**Expected behavior**\nA clear and concise description of what you expected to happen.\n\n**Screenshot**\nIf applicable, add a screenshot/image to help " \
                    "explain your problem.\n\n**What server & channel did this occur in?**\nServer:\nChannel:\n```"
-        embed = discord.Embed(title="Please copy the template & fill it out", description=desc, color= discord.Color.gold())
+        embed = discord.Embed(title="Please copy the template & fill it out -- Send CANCEL to cancel.", description=desc, color= discord.Color.gold())
         await msg.clear_reactions()
         await msg.edit(embed=embed)
 
@@ -86,6 +91,10 @@ class Core(commands.Cog):
                 await msg.edit(embed=embed)
 
             content = str(issuemsg.content)
+            if content.strip().lower() == 'cancel':
+                embed = discord.Embed(title="Cancelled!", description="You cancelled this report!",
+                                      color=discord.Color.red())
+                return await msg.edit(embed=embed)
             if not content:
                 content = "No issue content provided."
             if issuemsg.attachments:

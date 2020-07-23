@@ -60,7 +60,7 @@ async def on_ready():
     bot.raid_db = {}
     bot.mapmarkers = {}
     bot.players_in_game = []
-    bot.serverwleaderboard = [703987028567523468, 660344559074541579, 713655609760940044, 719406991117647893, 691607211046076471]
+    bot.serverwleaderboard = [666063675416641539, 703987028567523468, 660344559074541579, 713655609760940044, 719406991117647893, 691607211046076471]
     await build_guild_db()
     for g in bot.guild_db:
         bot.raid_db[g] = {"afk": {}, "cp": {}, "leaders": []}

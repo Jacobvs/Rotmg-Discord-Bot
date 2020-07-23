@@ -224,7 +224,8 @@ def afk_check_base(run_title, requester, keyed_run: bool, emojis, confirm_emojis
         if len(rusher_emojis) > 1:
             desc += "If you are able to rush, react to one of these emojis: " + "".join(rusher_emojis) + "\n"
         else:
-            desc += "If you are rushing, please react to: " + rusher_emojis[0] + "\n"
+            desc += "If you are bringing a Trickster" if run_title == "Oryx 3" else "If you are rushing"
+            desc += ", please react to: " + rusher_emojis[0] + "\n"
     desc += "\nIf you are nitroboosting or have key popper early loc, react to: <:shard:682365548465487965>\n" \
             "To end the AFK check as a leader, react to ❌"
     embed = discord.Embed(description=desc, color=color)
@@ -253,14 +254,17 @@ def aborted_afk(run_title, requester, thumbnail):
     return embed
 
 
-def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run, rushers=False, reactions=False):
-    embed = discord.Embed(description=f"**[AFK Check]({msg_url}) control panel for `{run_title}`**", color=discord.Color.teal())
+def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run, rushers=False, reactions=False, vc_name=None):
+    desc = f"**[AFK Check]({msg_url}) control panel for `{run_title}`**"
+    desc += f" in `{vc_name}`" if vc_name else ""
+    embed = discord.Embed(description=desc, color=discord.Color.teal())
     embed.add_field(name="Location of run:", value=location, inline=False)
     embed.add_field(name="Nitro Boosters:", value="`None`", inline=False)
     if reactions:
         embed.add_field(name="Confirmed Reactions:", value="No Confirmed Reactions", inline=False)
     if rushers:
-        embed.add_field(name="Confirmed Rushers:", value="No Confirmed Rushers", inline=False)
+        name = "Confirmed Tricksters" if run_title == "Oryx 3" else "Confirmed Rushers"
+        embed.add_field(name=name, value="No "+name, inline=False)
     if keyed_run:
         embed.add_field(name="Current Keys:", value=f"Main {key_emoji}: None\nBackup {key_emoji}: None", inline=False)
     if run_title == "Void" or run_title == "Full-Skip Void":
@@ -317,8 +321,8 @@ def slots_help_embed():
                         .add_field(name="Winnings", value=":lemon: Lemon - **2x**\n:watermelon: Melon - **3x**\n:banana: Banana - **5x**"
                                                           "\n:cherries: Cherry - **10x**\n:gem: Diamond - **40x**\n"
                                                           "<:slot7:711843601369530458> 7's - **77x**", inline=False)\
-                        .add_field(name="Odds", value=":x: Lose - **79.9%** (Tickets 1-799)\n:lemon: Lemon - **10%** (800-899)"
-                                                      "\n:watermelon: Melon - **5%** (900-949)\n:banana: Banana - **3%** (950-979)"
+                        .add_field(name="Odds", value=":x: Lose - **74.9%** (Tickets 1-749)\n:lemon: Lemon - **13%** (750-879)"
+                                                      "\n:watermelon: Melon - **7%** (880-949)\n:banana: Banana - **3%** (950-979)"
                                                           "\n:cherries: Cherry - **1.3%** (980-992)\n:gem: Diamond - **0.5%** (993-997)\n"
                                                           "<:slot7:711843601369530458> 7's - **0.3%** (998-1000)", inline=False)\
                         .add_field(name="Usage", value="!slots <bet>", inline=False)
