@@ -28,6 +28,7 @@ PRELOADED_MODULES = set(modules.values())
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
+gh_token = os.getenv('GITHUB_TOKEN')
 is_testing = os.getenv('TESTING')
 is_testing = True if is_testing == '1' else False
 
@@ -46,6 +47,7 @@ def get_prefix(client, message):
 bot = commands.Bot(command_prefix='!')
 bot.remove_command('help')
 bot.owner_ids = {196282885601361920, 317090865262755847, 185042602519822336}
+bot.gh_token = gh_token
 with open('data/variables.json', 'r') as file:
     bot.maintenance_mode = json.load(file).get("maintenance_mode")
 
@@ -58,7 +60,7 @@ async def on_ready():
     bot.raid_db = {}
     bot.mapmarkers = {}
     bot.players_in_game = []
-    bot.serverwleaderboard = [703987028567523468, 660344559074541579, 713655609760940044, 719406991117647893, 691607211046076471]
+    bot.serverwleaderboard = [666063675416641539, 703987028567523468, 660344559074541579, 713655609760940044, 719406991117647893, 691607211046076471]
     await build_guild_db()
     for g in bot.guild_db:
         bot.raid_db[g] = {"afk": {}, "cp": {}, "leaders": []}
@@ -66,7 +68,7 @@ async def on_ready():
     if bot.maintenance_mode:
         await bot.change_presence(status=discord.Status.idle, activity=discord.Game("IN MAINTENANCE MODE!"))
     else:
-        await bot.change_presence(status=discord.Status.online, activity=discord.Game("boooga."))
+        await bot.change_presence(status=discord.Status.online, activity=discord.Game("!modmail"))
     bot.loop.create_task(update_leaderboards(bot))
 
     bot.active_punishments = {}

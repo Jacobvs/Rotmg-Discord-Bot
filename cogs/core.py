@@ -1,13 +1,16 @@
+import asyncio
 import json
 from datetime import datetime, timedelta
 from os import listdir
 from os.path import join, isfile
 
+import aiohttp
 import discord
 import psutil
 from discord.ext import commands
 
 import sql
+import utils
 from cogs import verification, moderation
 from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification, subverify_react_handler
 from sql import get_guild, get_user, add_new_guild, usr_cols, gld_cols
@@ -32,30 +35,142 @@ class Core(commands.Cog):
 
 
     @commands.command(usage="report", description="Report a bug or suggest a new feature here!", aliases=['bug','feature','suggest'])
+    @commands.guild_only()
     async def report(self, ctx):
-        await ctx.send("Please report any bugs you find or suggestions you have here:\n"
-                       "Anyonmous (No login): <https://gitreports.com/issue/Jacobvs/Rotmg-Discord-Bot>\n"
-                       "Github (Preferred): <https://github.com/Jacobvs/Rotmg-Discord-Bot/issues/new/choose>")
+        blacklisted = await sql.get_blacklist(self.client.pool, ctx.author.id, ctx.guild.id, 'reporting')
+        if blacklisted:
+            return await ctx.author.send("You have been blacklisted from sending a report or suggestion! Contact a security+ if you believe this to be a mistake!")
+        embed = discord.Embed(title="Is this a report a feature or a bug?", description="Select 💎 if it's a feature, 🦟 if it's a bug.\n❌ to cancel.", color=discord.Color.gold())
+        msg = await ctx.send(embed=embed)
+        await msg.add_reaction("💎")
+        await msg.add_reaction("🦟")
+        await msg.add_reaction("❌")
+
+        def check(react, usr):
+            return usr.id == ctx.author.id and react.message.id == msg.id and str(react.emoji) in ["💎", "🦟", "❌"]
+
+        try:
+            reaction, user = await self.client.wait_for('reaction_add', timeout=1800, check=check)  # Wait 1/2 hr max
+        except asyncio.TimeoutError:
+            embed = discord.Embed(title="Timed out!", description="You didn't choose an option in time!",
+                                  color=discord.Color.red())
+            await msg.delete()
+            return await ctx.send(embed=embed)
+
+        if str(reaction.emoji) == '💎':
+           label = 'Feature'
+        elif str(reaction.emoji) == '❌':
+            embed = discord.Embed(title="Cancelled!", description="You cancelled this report!",
+                                  color=discord.Color.red())
+            return await msg.edit(embed=embed)
+        else:
+           label = 'Bug'
+
+        if label == 'Feature':
+            desc = "```**Is your feature request related to a problem? Please describe.**\nA clear and concise description of what the problem is. " \
+                   "Ex. I'm always frustrated when [...]\n\n**How would the feature work? Describe**\nAdd a description about how the feature would work " \
+                   "(e.g. commands, interactions, etc)\n\n**Describe the ideal implementation.**\nA clear and concise description of what you want to happen.\n\n" \
+                   "**Describe alternatives you've considered**\nA clear and concise description of any alternative solutions or features you've considered.\n\n" \
+                   "**Additional context**\nAdd any other context or a screenshot about the feature request here.\n```"
+        else:
+            desc = "```**Describe the bug**\nA clear and concise description of what the bug is.\n\n**To Reproduce**\nSteps to reproduce the behavior:\n1. (list all steps)\n" \
+                   "**Expected behavior**\nA clear and concise description of what you expected to happen.\n\n**Screenshot**\nIf applicable, add a screenshot/image to help " \
+                   "explain your problem.\n\n**What server & channel did this occur in?**\nServer:\nChannel:\n```"
+        embed = discord.Embed(title="Please copy the template & fill it out -- Send CANCEL to cancel.", description=desc, color= discord.Color.gold())
+        await msg.clear_reactions()
+        await msg.edit(embed=embed)
+
+        while True:
+            imageb = None
+            def member_check(m):
+                return m.author.id == ctx.author.id and m.channel == msg.channel
+            try:
+               issuemsg = await self.client.wait_for('message', timeout=1800, check=member_check)
+            except asyncio.TimeoutError:
+                embed = discord.Embed(title="Timed out!", description="You didn't write your report in time!", color=discord.Color.red())
+                await msg.edit(embed=embed)
+
+            content = str(issuemsg.content)
+            if content.strip().lower() == 'cancel':
+                embed = discord.Embed(title="Cancelled!", description="You cancelled this report!",
+                                      color=discord.Color.red())
+                return await msg.edit(embed=embed)
+            if not content:
+                content = "No issue content provided."
+            if issuemsg.attachments:
+                imageb = issuemsg.attachments[0] if issuemsg.attachments[0].height else None
+                if not imageb:
+                    await ctx.send("Please only send images as attachments.", delete_after=7)
+                    continue
+                else:
+                    imageb = await imageb.read()
+                    await issuemsg.delete()
+                    break
+            else:
+                await issuemsg.delete()
+                break
+
+        if imageb:
+            img_data = await utils.image_upload(imageb, ctx, is_rc=False)
+            if not img_data:
+                return await ctx.send(
+                    "There was an issue communicating with the image server, try again and if the issue persists – contact the developer.",
+                    delete_after=10)
+
+            image = img_data["secure_url"]
+            content += f"\n\nUploaded Image:\n{image}"
+
+        title = '[FEATURE] ' if label == 'Feature' else '[BUG] '
+        title += f'Submitted by {ctx.author.display_name}'
+
+        header = {'Authorization': f'token {self.client.gh_token}'}
+        payload = {
+            "title": title,
+            'body': content,
+            'assignee': 'Jacobvs',
+            'labels': [label]
+        }
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
+                async with cs.request("POST", "https://api.github.com/repos/Ooga-Booga-Bot/Rotmg-Discord-Bot/issues", json=payload, headers=header) as r:
+                    if r.status != 201:
+                        print("GH ISSUE UPLOAD ERROR:")
+                        print(r)
+                        print(await r.json())
+                        return None
+                    else:
+                        res = await r.json()
+        except asyncio.TimeoutError:
+            return await ctx.send("There was an issue uploading the issue, please retry the command.", delete_after=10)
+
+        embed = discord.Embed(title="Thank You!", description="I (Darkmattr) appreciate that you took the time to fill out a report/suggestion!\nI've been notified & will get to "
+                                                              f"it as soon as possible.\n\nTrack the status of your issue here:\n{res['html_url']}", color=discord.Color.green())
+        await msg.edit(embed=embed)
 
 
     @commands.command(usage="status", description="Retrieve the bot's status.")
     async def status(self, ctx):
         embed = discord.Embed(title="Bot Status", color=discord.Color.dark_gold())
         nverified = await sql.get_num_verified(self.client.pool)
-        embed.add_field(name="Bot latency:", value=f"**`{round(self.client.latency*1000, 2)}`** Milliseconds.", inline=False)
+        embed.add_field(name="Bot latency:", value=f"**`{round(self.client.latency*1000, 2)}`** Milliseconds.")
+        mcount = 0
+        for g in self.client.guilds:
+            mcount += g.member_count
         embed.add_field(name="Connected Servers:",
-                        value=f"**`{len(self.client.guilds)}`** servers with **`{len(list(self.client.get_all_members()))}`** total members.",
-                        inline=False)
-        embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.", inline=False)
+                        value=f"**`{len(self.client.guilds)}`** servers with **`{mcount}`** total members.")
+        embed.add_field(name="\u200b", value="\u200b")
+        embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.")
         lines = line_count('/home/pi/Rotmg-Bot/') + line_count('/home/pi/Rotmg-Bot/cogs') + line_count(
             '/home/pi/Rotmg-Bot/cogs/Raiding') + line_count('/home/pi/Rotmg-Bot/cogs/Minigames')
-        embed.add_field(name="Lines of Code:", value=(f"**`{lines}`** lines of code."), inline=False)
+        embed.add_field(name="Lines of Code:", value=(f"**`{lines}`** lines of code."))
+        embed.add_field(name="\u200b", value="\u200b")
         embed.add_field(name="Server Status:",
                         value=(f"```yaml\nServer: 0 GHz Potato\nCPU: {psutil.cpu_percent()}% utilization."
                                f"\nMemory: {psutil.virtual_memory().percent}% utilization."
                                f"\nDisk: {psutil.disk_usage('/').percent}% utilization."
                                f"\nNetwork: {round(psutil.net_io_counters().bytes_recv*0.000001)} MB in "
-                               f"/ {round(psutil.net_io_counters().bytes_sent*0.000001)} MB out.```"))
+                               f"/ {round(psutil.net_io_counters().bytes_sent*0.000001)} MB out.```"), inline=False)
+        embed.add_field(name="Development Progress", value="To see what I'm working on, click here:\nhttps://github.com/Ooga-Booga-Bot/Rotmg-Discord-Bot/projects/1", inline=False)
         if ctx.guild:
             appinfo = await self.client.application_info()
             embed.add_field(name=f"Bot author:", value=f"{appinfo.owner.mention} - DM me if something's broken or to request a feature!",
@@ -102,9 +217,6 @@ class Core(commands.Cog):
         if message.guild is None and message.author != self.client.user:
             # If DM is a command
             if message.content[0] == '!':
-                # TODO: implement proper checks
-                if message.author.id not in self.client.variables.get('allowed_user_ids'):
-                    await message.author.send('You do not have the permissions to use this command in a DM context.')
                 return
 
             user_data = await get_user(self.client.pool, message.author.id)
@@ -260,6 +372,9 @@ class Core(commands.Cog):
                 await afk.cp_handler(payload)
 
             elif payload.message_id == verify_message_id and str(payload.emoji) == '✅':  # handles verification reacts
+                blacklisted = await sql.get_blacklist(self.client.pool, user.id, payload.guild_id, 'verification')
+                if blacklisted:
+                    return await user.send("You have been blacklisted from verifying in this server! Contact a security+ if you believe this to be a mistake!")
                 return await guild_verify_react_handler(Verification(self.client), payload, user_data, guild_data, user, guild,
                                                         verify_message_id)
             elif payload.message_id == subverify_1_msg_id and (

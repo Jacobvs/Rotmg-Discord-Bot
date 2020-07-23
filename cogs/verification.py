@@ -171,7 +171,10 @@ class Verification(commands.Cog):
         embed = embeds.verification_check_msg(guild_db[gld_cols.reqsmsg], guild_db[gld_cols.supportchannelname])
         message = await ctx.send(embed=embed)
         await message.add_reaction("✅")
-        await ctx.message.delete()
+        try:
+            await ctx.message.delete()
+        except discord.NotFound:
+            pass
 
         # Save verification message id for later to check reacts with
         await update_guild(self.client.pool, ctx.guild.id, "verificationid", message.id)

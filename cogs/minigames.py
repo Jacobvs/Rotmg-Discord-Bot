@@ -1,4 +1,3 @@
-import discord
 import numpy as np
 from discord.ext import commands
 
@@ -19,7 +18,7 @@ class Minigames(commands.Cog):
     @commands.command(usage="connect4 <member>",
                       description="A game of Connect-4 with another member.\nEach player takes turn in placing a token on the board,\n"
                                   "the winner is the first to put four tokens in a row.")
-    async def connect4(self, ctx, other_player: discord.Member):
+    async def connect4(self, ctx, other_player: utils.MemberLookupConverter):
         if other_player.bot or other_player == ctx.author:
             raise commands.BadArgument('Cannot play a game against that member.')
 
@@ -41,7 +40,7 @@ class Minigames(commands.Cog):
 
 
     @commands.command(usage="tictactoe <member>", description="A game of Tic-Tac-Toe with another member.")
-    async def tic_tac_toe(self, ctx, other_player: utils.MemberLookupConverter):
+    async def tictactoe(self, ctx, other_player: utils.MemberLookupConverter):
         if other_player.bot or other_player == ctx.author:
             raise commands.BadArgument('Cannot play a game against that member.')
 
@@ -49,7 +48,7 @@ class Minigames(commands.Cog):
         await game.play()
 
 
-    @commands.command(usage="rps <choice>", aliases=['rockpaperscissors'], description="Play a game of Rock Paper Scissors.")
+    @commands.command(usage="rps <choice>", aliases=['rockpaperscissors', 'rps'], description="Play a game of Rock Paper Scissors.")
     async def rock_paper_scissors(self, ctx, player_choice=''):
         options_text= ['rock', 'paper', 'scissors']
         options_emoji = [':full_moon:', ':newspaper:', ':scissors:']
