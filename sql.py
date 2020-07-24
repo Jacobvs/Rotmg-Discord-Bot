@@ -233,7 +233,7 @@ async def get_casino_player(pool, id):
             if not data:
                 now = datetime.utcnow()
                 now = now.strftime('%Y-%m-%d %H:%M:%S')
-                sql = ("INSERT INTO rotmg.casino (id, balance, dailycooldown, workcooldown, searchcooldown) VALUES (%s, %s, %s, %s, %s)")
+                sql = ("REPLACE INTO rotmg.casino (id, balance, dailycooldown, workcooldown, searchcooldown) VALUES (%s, %s, %s, %s, %s)")
                 data = [id, 7500, now, now, now]
                 await cursor.execute(sql, data)
                 await conn.commit()
@@ -363,14 +363,14 @@ async def log_runs(pool, guild_id, member_id, column=1, number=1):
             else:
                 data = data[column]
 
-            name = "pkey" if column == 1 else "vials" if column == 2 else "helmrunes" if column == 3 else "shieldrunes" if column == 4 else\
-                "swordrunes" if column == 5 else "eventkeys" if column == 6 else "runsdone" if column == 7 else "eventsdone" if column == 8\
-                else "srunled" if column == 9 else "frunled" if column == 10 else "eventled" if column == 11 else "runsassisted" if\
-                column == 12 else "eventsassisted"
-            if column == 9 or column == 10 or column == 11:
+            name = "pkey" if column == 2 else "vials" if column == 3 else "helmrunes" if column == 4 else "shieldrunes" if column == 5 else\
+                "swordrunes" if column == 6 else "eventkeys" if column == 7 else "runsdone" if column == 8 else "eventsdone" if column == 9\
+                else "srunled" if column == 10 else "frunled" if column == 11 else "eventled" if column == 12 else "runsassisted" if\
+                column == 13 else "eventsassisted"
+            if column == 10 or column == 11 or column == 12:
                 await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number}, weeklyruns = weeklyruns + {number} "
                                      f"WHERE uid = {member_id} AND gid = {guild_id}")
-            elif column == 12:
+            elif column == 13:
                 await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number}, weeklyassists = weeklyassists + {number} "
                                      f"WHERE uid = {member_id} AND gid = {guild_id}")
             else:

@@ -19,7 +19,7 @@ class ErrorHandler(commands.Cog):
 
         if isinstance(error, commands.CommandNotFound):
             await ctx.message.delete()
-            return await ctx.send(f"That command does not exist. Please use `{await bot.get_prefix(ctx.message)}help` for "
+            return await ctx.send(f"That command does not exist. Please use `{ctx.prefix}help` for "
                                   f"a list of commands.")
 
         if isinstance(error, commands.MissingPermissions):
@@ -74,8 +74,8 @@ class ErrorHandler(commands.Cog):
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
         await ctx.send("An unexpected error occurred while running that command. Please report this by sending a DM to Darkmattr#7321.")
-        logging.warning("Ignoring exception in command {}:".format(ctx.command))
-        logging.warning("\n" + "".join(traceback.format_exception(type(error), error, error.__traceback__)))
+        logging.error("Ignoring exception in command {}:".format(ctx.command))
+        logging.error("\n" + "".join(traceback.format_exception(type(error), error, error.__traceback__)))
 
 
 def setup(client):

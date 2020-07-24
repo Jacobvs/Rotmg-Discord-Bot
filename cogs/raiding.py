@@ -25,7 +25,7 @@ class Raiding(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @commands.command(usage="afk <location>", description="Starts an AFK check for the location specified.")
+    @commands.command(usage="afk <location>", description="Starts an AFK check for the location specified.", aliases=['afkcheck', 'startafk'])
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
     async def afk(self, ctx, *, location):

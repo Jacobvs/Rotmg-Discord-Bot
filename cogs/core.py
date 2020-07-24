@@ -181,9 +181,17 @@ class Core(commands.Cog):
         await ctx.send(embed=embed)
 
 
-    @commands.command(usage="rolecount <role>", description="Counts the number of people who have a role.")
-    async def rolecount(self, ctx, role: discord.Role):
-        embed = discord.Embed(color=role.color).add_field(name=f"Members in {role.name}", value=str(len(role.members)))
+    @commands.command(usage="rolecount [role]", description="Counts the number of people who have a role, If no role is specified it counts everyone.")
+    async def rolecount(self, ctx, *, role: discord.Role=None):
+        if not role:
+            name = " the server"
+            nmembers = ctx.guild.member_count
+            color = discord.Color.gold()
+        else:
+            name = role.name
+            nmembers = len(role.members)
+            color = role.color
+        embed = discord.Embed(color=color).add_field(name=f"Members in {name}", value=f"{nmembers:,}")
         await ctx.send(embed=embed)
 
     # Event listeners

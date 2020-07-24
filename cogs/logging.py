@@ -46,7 +46,7 @@ class Logging(commands.Cog):
         if not member:
             member = ctx.author
 
-        setup = VCSelect(self.client, ctx)
+        setup = VCSelect(self.client, ctx, manual_log=True)
         data = await setup.start()
         if isinstance(data, tuple):
             (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
@@ -57,7 +57,7 @@ class Logging(commands.Cog):
             await setup_msg.delete()
         except discord.NotFound:
             pass
-        r_msg = await ctx.send(embed=embeds.dungeon_select())
+        r_msg = await ctx.send(embed=embeds.dungeon_select(manual_log=True))
         def dungeon_check(m):
             return m.author == ctx.author and m.channel == ctx.channel and m.content.isdigit()
 

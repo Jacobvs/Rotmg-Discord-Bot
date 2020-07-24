@@ -159,6 +159,8 @@ class AfkCheck:
                     or (self.secondpopperrole in payload.member.roles and self.secondpopperrole and self.secondpopperearlyloc)
                     or (self.thirdpopperrole in payload.member.roles and self.thirdpopperrole and self.thirdpopperearlyloc)
                            else False) and payload.member not in self.nitroboosters:
+                    if len(self.nitroboosters) > 7:
+                        return await payload.member.send("We already have 8 Nitro Boosters for this run. Wait for the RL to call location.")
                     await payload.member.send(f"Confirmed {payload.emoji}. The location for this run is:\n***{self.location}***\nPlease get to the location soon.")
                     if payload.member not in self.userswloc:
                         self.userswloc.append(payload.member)
@@ -302,6 +304,9 @@ class AfkCheck:
 
         if pot_list != None:
             pot_list.remove(member)
+
+        if member.id not in self.raiderids:
+            self.raiderids.append(member.id)
 
         if rush:
             if self.numrushers >= self.maxrushers:
@@ -458,16 +463,16 @@ class AfkCheck:
             pass
 
         if self.dungeontitle == "Void" or self.dungeontitle == "Full-Skip Void":
-            log = LogRun(self.client, self.ctx, self.emojis, self.keyreacts, self.dungeontitle, self.raiderids, self.rlrole, self.hcchannel,
+            self.log = LogRun(self.client, self.ctx, self.emojis, self.keyreacts, self.dungeontitle, self.raiderids, self.rlrole, self.hcchannel,
                          events=self.inevents, vialreacts=self.vials)
         elif self.dungeontitle == "Oryx 3":
-            log = LogRun(self.client, self.ctx, self.emojis, self.keyreacts, self.dungeontitle, self.raiderids, self.rlrole, self.hcchannel,
+            self.log = LogRun(self.client, self.ctx, self.emojis, self.keyreacts, self.dungeontitle, self.raiderids, self.rlrole, self.hcchannel,
                          events=self.inevents, helmreacts=self.helmrunes, shieldreacts=self.shieldrunes, swordreacts=self.swordrunes)
         else:
-            log = LogRun(self.client, self.ctx, self.emojis, self.keyreacts, self.dungeontitle, self.raiderids, self.rlrole, self.hcchannel,
+            self.log = LogRun(self.client, self.ctx, self.emojis, self.keyreacts, self.dungeontitle, self.raiderids, self.rlrole, self.hcchannel,
                          events=self.inevents)
 
-        await log.start()
+        await self.log.start()
 
 
     async def abort_afk(self, ended_by):

@@ -4,6 +4,7 @@ import random
 import discord
 
 import sql
+import utils
 
 
 class Roulette:
@@ -35,8 +36,8 @@ class Roulette:
         num = random.randint(-1, 36)
         if num == -1:
             num = 0
-        #embed = discord.Embed(title="Rolling!", color=discord.Color.teal()).set_image(url=utils.RouletteGifs[f'_{num}'].value)
-        #await self.game_msg.edit(embed=embed)
+        embed = discord.Embed(title="Rolling!", color=discord.Color.teal()).set_image(url=utils.RouletteGifs[f'_{num}'].value)
+        await self.game_msg.edit(embed=embed)
 
         multiplier = get_result(num, self.bet_type)
         if multiplier != -1:
@@ -52,7 +53,7 @@ class Roulette:
         self.gameembed.color = get_color(num)
         await sql.change_balance(self.client.pool, self.ctx.guild.id, self.player.id, self.balance+(self.bet*multiplier))
 
-        #await asyncio.sleep(12)
+        await asyncio.sleep(12)
         await self.game_msg.edit(embed=self.gameembed)
 
 

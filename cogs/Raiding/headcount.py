@@ -109,6 +109,9 @@ class Headcount:
         for e in self.emojis:
             await afkmsg.add_reaction(e)
 
+        for e in self.confirmreactions:
+            await afkmsg.add_reaction(e)
+
         for e in self.rusher_emojis:
             await afkmsg.add_reaction(e)
 
