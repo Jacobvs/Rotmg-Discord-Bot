@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import textwrap
 
 import discord
 import emoji
@@ -317,7 +318,12 @@ class Punishments(commands.Cog):
         embed = discord.Embed(title=f'{ptype} Info', description=fduration+"\n", color=color)
         embed.add_field(name=f'User Punished: {user.display_name}', value=f"{user.mention}\nJoined at: {user.joined_at}")
         embed.add_field(name=f'Requester: {requester.display_name}', value=f"{requester.mention}")
-        embed.add_field(name="Reason:", value=reason, inline=False)
+        if len(reason) <= 1024:
+            embed.add_field(name="Reason:", value=reason, inline=False)
+        else:
+            lines = textwrap.wrap(reason, width=1024)  # Wrap message before max len of field of 1024
+            for i, l in enumerate(lines):
+                embed.add_field(name=f"Reason (pt. {i + 1})", value=l, inline=False)
         if ptype != 'Warning' and ptype != 'Blacklist':
             embed.set_footer(text="Expires")
             embed.timestamp = duration

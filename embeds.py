@@ -227,6 +227,7 @@ def afk_check_base(run_title, requester, keyed_run: bool, emojis, confirm_emojis
             desc += "If you are bringing a Trickster" if run_title == "Oryx 3" else "If you are rushing"
             desc += ", please react to: " + rusher_emojis[0] + "\n"
     desc += "\nIf you are nitroboosting or have key popper early loc, react to: <:shard:682365548465487965>\n" \
+            "If you are one of my lovely patreons, react to: <:patreon:736944176469508118>  ⇒  `!patreon`\n" \
             "To end the AFK check as a leader, react to ❌"
     embed = discord.Embed(description=desc, color=color)
     if thumbnail:
@@ -259,7 +260,8 @@ def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run, 
     desc += f" in `{vc_name}`" if vc_name else ""
     embed = discord.Embed(description=desc, color=discord.Color.teal())
     embed.add_field(name="Location of run:", value=location, inline=False)
-    embed.add_field(name="Nitro Boosters:", value="`None`", inline=False)
+    embed.add_field(name="Nitro Boosters:", value="None", inline=False)
+    embed.add_field(name="Patreons:", value="None", inline=False)
     if reactions:
         embed.add_field(name="Confirmed Reactions:", value="No Confirmed Reactions", inline=False)
     if rushers:
@@ -271,12 +273,8 @@ def afk_check_control_panel(msg_url, location, run_title, key_emoji, keyed_run, 
         embed.add_field(name="Vials:", value="Main <:vial:682205784524062730>: None\nBackup <:vial:682205784524062730>: None",
                         inline=False)
     elif run_title == "Oryx 3":
-        embed.add_field(name="Sword Rune", value="Main <:SwordRune:708191783405879378>: \nBackup <:SwordRune:708191783405879378>: ",
-                        inline=True)
-        embed.add_field(name="Shield Rune", value="Main <:ShieldRune:708191783674314814>: \nBackup <:ShieldRune:708191783674314814>: "
-                       , inline=True)
-        embed.add_field(name="Helm Rune", value="Main <:HelmRune:708191783825178674>: \nBackup <:HelmRune:708191783825178674>: ",
-                        inline=True)
+        embed.add_field(name="Runes:", value="Helm Runes <:helmrune:737673058722250782> - \nShield Runes <:shieldrune:737672554642276423> - \n"
+                                             "Sword Runes <:swordrune:737672554482761739> - ", inline=False)
     if run_title == "Realm Clearing":
         embed.add_field(name="Cleared Numbers:", value="`[None]`")
     embed.add_field(name="Reactions:", value="📝 - Change Location | 🗺️ - Reveal Location | 🛑 - Abort Afk | ❌ - End Afk")

@@ -141,7 +141,7 @@ class Headcount:
                     return m.author == self.ctx.author and m.channel == self.ctx.channel
 
                 try:
-                    msg = await self.client.wait_for('message', timeout=60, check=location_check)  # Wait max 1 hour
+                    msg = await self.client.wait_for('message', timeout=600, check=location_check)  # Wait max 10 Minutes
                 except asyncio.TimeoutError:
                     continue
 

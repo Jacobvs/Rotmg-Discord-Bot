@@ -47,12 +47,15 @@ class Moderation(commands.Cog):
 
         if member.nick and " | " in member.nick: # Check if user has an alt account
             names = member.nick.split(" | ")
+            names = ["".join([c for c in n if c.isalpha()]) for n in names]
             desc = f"Found {member.mention} with the ign's: "
-            desc += " | ".join(['['+''.join([n for n in name if n.isalpha()])+'](https://www.realmeye.com/player/'+''.join([n for n in name if n.isalpha()])+")" for name in names])
+            desc += " | ".join(['['+''.join([n for n in name])+'](https://www.realmeye.com/player/'+''.join([n for n in name])+")" for name in names])
             desc += f"\nVoice Channel: {vc}"
+            desc += f"\nRealm Names: `{'`, `'.join(names)}`"
         else:
             name = ''.join([i for i in member.display_name if i.isalpha()])
             desc = f"Found {member.mention} with the ign: [{name}](https://www.realmeye.com/player/{name})\nVoice Channel: {vc}"
+            desc += f"\nRealm Name: `{name}`"
 
         embed = discord.Embed(description=desc, color=discord.Color.green())
 
@@ -171,26 +174,47 @@ class Moderation(commands.Cog):
                               color=discord.Color.green())
         await ctx.send(embed=embed)
 
-    @commands.command(usage="purge <num> [ignore_pinned]",
-                      description="Removes [num] messages from the channel, ignore_pinned = 0 to ignore, 1 to delete pinned")
+    @commands.command(usage="purge <num> [filter_type: all / contains / from] [filter: 'word' / 'sentence or words' / @member]",
+                      description="Removes [num] messages from the channel\nTo delete all messages do: `purge <num> all`\nTo delete messages containing words or a sentence do: "
+                                  "`purge <num> contains 'word'` or `purge <num> contains 'sentence to search'`\nTo purge messages from a member do: `purge <num> from @member`")
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
-    async def purge(self, ctx, num=5, ignore_pinned=0):
+    async def purge(self, ctx, num=5, type=None, filter=None):
         num += 1
         if not isinstance(num, int):
             await ctx.send("Please pass in a number of messages to delete.")
             return
 
-        no_older_than = datetime.datetime.utcnow()-datetime.timedelta(days=14)+datetime.timedelta(seconds=1)
-        if ignore_pinned == 0:
-            n = len(await ctx.channel.purge(limit=num, check=is_not_pinned, after=no_older_than, bulk=True))
+        no_older_than = datetime.datetime.utcnow() - datetime.timedelta(days=14) + datetime.timedelta(seconds=1)
+        if type:
+            type = type.lower()
+            if type == 'all':
+                def check(msg):
+                    return True
+            elif type == 'contains':
+                def check(msg):
+                    return str(filter).lower() in msg.content.lower()
+            elif type == 'from':
+                try:
+                    converter = utils.MemberLookupConverter()
+                    mem = await converter.convert(ctx, filter)
+                except discord.ext.commands.BadArgument as e:
+                    return ctx.send(f"No members found with the name: {filter}")
+
+                def check(msg):
+                    return msg.author == mem
+            else:
+                return await ctx.send(f'`{type}` is not a valid filter type! Please choose from "all", "contains", "from"')
         else:
-            n = len(await ctx.channel.purge(limit=num, after=no_older_than, bulk=True))
-        if n < num:
-            return await ctx.send("You are trying to delete messages that are older than 15 days. Discord API doesn't "
-                                  "allow bots to do this!\nYou can use the nuke command to completely clean a "
-                                  "channel.", delete_after=10)
-        await ctx.send(f"Deleted {n-1} messages.", delete_after=5)
+            def check(msg):
+                return not msg.pinned
+
+        messages = await ctx.channel.purge(limit=num, check=check, after=no_older_than, bulk=True)
+        # if len(messages) < num:
+        #     return await ctx.send("You are trying to delete messages that are older than 15 days. Discord API doesn't "
+        #                           "allow bots to do this!\nYou can use the nuke command to completely clean a "
+        #                           "channel.", delete_after=10)
+        await ctx.send(f"Deleted {len(messages)-1} messages.", delete_after=5)
 
     @commands.command(usage='nuke', description="Deletes all the messages in a channel.")
     @commands.guild_only()

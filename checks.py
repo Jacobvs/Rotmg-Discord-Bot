@@ -60,6 +60,11 @@ def in_voice_channel():
         return True
     return commands.check(predicate)
 
+def not_raiding_vc():
+    def predicate(ctx):
+        return ctx.author.voice and ctx.author.voice.channel not in ctx.bot.guild_db.get(ctx.guild.id) and "Raid" not in ctx.author.voice.channel.name
+    return commands.check(predicate)
+
 def is_dj():
     """Check if user has a role named 'DJ'"""
     def predicate(ctx):

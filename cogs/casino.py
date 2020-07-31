@@ -124,9 +124,11 @@ class Casino(commands.Cog):
             balance2 = data[sql.casino_cols.balance]
             if balance2 < bet:
                 return await ctx.send(f"{member.display_name} doesn't have enough credits to play.")
-            game = Coinflip(ctx, self.client, bet, balance1, balance2, member)
+            game = Coinflip(ctx, self.client, bet, balance1, member)
             self.client.players_in_game.append(ctx.author.id)
             await game.play()
+            if member.id in self.client.players_in_game:
+                self.client.players_in_game.remove(member.id)
             self.client.players_in_game.remove(ctx.author.id)
         else:
             await ctx.send("You have to place a bet higher than 0!")
@@ -318,7 +320,10 @@ class Casino(commands.Cog):
             embed.add_field(name="You have already collected your daily credits!", value=f"Next in: {hours}:{minutes}:{seconds}")
             embed.set_footer(text="Use !cooldowns to check your cooldown timers.")
             return await ctx.send(embed=embed, delete_after=10)
-        balance = data[sql.casino_cols.balance]+7500
+        if ctx.author.id in self.client.patreon_ids:
+            balance = data[sql.casino_cols.balance] + 20000
+        else:
+            balance = data[sql.casino_cols.balance] + 7500
         await sql.change_balance(self.client.pool, ctx.guild.id, ctx.author.id, balance)
         await sql.update_cooldown(self.client.pool, ctx.author.id, sql.casino_cols.dailycooldown)
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
