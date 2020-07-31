@@ -9,6 +9,7 @@ import discord
 import psutil
 from discord.ext import commands
 
+import checks
 import sql
 import utils
 from cogs import verification, moderation
@@ -25,17 +26,53 @@ class Core(commands.Cog):
 
     def __init__(self, client):
         self.client = client
-        self.start_time = datetime.now()
+
+    @commands.command(usage='patreon', description='Show patreon info.')
+    async def patreon(self, ctx):
+        is_patreon = await sql.get_patreon_status(self.client.pool, ctx.author.id)
+        if not is_patreon:
+            embed = discord.Embed(title="Become a Patreon Supporter!", description="Do you wish to support the bot's development & help pay for server costs?\nBecoming a "
+                                  "patreon gives you access to many perks such as:\n- Early Location to Raids & Priority Queuing\n- Custom Bot Commands"
+                                   "\n- Early access to new Features\n- Patreon Voting & BTS Updates\n- & Much more!\n\nIf you're interested, "
+                                  "the link to my patreon can be found here:\nhttps://www.patreon.com/Darkmattr", color=discord.Color.gold())
+        else:
+            embed = discord.Embed(title="Thank you!", description="I can't describe how much it means to me that you are supporting my work on the bot! It is allowing me to "
+                                                                  "create new & exciting features for the community!", colour=discord.Color.gold())
+        embed.set_thumbnail(url="https://miro.medium.com/fit/c/336/336/1*0syMZ77PxtOiQHK-xK3F3Q.png")
+        pdata = await sql.get_all_patreons(self.client.pool)
+        if len(pdata) > 1:
+            patreon_m = []
+            patreon_u = []
+            for p in pdata:
+                if p[0] not in self.client.owner_ids:
+                    if ctx.guild:
+                        member = ctx.guild.get_member(p[0])
+                        if member:
+                            patreon_m.append(member.mention)
+                        else:
+                            patreon_u.append(p[1])
+                    else:
+                        patreon_u.append(p[1])
+            desc = "Thank you to all my patreons!\n"
+            if patreon_m:
+                desc += "Patreons in this server:\n"
+                desc += " | ".join(patreon_m) + "\n"
+            if patreon_u:
+                desc += "\nOther Patreons:\n"
+                desc += " | ".join(patreon_u)
+            embed.add_field(name="Current Patreons:", value=desc, inline=False)
+        await ctx.send(embed=embed)
 
 
     @commands.command(usage="uptime", description="Tells how long the bot has been running.")
     async def uptime(self, ctx):
-        uptime_seconds = round((datetime.now() - self.start_time).total_seconds())
+        uptime_seconds = round((datetime.now() - self.client.start_time).total_seconds())
         await ctx.send(f"Current Uptime: {'{:0>8}'.format(str(timedelta(seconds=uptime_seconds)))}")
 
 
     @commands.command(usage="report", description="Report a bug or suggest a new feature here!", aliases=['bug','feature','suggest'])
     @commands.guild_only()
+    @checks.is_rl_or_higher_check()
     async def report(self, ctx):
         blacklisted = await sql.get_blacklist(self.client.pool, ctx.author.id, ctx.guild.id, 'reporting')
         if blacklisted:
@@ -91,7 +128,7 @@ class Core(commands.Cog):
                 await msg.edit(embed=embed)
 
             content = str(issuemsg.content)
-            if content.strip().lower() == 'cancel':
+            if 'cancel' in content.strip().lower():
                 embed = discord.Embed(title="Cancelled!", description="You cancelled this report!",
                                       color=discord.Color.red())
                 return await msg.edit(embed=embed)
@@ -132,7 +169,7 @@ class Core(commands.Cog):
         }
         try:
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
-                async with cs.request("POST", "https://api.github.com/repos/Ooga-Booga-Bot/Rotmg-Discord-Bot/issues", json=payload, headers=header) as r:
+                async with cs.request("POST", "https://api.github.com/repos/Jacobvs/Rotmg-Discord-Bot/issues", json=payload, headers=header) as r:
                     if r.status != 201:
                         print("GH ISSUE UPLOAD ERROR:")
                         print(r)
@@ -181,9 +218,17 @@ class Core(commands.Cog):
         await ctx.send(embed=embed)
 
 
-    @commands.command(usage="rolecount <role>", description="Counts the number of people who have a role.")
-    async def rolecount(self, ctx, role: discord.Role):
-        embed = discord.Embed(color=role.color).add_field(name=f"Members in {role.name}", value=str(len(role.members)))
+    @commands.command(usage="rolecount [role]", description="Counts the number of people who have a role, If no role is specified it counts everyone.")
+    async def rolecount(self, ctx, *, role: discord.Role=None):
+        if not role:
+            name = " the server"
+            nmembers = ctx.guild.member_count
+            color = discord.Color.gold()
+        else:
+            name = role.name
+            nmembers = len(role.members)
+            color = role.color
+        embed = discord.Embed(color=color).add_field(name=f"Members in {name}", value=f"{nmembers:,}")
         await ctx.send(embed=embed)
 
     # Event listeners
@@ -252,6 +297,14 @@ class Core(commands.Cog):
             else:
                 await message.author.send("You are not verified in any guilds this bot is in yet. Please verify "
                                           "before attempting to send modmail.")
+        elif message.author != self.client.user:
+            if message.author.id in self.client.beaned_ids:
+                try:
+                    await message.delete()
+                    await message.channel.send(f"__{message.author.display_name}__ Says: ||{message.content}||")
+                except discord.NotFound or discord.Forbidden:
+                    pass
+
 
 
     @commands.bot_has_permissions(add_reactions=True)
@@ -259,38 +312,39 @@ class Core(commands.Cog):
         aliases=["h"], description="Shows the help menu or information for a specific command or cog when specified.")
     async def help(self, ctx, *, opt: str = None):
         if opt:
-            command = self.client.get_command(opt.lower())
-            if not command:
-                cog = self.client.get_cog(opt.capitalize())
-                if not cog:
+            cog = self.client.get_cog(opt.capitalize())
+            if not cog:
+                command = self.client.get_command(opt.lower())
+                if not command:
                     return await ctx.send(
                         embed=discord.Embed(description=f"That command/cog does not exist. Use `{ctx.prefix}help` to see all the commands.",
-                            color=discord.Color.red(), ))
-                cog_commands = cog.get_commands()
-                embed = discord.Embed(title=opt.capitalize(), description=f"{cog.description}\n\n`<>` Indicates a required argument.\n"
-                                                                 "`[]` Indicates an optional argument.\n", color=discord.Color.blue(), )
-                embed.set_author(name=f"{self.client.user.name} Help Menu", icon_url=self.client.user.avatar_url)
-                embed.set_thumbnail(url=self.client.user.avatar_url)
-                embed.set_footer(
-                    text=f"Use {ctx.prefix}help <command> for more information on a command.")
-                for cmd in cog_commands:
-                    if cmd.hidden is False:
-                        name = ctx.prefix + cmd.usage
-                        if len(cmd.aliases) > 1:
-                            name += f" | Aliases – `{'`, `'.join([ctx.prefix + a for a in cmd.aliases])}`"
-                        elif len(cmd.aliases) > 0:
-                            name += f" | Alias – {ctx.prefix+cmd.aliases[0]}"
-                        embed.add_field(name=name, value=cmd.description, inline=False)
-                return await ctx.send(embed=embed)
+                                            color=discord.Color.red(), ))
 
-            embed = discord.Embed(title=command.name, description=command.description, colour=discord.Color.blue())
-            usage = "\n".join([ctx.prefix + x.strip() for x in command.usage.split("\n")])
-            embed.add_field(name="Usage", value=f"```{usage}```", inline=False)
-            if len(command.aliases) > 1:
-                embed.add_field(name="Aliases", value=f"`{'`, `'.join(command.aliases)}`")
-            elif len(command.aliases) > 0:
-                embed.add_field(name="Alias", value=f"`{command.aliases[0]}`")
+                embed = discord.Embed(title=command.name, description=command.description, colour=discord.Color.blue())
+                usage = "\n".join([ctx.prefix + x.strip() for x in command.usage.split("\n")])
+                embed.add_field(name="Usage", value=f"```{usage}```", inline=False)
+                if len(command.aliases) > 1:
+                    embed.add_field(name="Aliases", value=f"`{'`, `'.join(command.aliases)}`")
+                elif len(command.aliases) > 0:
+                    embed.add_field(name="Alias", value=f"`{command.aliases[0]}`")
+                return await ctx.send(embed=embed)
+            cog_commands = cog.get_commands()
+            embed = discord.Embed(title=opt.capitalize(), description=f"{cog.description}\n\n`<>` Indicates a required argument.\n"
+                                                                      "`[]` Indicates an optional argument.\n", color=discord.Color.blue(), )
+            embed.set_author(name=f"{self.client.user.name} Help Menu", icon_url=self.client.user.avatar_url)
+            embed.set_thumbnail(url=self.client.user.avatar_url)
+            embed.set_footer(
+                text=f"Use {ctx.prefix}help <command> for more information on a command.")
+            for cmd in cog_commands:
+                if cmd.hidden is False:
+                    name = ctx.prefix + cmd.usage
+                    if len(cmd.aliases) > 1:
+                        name += f" | Aliases – `{'`, `'.join([ctx.prefix + a for a in cmd.aliases])}`"
+                    elif len(cmd.aliases) > 0:
+                        name += f" | Alias – {ctx.prefix + cmd.aliases[0]}"
+                    embed.add_field(name=name, value=cmd.description, inline=False)
             return await ctx.send(embed=embed)
+
         all_pages = []
         page = discord.Embed(title=f"{self.client.user.name} Help Menu",
             description="Thank you for using Ooga-Booga! Please direct message `Darkmatter#7321` if you find bugs or have suggestions!",
@@ -349,6 +403,75 @@ class Core(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.Cog.listener()
+    async def on_member_update(self, before, after):
+        if after.guild.id == 660344559074541579:
+            name = "".join([c for c in after.display_name if c.isalpha()])
+            if self.client.patreon_role in after.roles and self.client.patreon_role not in before.roles:
+                await sql.set_patreon_status(self.client.pool, after.id, name, True)
+                self.client.patreon_ids.add(after.id)
+                pchannel = self.client.get_channel(737140990158045214)
+                if pchannel:
+                    await pchannel.send(f"{after.mention} became a patreon! :tada:\nUse `!help patreon` to see the new commands you have access to\nAlso, feel free to dm me "
+                                        f"anytime if you have questions or suggestions! Thanks so much for your support!")
+                print(f"{after.display_name} became a patreon!")
+            elif self.client.patreon_role in before.roles and self.client.patreon_role not in after.roles:
+                await sql.set_patreon_status(self.client.pool, after.id, name, False)
+                try:
+                    self.client.patreon_ids.remove(after.id)
+                except ValueError:
+                    pass
+                print(f"{before.display_name} lost their patreon status!")
+
+    # @commands.command()
+    # async def mrole(self, ctx, role: discord.Role):
+    #     for m in role.members:
+    #         await ctx.send(m.mention)
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        # joins
+        if not before.channel and after.channel:
+            if after.channel.id in self.client.queues:
+                if member.id not in self.client.queues[after.channel.id]:
+                    await self.join_queue(member, before.channel, after.channel)
+                    # print(f"++++ {member} was added to the queue at position {len(self.client.queues[after.channel.id])} ++++")
+        #leaves
+        elif before.channel and not after.channel:
+            if before.channel.id in self.client.queues:
+                if member.id in self.client.queues[before.channel.id]:
+                    self.leave_queue(member.id, before.channel.id)
+                    # print(f"---- {member} was removed from the queue -----")
+        # moves
+        elif before.channel.id != after.channel.id:
+            if before.channel.id in self.client.queues and after.channel.id in self.client.queues:
+                if member.id in self.client.queues[before.channel.id]:
+                    self.leave_queue(member.id, before.channel.id)
+                if member.id not in self.client.queues[after.channel.id]:
+                    await self.join_queue(member, before.channel, after.channel)
+                # print(f"???? {member} switched queues & was added to queue at position {len(self.client.queues[after.channel.id])} ????")
+            elif after.channel.id in self.client.queues:
+                if before.channel.id not in self.client.queues and member.id not in self.client.queues[after.channel.id]:
+                    await self.join_queue(member, before.channel, after.channel)
+                    # print(f"++++ {member} was added to the queue at position {len(self.client.queues[after.channel.id])} ++++")
+            elif before.channel.id in self.client.queues:
+                if after.channel.id not in self.client.queues and member.id in self.client.queues[before.channel.id]:
+                    self.leave_queue(member.id, before.channel.id)
+                    # print(f"---- {member} was removed from the queue -----")
+
+    # TODO: Check for member in active raid, if so -> move them back to raid channel
+    async def join_queue(self, member, before_channel, after_channel):
+        if member.id in self.client.active_raiders:
+            raidid = self.client.active_raiders[member.id]
+            await member.move_to(self.client.qraid_vcs[raidid])
+            await member.send("You are currently still in a raid! Please wait until the raid ends to re-join the queue!")
+        else:
+            self.client.queues[after_channel.id].append(member.id)
+
+    def leave_queue(self, member_id, channel_id):
+        self.client.queues[channel_id].remove(member_id)
+
+
+    @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         if payload.user_id == self.client.user.id:
             return
@@ -397,7 +520,6 @@ class Core(commands.Cog):
             if user_data is not None:
                 if payload.message_id == user_data[usr_cols.verifyid]:
                     return await dm_verify_react_handler(Verification(self.client), payload, user_data, user)
-        # elif str(payload.emoji) in ['✉️','🚫']: # handles modmail (FUTURE)
 
 
 def setup(client):

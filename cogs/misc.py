@@ -2,55 +2,21 @@ import asyncio
 import random
 from datetime import datetime
 
-import aiohttp
 import discord
-import youtube_dl
 from discord.ext import commands
-from discord.utils import get
+from discord.ext.commands import BucketType
 
 import checks
 import embeds
 import sql
 import utils
-from checks import is_dj, is_rl_or_higher_check, is_bot_owner
-
-youtube_dl.utils.bug_reports_message = lambda: ''
-
-ytdl_format_options = {'format': 'bestaudio/best', 'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s', 'restrictfilenames': True,
-                       'noplaylist': True, 'nocheckcertificate': True, 'ignoreerrors': False, 'logtostderr': False, 'quiet': True,
-                       'no_warnings': True, 'default_search': 'auto', 'source_address': '0.0.0.0'
-                       # bind to ipv4 since ipv6 addresses cause issues sometimes
-                       }
-
-ffmpeg_options = {'options': '-vn', 'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'}
-
-ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
+from checks import is_rl_or_higher_check, is_bot_owner
 
 
-async def connect_helper(self, ctx):
-    if ctx.message.guild is None:
-        await ctx.message.author.send("This command can only be used in a server when connected to a VC.")
-        return None
-
-    channel = ctx.message.author.voice.channel
-    voice = get(self.client.voice_clients, guild=ctx.guild)
-
-    if voice and voice.is_connected():
-        await voice.move_to(channel)
-    else:
-        voice = await channel.connect()
-
-    return voice
-
-
-def disconnect_helper(self, voice):
-    coroutine = voice.disconnect()
-    task = asyncio.run_coroutine_threadsafe(coroutine, self.client.loop)
-    try:
-        task.result()
-    except:
-        pass
-
+def is_lorlie():
+    def predicate(ctx):
+        return ctx.message.author.id == 482120766893064192
+    return commands.check(predicate)
 
 class Misc(commands.Cog):
     """Miscellaneous Commands"""
@@ -157,23 +123,6 @@ class Misc(commands.Cog):
         await author.send(embed=embed)
 
 
-    @commands.command(usage='joke', description='Tell a joke.')
-    async def joke(self, ctx):
-        async with aiohttp.ClientSession() as cs:
-            async with cs.get('https://sv443.net/jokeapi/v2/joke/Dark?blacklistFlags=nsfw,religious,political,racist,sexist',
-                              ssl=False) as r:
-                data = await r.json()
-
-        if data and not data['error']:
-            if data['type'] == 'single':
-                embed = discord.Embed(title=data['joke'])
-            else:
-                embed = discord.Embed(title=data['setup'], description=data['delivery'])
-            await ctx.send(embed=embed)
-        else:
-            await ctx.send("Bot isn't funny I guess? (Servers couldn't be reached. Try again later.)")
-
-
     @commands.command(usage='djoke', description="This command doesn't exist..... Shh...")
     @commands.guild_only()
     @commands.is_owner()
@@ -194,127 +143,8 @@ class Misc(commands.Cog):
         embed = discord.Embed(title=roast)
         await ctx.send(content=member.mention, embed=embed)
 
-    @commands.command(aliases=["ahhaha"], usage="laugh", description="Ah-Ha-hA")
-    @commands.guild_only()
-    @commands.check_any(is_dj(), is_bot_owner())
-    @checks.in_voice_channel()
-    async def laugh(self, ctx):
-        voice = await connect_helper(self, ctx)
-        client = ctx.guild.voice_client
-        if not client.source:
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/ahhaha.mp3", options=ffmpeg_options['options']),
-                                                  volume=1)
-            ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
-            await ctx.send("Ah-Ha-hA")
-        else:
-            await ctx.send("Audio is already playing!")
 
-
-    @commands.command(usage="bully", description="Why you bully me?")
-    @commands.guild_only()
-    @commands.check_any(is_dj(), is_bot_owner())
-    @checks.in_voice_channel()
-    async def bully(self, ctx):
-        voice = await connect_helper(self, ctx)
-        client = ctx.guild.voice_client
-        if not client.source:
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/bully-me.mp3", options=ffmpeg_options['options']),
-                                                  volume=1)
-            ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
-            await ctx.send("Why you bully me?")
-        else:
-            await ctx.send("Audio is already playing!")
-
-
-    @commands.command(usage="roll", description="Not quite sure what this is.")
-    @commands.guild_only()
-    @commands.check_any(is_dj(), is_bot_owner())
-    @checks.in_voice_channel()
-    async def roll(self, ctx):
-        voice = await connect_helper(self, ctx)
-        client = ctx.guild.voice_client
-        if not client.source:
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/roll.mp3", options=ffmpeg_options['options']), volume=1)
-            ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
-            await ctx.send("youtube.com/watch?v=dQw4w9WgXcQ")
-        else:
-            await ctx.send("Audio is already playing!")
-
-
-    @commands.command(usage="fbi", description="FBI, OPEN UP.")
-    @commands.guild_only()
-    @commands.check_any(is_dj(), is_bot_owner())
-    @checks.in_voice_channel()
-    async def fbi(self, ctx):
-        voice = await connect_helper(self, ctx)
-        client = ctx.guild.voice_client
-        if not client.source:
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/fbi.mp3", options=ffmpeg_options['options']), volume=1)
-            ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
-            await ctx.send("FBI, OPEN UP")
-        else:
-            await ctx.send("Audio is already playing!")
-
-
-    @commands.command(usage="richard", description="RICHARD!")
-    @commands.guild_only()
-    @commands.check_any(is_dj(), is_bot_owner())
-    @checks.in_voice_channel()
-    async def richard(self, ctx):
-        voice = await connect_helper(self, ctx)
-        client = ctx.guild.voice_client
-        if not client.source:
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/richard.mp3", options=ffmpeg_options['options']),
-                                                  volume=1)
-            ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
-            await ctx.send("What the fuck, Richard?")
-        else:
-            await ctx.send("Audio is already playing!")
-
-
-    @commands.command(usage="oogabooga", description="The only command you ever need.")
-    @commands.check_any(is_rl_or_higher_check(), is_bot_owner())
-    async def oogabooga(self, ctx):
-        await ctx.message.delete()
-        opts = ["BOOGA OOGA", "ooga boooga", "ooga chacka booga", "boogady oogady", "OOGA BOOGA", "boog.", "oog.", "booga", "ooga"]
-        embed = discord.Embed(title=random.choice(opts), description="[Ooga-booga Translator](https://codepen.io/Darkm4tter/full/mNWpBZ)")
-        embed.set_image(url="https://i.imgur.com/6z74JCz.png")
-        await ctx.send(embed=embed)
-
-
-    @commands.command(usage="whatthefuck", description="????")
-    @commands.check_any(is_rl_or_higher_check(), is_bot_owner())
-    async def whatthefuck(self, ctx):
-        await ctx.message.delete()
-        embed = discord.Embed(title="w h a t ᵗʰᵉᶠᵘᶜᵏ")
-        embed.set_image(url="https://i.imgur.com/qMK83uT.jpg")
-        await ctx.send(embed=embed)
-
-
-    @commands.command(usage="isitgone", description="Spooky...")
-    @commands.check_any(is_rl_or_higher_check(), is_bot_owner())
-    async def isitgone(self, ctx):
-        await ctx.message.delete()
-        embed = discord.Embed(title="Is it gone?")
-        embed.set_image(url="https://i.imgur.com/tYi5Xjg.jpg")
-        await ctx.send(embed=embed)
-
-    @commands.command(usage="comic", description="Get random XKCD Comic.")
-    async def comic(self, ctx):
-        num = random.randint(0, 2326)
-        async with aiohttp.ClientSession() as cs:
-            async with cs.get(f'https://xkcd.com/{num}/info.0.json', ssl=False) as r:
-                data = await r.json()
-
-        if data:
-            embed = discord.Embed(title=data['title'])
-            embed.set_image(url=data['img'])
-            await ctx.send(embed=embed)
-        else:
-            await ctx.send("XKCD's servers couldn't be reached. Try again later.")
-
-
-    @commands.command(usage='poll <title> <option 1> <option 2> [option 3]...',
+    @commands.command(usage='poll <title> [option 1] [option 2] [option 3]...',
                       description="Creates a poll with up to 2-10 options\n"
                                   "For options/titles with more than one word, surround the text with quotes.")
     @commands.guild_only()
@@ -338,5 +168,49 @@ class Misc(commands.Cog):
         # TODO: add option to ping @here or @everyone
 
 
+    @commands.command(usage='isgay <member>', description="Preed's Custom Patreon Command")
+    async def isgay(self, ctx, member: utils.MemberLookupConverter):
+        if member.id == self.client.user.id:
+            await ctx.send(f"Preed's Custom Patreon Command!\n__{member.display_name}__: Hmm, I don't think so...")
+        b = bool(random.getrandbits(1))
+        b2 = bool(random.getrandbits(1))
+        b3 = bool(random.getrandbits(1))
+        d = f"🌈__{member.display_name}__🌈: I've never been so sure of anything." if b and b2 and b3 else f"🌈__{member.display_name}__🌈: Yes." if b and b2 else \
+            f"__{member.display_name}__: I'm pretty sure." if b else f"__{member.display_name}__: Hmm, I don't think so..."
+        await ctx.send(f"Preed's Custom Patreon Command!\n{d}")
+
+    @commands.command(usage='bean <member>', description="Lorlie's Custom Patreon Command")
+    @commands.guild_only()
+    @commands.check_any(is_lorlie(), checks.is_security_or_higher_check())
+    @commands.cooldown(1, 1800, BucketType.member)
+    async def bean(self, ctx, member: utils.MemberLookupConverter):
+        if member.bot:
+            commands.Command.reset_cooldown(ctx.command, ctx)
+            return await ctx.send(f'Cannot bean `{member.display_name}` (is a bot).')
+        if member.guild_permissions.manage_guild and ctx.author.id not in self.client.owner_ids:
+            commands.Command.reset_cooldown(ctx.command, ctx)
+            return await ctx.send(f'Cannot bean `{member.display_name}` due to roles.')
+        if member.id in self.client.beaned_ids:
+            commands.Command.reset_cooldown(ctx.command, ctx)
+            return await ctx.send(f"{member.display_name}__ is already Beaned!")
+        self.client.beaned_ids.add(member.id)
+        await ctx.send(f"Lorlie's Custom Patreon Command!\n__{member.display_name}__ was Beaned!")
+        await asyncio.sleep(240)
+        if member.id in self.client.beaned_ids:
+            self.client.beaned_ids.remove(member.id)
+            await ctx.send(f"Lorlie's Custom Patreon Command!\n__{member.display_name}__ was automatically Un-Beaned!")
+
+    @commands.command(usage='unbean <member>', description="Lorlie's Custom Patreon Command")
+    @commands.guild_only()
+    @commands.check_any(is_lorlie(), checks.is_security_or_higher_check())
+    async def unbean(self, ctx, member: utils.MemberLookupConverter):
+        if member.id not in self.client.beaned_ids:
+            return await ctx.send(f"{member.display_name}__ is not currently Beaned!")
+
+        self.client.beaned_ids.remove(member.id)
+        await ctx.send(f"Lorlie's Custom Patreon Command!\n__{member.display_name}__ was Un-Beaned!")
+
+
 def setup(client):
     client.add_cog(Misc(client))
+

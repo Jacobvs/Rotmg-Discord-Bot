@@ -7,6 +7,7 @@ import cv2
 import discord
 import numpy as np
 from discord.ext import commands
+from discord.ext.commands import BucketType
 from pytesseract import pytesseract
 
 import checks
@@ -15,6 +16,7 @@ import utils
 from cogs.Raiding.afk_check import AfkCheck
 from cogs.Raiding.fametrain import FameTrain
 from cogs.Raiding.headcount import Headcount
+from cogs.Raiding.queue_afk import QAfk
 from cogs.Raiding.realmclear import RealmClear
 from cogs.Raiding.vc_select import VCSelect
 
@@ -25,9 +27,58 @@ class Raiding(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @commands.command(usage="afk <location>", description="Starts an AFK check for the location specified.")
+    @commands.command(usage='qafk <location>', description="Start a Queue afk check for the location specified.")
+    @commands.guild_only()
+    # @commands.is_owner()
+    @commands.max_concurrency(1, per=BucketType.guild, wait=False)
+    async def qafk(self, ctx, *, location):
+        if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
+            return await ctx.send("You cannot start another AFK while an AFK check is still up or a run log has not been completed.")
+
+        if not ('us' in location.lower() or 'eu' in location.lower()):
+            return await ctx.send("Please Choose a US or EU Location!")
+
+        is_us = True if 'us' in location.lower() else False
+
+        self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
+
+        setup = VCSelect(self.client, ctx, qafk=True)
+        data = await setup.q_start()
+        if isinstance(data, tuple):
+            (raiderrole, rlrole, hcchannel) = data
+        else:
+            self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
+            return
+
+        qafk = QAfk(self.client, ctx, location, hcchannel, raiderrole, rlrole, is_us)
+        await qafk.start()
+        self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
+
+
+    @commands.command(usage='position', description="Check your position within the raiding queue!", aliases=['queue'])
+    @commands.guild_only()
+    async def position(self, ctx):
+        try:
+            await ctx.message.delete()
+        except discord.NotFound:
+            pass
+
+        index = None
+        for id in self.client.queues:
+            if ctx.author.id in self.client.queues[id]:
+                index = self.client.queues[id].index(ctx.author.id)+1
+                channel_id = id
+                break
+        if index:
+            d = self.client.queue_links[channel_id]
+            await ctx.send(f"{ctx.author.mention} - Your position in the Queue for {d[1].name} is **{index}**")
+        else:
+            await ctx.send(f"You are not currently in any raiding queues!")
+
+    @commands.command(usage="afk <location>", description="Starts an AFK check for the location specified.", aliases=['afkcheck', 'startafk'])
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
+    @commands.max_concurrency(1, per=BucketType.guild, wait=False)
     async def afk(self, ctx, *, location):
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             return await ctx.send("You cannot start another AFK while an AFK check is still up or a run log has not been completed.")
@@ -41,12 +92,12 @@ class Raiding(commands.Cog):
             return
         afk = AfkCheck(self.client, ctx, location, raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg)
         await afk.start()
-        self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
 
     @commands.command(usage="headcount", aliases=["hc"], description="Starts a headcount.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
+    # @commands.max_concurrency(1, per=BucketType.guild, wait=False)
     async def headcount(self, ctx):
         setup = VCSelect(self.client, ctx, headcount=True)
         data = await setup.start()
@@ -148,23 +199,29 @@ class Raiding(commands.Cog):
     @commands.command(usage="clean", description="Clean out & lock a voice channel.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
-    async def clean(self, ctx):
-        setup = VCSelect(self.client, ctx, clean=True)
-        data = await setup.start()
-        if isinstance(data, tuple):
-            (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
-        else:
-            return
-        await setup_msg.delete()
+    @commands.max_concurrency(1, per=BucketType.guild, wait=False)
+    async def clean(self, ctx, channel: discord.VoiceChannel = None):
+        vcchannel = channel
+        if not channel:
+            setup = VCSelect(self.client, ctx, clean=True)
+            data = await setup.start()
+            if isinstance(data, tuple):
+                (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+            else:
+                return
+            await setup_msg.delete()
+
+            await vcchannel.set_permissions(raiderrole, connect=False, view_channel=True, speak=False)
+
+            for member in vcchannel.members:
+                if member.top_role < rlrole:
+                    if member.voice:
+                        await member.move_to(channel=None)
+
         for member in vcchannel.members:
-            if member.top_role < rlrole:
-                if member.voice:
-                    await member.move_to(channel=None)
-        vc_name = vcchannel.name
-        if " <-- Join!" in vc_name:
-            vc_name = vc_name.split(" <")[0]
-            await vcchannel.edit(name=vc_name)
-        await vcchannel.set_permissions(raiderrole, connect=False, view_channel=True, speak=False)
+            if member.voice:
+                await member.move_to(channel=None)
+
         embed = discord.Embed(title="Done Cleaning!", description=f"{vcchannel.name} has been cleaned and locked.",
                               color=discord.Color.green())
         await ctx.send(embed=embed)

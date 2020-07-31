@@ -69,7 +69,9 @@ class Mail(commands.Cog):
             await msg.edit(embed=embed)
 
         logchannel = await category.create_text_channel(name="0-modmail-log")
+        storagechannel = await category.create_text_channel(name="1-mail-storage")
         await sql.update_guild(self.client.pool, ctx.guild.id, 'modmaillogchannel', logchannel.id)
+        await sql.update_guild(self.client.pool, ctx.guild.id, 'modmailstoragechannel', storagechannel.id)
         self.client.guild_db[ctx.guild.id][sql.gld_cols.modmaillogchannel] = logchannel
 
         embed = discord.Embed(title="Success!", description="The modmail category was successfully setup! You should be able to receive modmail now!", color=discord.Color.green())
@@ -214,6 +216,8 @@ class Mail(commands.Cog):
         mailembed.description = f"To close this thread, use the `{ctx.prefix}close` command."
 
         await msg.delete()
+        modmail_storage = self.client.guild_db[ctx.guild.id][sql.gld_cols.modmailstoragechannel]
+        await modmail_storage.send(embed=mailembed)
         await ctx.send(embed=mailembed)
 
         if anonymous:
@@ -321,6 +325,7 @@ class ModmailMessage:
         if not modmail_category:
             return await self.ctx.author.send("This server does not have modmail setup yet! Contact an upper level staff if you believe this to be a mistake!")
         modmail_log_channel = self.client.guild_db[server.id][sql.gld_cols.modmaillogchannel]
+        modmail_storage = self.client.guild_db[server.id][sql.gld_cols.modmailstoragechannel]
 
         blacklisted = await sql.get_blacklist(self.client.pool, self.ctx.author.id, server.id, 'modmail')
         if blacklisted:
@@ -470,12 +475,19 @@ class ModmailMessage:
             #TODO: Add option to send anonymously
 
 
-        user_ids = [int(c.topic.split(" - ")[0].split("Channel ")[1]) for c in modmail_category.text_channels if c.topic and " - " in c.topic]
-        if self.ctx.author.id in user_ids:
-            index = user_ids.index(self.ctx.author.id)+1
-            modmail_channel = modmail_category.text_channels[index]
-            created = False
-        else:
+        # Find channel
+        modmail_channel = None
+        for c in modmail_category.text_channels:
+            if c.topic and ' - DO NOT CHANGE THIS!' in c.topic:
+                try:
+                    id = int(c.topic.split(" - ")[0].split("Channel ")[1])
+                    if id == self.ctx.author.id:
+                        modmail_channel = c
+                        created = False
+                        break
+                except ValueError:
+                    pass
+        if not modmail_channel:
             modmail_channel = await modmail_category.create_text_channel(name=str(self.ctx.author), topic=f"Modmail Channel"
                                                                          f" {self.ctx.author.id} - DO NOT CHANGE THIS!")
             created = True
@@ -491,7 +503,8 @@ class ModmailMessage:
                     break
 
         if aboutmember:
-            over = modmail_channel.overwrites.update({aboutmember: discord.PermissionOverwrite(read_messages=False)})
+            over = modmail_channel.overwrites
+            over[aboutmember] = discord.PermissionOverwrite(read_messages=False)
             await modmail_channel.edit(overwrites=over)
             mailembed.set_field_at(len(mailembed.fields)-1, name="Regarding:", value=f"This modmail is regarding {aboutmember.mention}")
 
@@ -500,12 +513,15 @@ class ModmailMessage:
         mailembed.set_thumbnail(url="https://www.bootgum.com/wp-content/uploads/2018/07/Email_Open_550px-1.gif")
         mailembed.color = discord.Color.green()
         await modmail_channel.send(embed=mailembed)
+        await modmail_storage.send(embed=mailembed)
         for i, img in enumerate(images, start=1):
             embed = discord.Embed(title=f"Proof #{i}")
             embed.set_image(url=img["secure_url"])
             await modmail_channel.send(embed=embed)
+            await modmail_storage.send(embed=embed)
         if txt_file:
             await modmail_channel.send(file=txt_file)
+            await modmail_storage.send(embed=txt_file)
 
         title = "New Ticket" if created else "Response"
         desc = "opened in" if created else "responded to"

@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import difflib
 import logging
 import random
 import re
@@ -8,6 +9,7 @@ from enum import Enum
 import aiohttp
 import discord
 import numpy as np
+from discord.embeds import _EmptyEmbed
 from discord.ext.commands import BadArgument, Converter
 
 import sql
@@ -19,26 +21,77 @@ class MemberLookupConverter(discord.ext.commands.MemberConverter):
         in_db = False
         if not ctx.guild:
             ctx.guild = guild
-        try:
-            member = await super().convert(ctx, mem)  # Convert parameter to discord.member
-        except discord.ext.commands.BadArgument:
-            if isinstance(mem, str):
+
+        if not mem.isdigit():
+            try:
+                data = await sql.get_user_from_ign(ctx.bot.pool, mem)
+                if data:
+                    in_db = True
+                    member = await super().convert(ctx, str(data[0]))
+                    return member
+                else:
+                    raise BadArgument(f"No members found with the name: {mem} and no results were found in the bot's database. "
+                                      "Check your spelling and try again!")
+            except discord.ext.commands.BadArgument:
+                if isinstance(mem, str):
+                    members = ctx.guild.members
+                    if len(mem) > 5 and mem[-5] == '#':
+                        # The 5 length is checking to see if #0000 is in the string,
+                        # as a#0000 has a length of 6, the minimum for a potential
+                        # discriminator lookup.
+                        potential_discriminator = mem[-4:]
+
+                        # do the actual lookup and return if found
+                        # if it isn't found then we'll do a full name lookup below.
+                        result = discord.utils.get(members, name=mem[:-5], discriminator=potential_discriminator)
+                        if result is not None:
+                            return result
+
+                    def pred(m):
+                        if m.nick:
+                            if " | " in m.nick:
+                                names = m.nick.split(" | ")
+                                for n in names:
+                                    if "".join([m.lower() for m in n if m.isalpha()]) == mem:
+                                        return True
+                            else:
+                                if "".join([m.lower() for m in m.nick if m.isalpha()]) == mem:
+                                    return True
+                        return False
+
+                    res = discord.utils.find(pred, members)
+                    if res is not None:
+                        return res
+
                 try:
-                    data = await sql.get_user_from_ign(ctx.bot.pool, mem)
-                    if data:
-                        in_db = True
-                        member = await super().convert(ctx, str(data[0]))
-                    else:
-                        raise BadArgument(f"No members found with the name: {mem} and no results were found in the bot's database. "
-                                          "Check your spelling and try again!")
+                    member = await super().convert(ctx, mem)  # Convert parameter to discord.member
+                    return member
                 except discord.ext.commands.BadArgument:
-                    desc = f"No members found with the name: {mem}. "
-                    desc += f"Found 1 result in the bot's database under the user: <@{data[0]}>. Verified in: [{data[6]}]" if in_db \
-                        else "No results found in the bot's database. Check your spelling and try again!"
-                    raise BadArgument(desc)
-            else:
-                raise BadArgument(f"No members found with the name: `{mem}`")
-        return member
+                    pass
+
+                nicks = []
+                mems = []
+                for m in ctx.guild.members:
+                    if m.nick:
+                        nicks.append(m.nick.lower())
+                        mems.append(m)
+
+                res = difflib.get_close_matches(mem.lower(), nicks, n=1, cutoff=0.75)
+                if res:
+                    index = nicks.index(res[0])
+                    return mems[index]
+
+                desc = f"No members found with the name: {mem}. "
+                desc += f"Found 1 result in the bot's database under the user: <@{data[0]}>. Verified in: [{data[6]}]" if in_db \
+                    else "No results found in the bot's database. Check your spelling and try again!"
+                raise BadArgument(desc)
+        else:
+            try:
+                member = await super().convert(ctx, mem)  # Convert parameter to discord.member
+                return member
+            except discord.ext.commands.BadArgument:
+                raise BadArgument(f"No members found with the name: {mem} and no results were found in the bot's database. "
+                                  "Check your spelling and try again!")
 
 
 class EmbedPaginator:
@@ -51,6 +104,12 @@ class EmbedPaginator:
     async def paginate(self):
         if self.pages:
             pagenum = 0
+            embed: discord.Embed = self.pages[pagenum]
+            if not isinstance(embed.title, _EmptyEmbed):
+                if f" (Page {pagenum+1}/{len(self.pages)})" not in str(embed.title):
+                    embed.title = embed.title + f" (Page {pagenum+1}/{len(self.pages)})"
+            else:
+                embed.title = f" (Page {pagenum+1}/{len(self.pages)})"
             msg = await self.ctx.send(embed=self.pages[pagenum])
             await msg.add_reaction("⏮️")
             await msg.add_reaction("⬅️")
@@ -71,10 +130,16 @@ class EmbedPaginator:
 
                 await msg.remove_reaction(reaction.emoji, self.ctx.author)
                 timeleft = 300 - (datetime.datetime.utcnow() - starttime).seconds
-                if str(reaction.emoji) == "⬅️" and pagenum != 0:
-                    pagenum -= 1
-                elif str(reaction.emoji) == "➡️" and pagenum != (len(self.pages)-1):
-                    pagenum += 1
+                if str(reaction.emoji) == "⬅️":
+                    if pagenum == 0:
+                        pagenum = len(self.pages)-1
+                    else:
+                        pagenum -= 1
+                elif str(reaction.emoji) == "➡️":
+                    if pagenum == len(self.pages)-1:
+                        pagenum = 0
+                    else:
+                        pagenum += 1
                 elif str(reaction.emoji) == "⏮️":
                     pagenum = 0
                 elif str(reaction.emoji) == "⏭️":
@@ -84,6 +149,12 @@ class EmbedPaginator:
                 else:
                     continue
 
+                embed: discord.Embed = self.pages[pagenum]
+                if not isinstance(embed.title, _EmptyEmbed):
+                    if f" (Page {pagenum + 1}/{len(self.pages)})" not in str(embed.title):
+                        embed.title = embed.title + f" (Page {pagenum + 1}/{len(self.pages)})"
+                else:
+                    embed.title = f" (Page {pagenum + 1}/{len(self.pages)})"
                 await msg.edit(embed=self.pages[pagenum])
 
     async def end_pagination(self, msg):
@@ -406,61 +477,114 @@ class Duration(Converter):
 
         return now + delta
 
-async def check_pops(client, ctx, member, changed_amount, num, type=None, emoji=None, hcchannel=None):
-    if not hcchannel:
-        setup = VCSelect(client, ctx, log=True)
-        data = await setup.start()
-        if isinstance(data, tuple):
-            (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
-        else:
-            return
-        try:
-            await setup_msg.delete()
-        except discord.NotFound:
-            pass
+def textProgressBar(iteration, total, prefix='```yml\nProgress:  ', percent_suffix="", suffix='\n```', decimals=1, length=100, fullisred=True, empty="<:gray:736515579103543336>"):
+    """
+    Call in a loop to create progress bar
+    @params:
+        iteration        - Required  : current iteration (Int)
+        total            - Required  : total iterations (Int)
+        prefix           - Optional  : prefix string (Str)
+        percent_suffix   - Optional  : percent suffix (Str)
+        suffix           - Optional  : suffix string (Str)
+        decimals         - Optional  : positive number of decimals in percent complete (Int)
+        length           - Optional  : character length of bar (Int)
+        fill             - Optional  : bar fill character (Str)
+        empty            - Optional  : bar empty character (Str)
+    """
+    iteration = total if iteration > total else iteration
+    percent = 100 * (iteration / float(total))
+    s_percent = ("{0:." + str(decimals) + "f}").format(percent)
+    if fullisred:
+        fill = "<:green:736390154549329950>" if percent <= 34 else "<:yellow:736390576932651049>" if percent <= 67 else "<:orange:736390576789782620>" \
+            if percent <= .87 else "<:red:736390576978788363>"
+    else:
+        fill = "<:red:736390576978788363>" if percent <= 34 else "<:orange:736390576789782620>" if percent <= 67 else "<:yellow:736390576932651049>" \
+            if percent <= .87 else "<:green:736390154549329950>"
 
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + empty * (length - filledLength)
+    res = f'{prefix} {bar} - {s_percent}% {percent_suffix} {suffix}' if percent_suffix != "" else f'\r{prefix}\n{bar}{suffix}'
+    return res
+
+
+async def check_pops(client, member, changed_amount, num, type=None, emoji=None, guild=None, ctx=None, hcchannel=None):
     if type:
         fname = "Keys" if type == "key" else "Event Keys" if type == "event" else "Vials" if type == "vial" else "Helm Runes" if \
             type == "helm" else "Shield Runes" if type == "shield" else "Sword Runes"
     else:
         fname=emoji
 
+    guild = guild if guild else ctx.guild
+
     send_msg = False
     desc = f"{member.mention} has popped {num} {fname} for the server!"
     if num % 5 == 0:
         send_msg = True
-    guild_db = client.guild_db.get(ctx.guild.id)
-    fpopnum = guild_db[sql.gld_cols.numpopsfirst]
-    if num >= fpopnum:
-        role = guild_db[sql.gld_cols.firstpopperrole]
-        if role and role not in member.roles:
-            send_msg = True
-            desc += f"\nThey have earned the {role.mention} role!"
-            try:
-                await member.add_roles(role)
-            except discord.Forbidden:
-                print(f"ERROR: adding first key popper role to {member.display_name} failed!")
-    spopnum = guild_db[sql.gld_cols.numpopssecond]
-    if num >= spopnum:
-        role = guild_db[sql.gld_cols.secondpopperrole]
-        if role and role not in member.roles:
-            send_msg = True
-            desc += f"\nThey have earned the {role.mention} role!"
-            try:
-                await member.add_roles(role)
-            except discord.Forbidden:
-                print(f"ERROR: adding second key popper role to {member.display_name} failed!")
-    tpopnum = guild_db[sql.gld_cols.numpopsthird]
-    if num >= tpopnum:
-        role = guild_db[sql.gld_cols.thirdpopperrole]
-        if role and role not in member.roles:
-            send_msg = True
-            desc += f"\nThey have earned the {role.mention} role!"
-            try:
-                await member.add_roles(role)
-            except discord.Forbidden:
-                print(f"ERROR: adding third key popper role to {member.display_name} failed!")
+    guild_db = client.guild_db.get(guild.id)
+    if fname == 'Keys':
+        fpopnum = guild_db[sql.gld_cols.numpopsfirst]
+        if num >= fpopnum:
+            role = guild_db[sql.gld_cols.firstpopperrole]
+            if role and role not in member.roles:
+                send_msg = True
+                desc += f"\nThey have earned the {role.mention} role!"
+                try:
+                    await member.add_roles(role)
+                except discord.Forbidden:
+                    print(f"ERROR: adding first key popper role to {member.display_name} failed!")
+        spopnum = guild_db[sql.gld_cols.numpopssecond]
+        if num >= spopnum:
+            role = guild_db[sql.gld_cols.secondpopperrole]
+            if role and role not in member.roles:
+                send_msg = True
+                desc += f"\nThey have earned the {role.mention} role!"
+                try:
+                    await member.add_roles(role)
+                except discord.Forbidden:
+                    print(f"ERROR: adding second key popper role to {member.display_name} failed!")
+        tpopnum = guild_db[sql.gld_cols.numpopsthird]
+        if num >= tpopnum:
+            role = guild_db[sql.gld_cols.thirdpopperrole]
+            if role and role not in member.roles:
+                send_msg = True
+                desc += f"\nThey have earned the {role.mention} role!"
+                try:
+                    await member.add_roles(role)
+                except discord.Forbidden:
+                    print(f"ERROR: adding third key popper role to {member.display_name} failed!")
+    elif type == 'helm' or type == 'shield' or type == 'sword':
+        frpopnum = guild_db[sql.gld_cols.numpopsfirstrune]
+        if num >= frpopnum:
+            role = guild_db[sql.gld_cols.runepopper1role]
+            if role and role not in member.roles:
+                send_msg = True
+                desc += f"\nThey have earned the {role.mention} role!"
+                try:
+                    await member.add_roles(role)
+                except discord.Forbidden:
+                    print(f"ERROR: adding first rune popper role to {member.display_name} failed!")
+        srpopnum = guild_db[sql.gld_cols.numpopssecondrune]
+        if num >= srpopnum:
+            role = guild_db[sql.gld_cols.runepopper2role]
+            if role and role not in member.roles:
+                send_msg = True
+                desc += f"\nThey have earned the {role.mention} role!"
+                try:
+                    await member.add_roles(role)
+                except discord.Forbidden:
+                    print(f"ERROR: adding second rune popper role to {member.display_name} failed!")
     if send_msg:
+        if not hcchannel:
+            setup = VCSelect(client, ctx, log=True)
+            data = await setup.start()
+            if isinstance(data, tuple):
+                (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+            else:
+                return
+            try:
+                await setup_msg.delete()
+            except discord.NotFound:
+                pass
         await hcchannel.send(desc)
 
 
@@ -483,13 +607,79 @@ async def image_upload(binary, sendable, is_rc=True):
     return res
 
 
+servers = {"US" : ("USWest3", "USWest2", "USWest", "USSouthWest", "USSouth3", "USSouth2", "USSouth", "USNorthWest", "USMidWest2", "USMidWest", "USEast3", "USEast2", "USEast"),
+           "EU" : ("EUWest", "EUSouthWest", "EUSouth", "EUNorth2", "EUNorth", "EUEast")}
+
+def get_server(is_us=True):
+    res = random.choice(servers["EU"]) if is_us else random.choice(servers["US"])
+    return res + " Nexus"
+
+
+oryx_images = [
+    "https://i.imgur.com/mPp9HfN.gif",
+    "https://i.imgur.com/c6Ck8KA.gif",
+    "https://i.imgur.com/aAm0TfB.gif",
+    "https://i.imgur.com/9HLRAcT.gif",
+    "https://i.imgur.com/6Cwnzfi.gif",
+    "https://i.imgur.com/tIj66nn.gif",
+    "https://i.imgur.com/VqWnW9D.gif",
+    "https://i.imgur.com/BivkiN0.gif",
+    "https://i.imgur.com/ZQgIOzf.gif",
+    "https://i.imgur.com/gJeniO7.gif",
+    "https://i.imgur.com/hJTpbTZ.gif",
+    "https://i.imgur.com/UmiD7hl.gif",
+    "https://i.imgur.com/ImMoYzi.gif",
+    "https://i.imgur.com/pYjQR9W.gif",
+    "https://i.imgur.com/VqPKPUH.gif",
+    "https://i.imgur.com/jhNLpiT.gif",
+    "https://i.imgur.com/Qig5rY2.gif",
+    "https://i.imgur.com/FFYAEws.gif",
+    "https://i.imgur.com/Ct5XsHB.gif",
+    "https://i.imgur.com/4VYcT6Z.gif"
+]
+def get_random_oryx():
+    return random.choice(oryx_images)
+
+# Queue Dungeons
+# 0 : title
+# 1 : dungeon emoji
+# 2 : player cap - (total, nitro)
+# 3 : required emojis (emoji, max)
+# 4 : normal emojis
+# 5 : dungeon color
+# 6 : dungeon image
+q_dungeons = {1: ("Oryx 3",
+                  ("<a:O3:737899037973282856>", "https://i.imgur.com/Y37KxOF.gif"),
+                  (80, 6),
+                  (("<:WineCellarInc:708191799750950962>", 1),
+                   ("<:swordrune:737672554482761739>", 2),
+                   ("<:shieldrune:737672554642276423>", 2),
+                   ("<:helmrune:737673058722250782>", 2),
+                   ("<:puri:682205769973760001>", 2),
+                   ("<:mseal:682205755754938409>", 1),
+                   ("<:trickster:682214467483861023>", 3),
+                   ("<:Bard:735022210657550367>", 1)),
+                  ("<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
+                   "<:wizard:711307534685962281>", "<:Samurai:735022210682585098>"),
+                 discord.Color.gold(),
+                 "https://i.imgur.com/0qglf0F.gif")
+              }
+
+def q_dungeon_info(num):
+    info = q_dungeons.get(num)
+    if num == 1:
+        l = list(info[:6])
+        l.append(get_random_oryx())
+        return l
+    return info if info else False
+
+
 defaults = ["<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>"]
-dungeons = {1: ("Oryx 3", ["<:oryx3:711426860051071067>", "<:WineCellarInc:708191799750950962>", "<:SwordRune:708191783405879378>",
-                           "<:ShieldRune:708191783674314814>", "<:HelmRune:708191783825178674>", "<:warrior:682204616997208084>",
+dungeons = {1: ("Oryx 3", ["<:oryx3:711426860051071067>", "<:WineCellarInc:708191799750950962>", "<:swordrune:737672554482761739>",
+                           "<:shieldrune:737672554642276423>", "<:helmrune:737673058722250782>", "<:warrior:682204616997208084>",
                            "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
                            "<:Bard:735022210657550367>"],
-                ["<:brainofthegolem:682205737492938762>", "<:puri:682205769973760001>", "<:Ogmur:735022210460287038>",
-                 "<:mseal:682205755754938409>", "<:slow_icon:678792068965072906>", "<:SnakeOil:733724221137616920>"],
+                ["<:puri:682205769973760001>", "<:mseal:682205755754938409>", "<:slow_icon:678792068965072906>", "<:SnakeOil:733724221137616920>"],
                 ["<:trickster:682214467483861023>"],
                 discord.Color.gold(),
                 "https://cdn.discordapp.com/attachments/561246036870430770/708192230468485150/oryx_3_w.png"),

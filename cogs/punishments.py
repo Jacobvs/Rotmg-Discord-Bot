@@ -1,7 +1,9 @@
 import asyncio
 import datetime
+import textwrap
 
 import discord
+import emoji
 from discord.ext import commands
 
 import checks
@@ -29,6 +31,7 @@ class Punishments(commands.Cog):
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
     async def warn(self, ctx, member: utils.MemberLookupConverter, *, reason):
+        reason = emoji.demojize(reason)
         await sql.add_punishment(self.client.pool, member.id, ctx.guild.id, 'warn', ctx.author.id, None, reason)
         await self.send_log(ctx.guild, member, ctx.author, 'warn', None, reason)
         embed = discord.Embed(title="Success!", description=f"`{member.display_name}` was successfully warned for reason:\n{reason}.",
@@ -51,6 +54,7 @@ class Punishments(commands.Cog):
         already_active = await sql.has_active(self.client.pool, member.id, ctx.guild.id, 'mute')
         if already_active:
             return await ctx.send(f"{member.mention} already has an active mute!")
+        reason = emoji.demojize(reason)
         await sql.add_punishment(self.client.pool, member.id, ctx.guild.id, 'mute', ctx.author.id, duration, reason)
         await self.send_log(ctx.guild, member, ctx.author, 'mute', duration, reason)
 
@@ -88,6 +92,7 @@ class Punishments(commands.Cog):
         if self.client.active_punishments[str(ctx.guild.id)+str(member.id)+'mute']:
             task = self.client.active_punishments[str(ctx.guild.id)+str(member.id)+'mute']
             task.cancel()
+        reason = emoji.demojize(reason)
         await unmute(self.client.pool, ctx.guild, member)
         await send_update_embeds(self.client, ctx.guild, member, True, False, ctx.author, reason)
         embed = discord.Embed(title="Success!",
@@ -111,6 +116,7 @@ class Punishments(commands.Cog):
         if already_active:
             return await ctx.send(f"{member.mention} already has an active suspension!")
 
+        reason = emoji.demojize(reason)
         tsecs = (duration - datetime.datetime.utcnow()).total_seconds()
         suspendrole = self.client.guild_db.get(ctx.guild.id)[sql.gld_cols.suspendedrole]
         verifiedrole = self.client.guild_db.get(ctx.guild.id)[sql.gld_cols.verifiedroleid]
@@ -155,6 +161,7 @@ class Punishments(commands.Cog):
         if not already_active:
             return await ctx.send(f'Cannot un-suspend `{member.display_name}` as they have no active suspensions!')
 
+        reason = emoji.demojize(reason)
         if self.client.active_punishments[str(ctx.guild.id)+str(member.id)+'suspend']:
             task = self.client.active_punishments[str(ctx.guild.id)+str(member.id)+'suspend']
             task.cancel()
@@ -181,6 +188,7 @@ class Punishments(commands.Cog):
         exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'verification')
         if exists:
             return await ctx.send(f"That member ({member.mention}) already has an active verification blacklist!")
+        reason = emoji.demojize(reason)
         await sql.add_blacklist(self.client.pool, member.id, ctx.guild.id, ctx.author.id, 'verification', reason)
         embed = discord.Embed(title="Success!", description=f"{member.mention} was successfully blacklisted from verification!", color=discord.Color.green())
         embed.add_field(name="Requester:", value=ctx.author.mention)
@@ -201,6 +209,7 @@ class Punishments(commands.Cog):
         exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'modmail')
         if exists:
             return await ctx.send(f"That member ({member.mention}) already has an active modmail blacklist!")
+        reason = emoji.demojize(reason)
         await sql.add_blacklist(self.client.pool, member.id, ctx.guild.id, ctx.author.id, 'modmail', reason)
         embed = discord.Embed(title="Success!", description=f"{member.mention} was successfully blacklisted from sending modmail!", color=discord.Color.green())
         embed.add_field(name="Requester:", value=ctx.author.mention)
@@ -222,6 +231,7 @@ class Punishments(commands.Cog):
         exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'reporting')
         if exists:
             return await ctx.send(f"That member ({member.mention}) already has an active reporting blacklist!")
+        reason = emoji.demojize(reason)
         await sql.add_blacklist(self.client.pool, member.id, ctx.guild.id, ctx.author.id, 'reporting', reason)
         embed = discord.Embed(title="Success!", description=f"{member.mention} was successfully blacklisted from reporting!", color=discord.Color.green())
         embed.add_field(name="Requester:", value=ctx.author.mention)
@@ -308,7 +318,12 @@ class Punishments(commands.Cog):
         embed = discord.Embed(title=f'{ptype} Info', description=fduration+"\n", color=color)
         embed.add_field(name=f'User Punished: {user.display_name}', value=f"{user.mention}\nJoined at: {user.joined_at}")
         embed.add_field(name=f'Requester: {requester.display_name}', value=f"{requester.mention}")
-        embed.add_field(name="Reason:", value=reason, inline=False)
+        if len(reason) <= 1024:
+            embed.add_field(name="Reason:", value=reason, inline=False)
+        else:
+            lines = textwrap.wrap(reason, width=1024)  # Wrap message before max len of field of 1024
+            for i, l in enumerate(lines):
+                embed.add_field(name=f"Reason (pt. {i + 1})", value=l, inline=False)
         if ptype != 'Warning' and ptype != 'Blacklist':
             embed.set_footer(text="Expires")
             embed.timestamp = duration

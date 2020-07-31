@@ -8,12 +8,11 @@ import sql
 
 class Coinflip:
 
-    def __init__(self, ctx, client, bet, p1balance, p2balance, player2):
+    def __init__(self, ctx, client, bet, p1balance, player2):
         self.ctx = ctx
         self.client = client
         self.bet = bet
         self.p1balance = p1balance
-        self.p2balance = p2balance
         self.player1 = ctx.author
         self.player2 = player2
         self.p1coin = True
@@ -57,6 +56,16 @@ class Coinflip:
         await self.game_msg.clear_reactions()
 
         if resp == '✅':
+            data = await sql.get_casino_player(self.client.pool, self.player2.id)
+            self.p2balance = data[sql.casino_cols.balance]
+            if self.p2balance < self.bet:
+                await self.ctx.send(f"{user.mention} doesn't have enough credits to play.", delete_after=5)
+                self.gameembed.color = discord.Color.red()
+                self.gameembed.clear_fields()
+                self.gameembed.add_field(name="Error",
+                                         value=f"{user.mention} didn't have enough credits to play.")
+                await self.game_msg.edit(embed=self.gameembed)
+                return await self.game_msg.clear_reactions()
             if user.id in self.client.players_in_game:
                 await self.ctx.send("You're already in a game! "
                                     "Finish that game or wait for it to expire to start a new one.", delete_after=10)
@@ -66,6 +75,9 @@ class Coinflip:
                                          value=f"{user.mention} was already in a game and tried to join this one. Credits have been refunded.")
                 await self.game_msg.edit(embed=self.gameembed)
                 return await self.game_msg.clear_reactions()
+            else:
+                self.client.players_in_game.append(user.id)
+
             await self.game_msg.edit(embed=self.gameembed)
             self.p1coin = random.choice([True, False])
             await self.countdown()

@@ -3,6 +3,7 @@ import importlib
 import json
 import logging
 import os
+import pickle
 from sys import modules
 
 import aiomysql
@@ -46,7 +47,7 @@ def get_prefix(client, message):
 
 bot = commands.Bot(command_prefix='!')
 bot.remove_command('help')
-bot.owner_ids = {196282885601361920, 317090865262755847, 185042602519822336}
+bot.owner_id = 196282885601361920
 bot.gh_token = gh_token
 with open('data/variables.json', 'r') as file:
     bot.maintenance_mode = json.load(file).get("maintenance_mode")
@@ -57,9 +58,11 @@ async def on_ready():
     """Wait until bot has connected to discord"""
     bot.pool = await aiomysql.create_pool(host=os.getenv("MYSQL_HOST"), port=3306, user='root', password=os.getenv("MYSQL_PASSWORD"),
                                           db='mysql', loop=bot.loop)
+    bot.start_time = datetime.datetime.now()
     bot.raid_db = {}
     bot.mapmarkers = {}
     bot.players_in_game = []
+    bot.active_raiders = {}
     bot.serverwleaderboard = [666063675416641539, 703987028567523468, 660344559074541579, 713655609760940044, 719406991117647893, 691607211046076471]
     await build_guild_db()
     for g in bot.guild_db:
@@ -68,7 +71,7 @@ async def on_ready():
     if bot.maintenance_mode:
         await bot.change_presence(status=discord.Status.idle, activity=discord.Game("IN MAINTENANCE MODE!"))
     else:
-        await bot.change_presence(status=discord.Status.online, activity=discord.Game("!modmail"))
+        await bot.change_presence(status=discord.Status.online, activity=discord.Game("!patreon | !modmail"))
     bot.loop.create_task(update_leaderboards(bot))
 
     bot.active_punishments = {}
@@ -89,10 +92,49 @@ async def on_ready():
                     t = bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs))
                 bot.active_punishments[str(guild.id)+str(member.id)+ptype] = t
 
+    init_queues()
+    guild = bot.get_guild(660344559074541579)
+    bot.patreon_role = guild.get_role(736954974545641493)
+    pdata = await sql.get_all_patreons(bot.pool)
+    lst = [r[0] for r in pdata]
+    bot.patreon_ids = set(lst)
+
+    bot.beaned_ids = set([])
+    bot.qraid_vcs = {}
     print(f'{bot.user.name} has connected to Discord!')
 
 async def build_guild_db():
     bot.guild_db = await sql.construct_guild_database(bot.pool, bot)
+
+# Link queue to raiding category (queue_channel, category)
+# 1. Dungeoneer (oryx raiding `Queue`)
+queue_links = [(660347818061332481, 660347478620766227), (736226011733033041, 736220007356432426)]
+def init_queues():
+    bot.queue_links = {}
+    bot.queues = {}
+    if os.path.isfile('data/queues.pkl'):
+        with open('data/queues.pkl', 'rb') as file:
+            bot.queues = pickle.load(file)
+        print('Loaded queue from file')
+    else:
+        for i in queue_links:
+            queue = bot.get_channel(i[0])
+            bot.queues[i[0]] = []
+            for m in queue.members:
+                bot.queues[i[0]].append(m.id)
+    for i in queue_links:
+        queue = bot.get_channel(i[0])
+        category = bot.get_channel(i[1])
+
+        bot.queue_links[queue.id] = (queue, category)
+        bot.queue_links[category.id] = (queue, category)
+
+
+@bot.command(usage="resetqueues")
+@commands.is_owner()
+async def resetqueues(ctx):
+    init_queues()
+
 
 @bot.command(usage="load <cog>")
 @commands.is_owner()
@@ -216,6 +258,8 @@ async def reload(ctx, extension):
         bot.reload_extension(f'cogs.{extension}')
     await ctx.send('{} has been reloaded.'.format(extension.capitalize()))
 
+
+
 # def rreload(module, paths=None, mdict=None):
 #     """Recursively reload modules."""
 #     if paths is None:
@@ -249,9 +293,15 @@ async def fleave(ctx, id: int):
 async def maintenance(ctx):
     if bot.maintenance_mode:
         bot.maintenance_mode = False
+        await bot.change_presence(status=discord.Status.online, activity=discord.Game("!patreon | !modmail"))
         await ctx.send("Maintenance mode has been turned off!")
     else:
         bot.maintenance_mode = True
+        await bot.change_presence(status=discord.Status.idle, activity=discord.Game("IN MAINTENANCE MODE!"))
+        with open('data/queues.pkl', 'wb') as file:
+            pickle.dump(bot.queues, file, pickle.HIGHEST_PROTOCOL)
+
+        print('Saved queue to file')
         await ctx.send("Maintenance mode has been turned on!")
     with open("data/variables.json", 'r+') as f:
         data = json.load(f)
@@ -263,6 +313,45 @@ async def maintenance(ctx):
 for filename in os.listdir('./cogs/'):
     if filename.endswith('.py'):
         bot.load_extension(f'cogs.{filename[:-3]}')
+
+@bot.command(usage='syncm')
+@commands.is_owner()
+@commands.guild_only()
+async def syncm(ctx):
+    verified_role = bot.guild_db.get(ctx.guild.id)[sql.gld_cols.verifiedroleid]
+    m_names = []
+    #(id, ign, 'verified', ctx.guild.name, alt1, alt2)
+    async for m in ctx.guild.fetch_members():
+        if verified_role in m.roles:
+            if m.nick:
+                name = None
+                alt1 = None
+                alt2 = None
+                if " | " in m.nick:
+                    ns = m.nick.split(" | ")
+                    for n in ns:
+                        if not name:
+                            name = "".join([c for c in n if c.isalpha()])
+                        elif not alt1:
+                            alt1 = "".join([c for c in n if c.isalpha()])
+                        elif not alt2:
+                            alt2 = "".join([c for c in n if c.isalpha()])
+                else:
+                    name = "".join([c for c in m.nick if c.isalpha()])
+                m_names.append((m.id, name, 'verified', ctx.guild.name, alt1, alt2))
+
+    await ctx.send(f'Created {len(m_names)} member profiles... Awaiting insertion into DB...')
+
+    async with bot.pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            s = f"Replace INTO rotmg.users (id, ign, status, verifiedguilds, alt1, alt2) VALUES (%s, %s, %s, %s, %s, %s)"
+            await cursor.executemany(s, m_names)
+            await conn.commit()
+
+    await ctx.send(f'Inserted {len(m_names)} members into DB. Success.')
+
+
+
 
 
 # Error Handlers
@@ -286,7 +375,7 @@ async def maintenance_mode(ctx):
                                 "This means bugs are being fixed or new features are being added.\n"
                                 "Please be patient and if this persists for too long, contact <@196282885601361920>.",
                               color=discord.Color.orange())
-        await ctx.send(embed=embed, delete_after=6)
+        await ctx.send(embed=embed)
         return False
     return True
 

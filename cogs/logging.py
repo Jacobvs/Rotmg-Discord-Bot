@@ -22,20 +22,25 @@ class Logging(commands.Cog):
                       description="Log when a member pops something for the server.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
-    async def pop(self, ctx, type, member: utils.MemberLookupConverter, number: int = 1):
-        type = type.lower()
-        if type not in ["key", "event", "vial", "helm", "shield", "sword"]:
+    async def pop(self, ctx, t, member: utils.MemberLookupConverter, number: int = 1):
+        kind = t.lower()
+        if kind not in ["key", "event", "vial", "helm", "shield", "sword"]:
             embed = discord.Embed(title="Error!", description="Please choose a proper key option!\nUsage: `!pop <key/event/vial/helm/"
                                                               "shield/sword> <@member> {number}`", color=discord.Color.red())
             return await ctx.send(embed=embed)
+        if number < -100 or number > 100 or number == 0:
+            embed = discord.Embed(title="Error!", description="Please specify a number between -100 and 100!\nUsage: `!pop <key/event/vial/helm/"
+                                                              "shield/sword> <@member> {number}`", color=discord.Color.red())
+            return await ctx.send(embed=embed)
 
-        col = sql.log_cols.pkey if type == "key" else sql.log_cols.eventkeys if type == "event" else sql.log_cols.vials if type == "vial"\
-            else sql.log_cols.helmrunes if type == "helm" else sql.log_cols.shieldrunes if type == "shield" else sql.log_cols.swordrunes
+
+        col = sql.log_cols.pkey if kind == "key" else sql.log_cols.eventkeys if kind == "event" else sql.log_cols.vials if kind == "vial"\
+            else sql.log_cols.helmrunes if kind == "helm" else sql.log_cols.shieldrunes if kind == "shield" else sql.log_cols.swordrunes
         num = await sql.log_runs(self.client.pool, ctx.guild.id, member.id, col, number)
 
-        if type != 'event':
-            await utils.check_pops(self.client, ctx, member, number, num, type=type)
-        embed = discord.Embed(title="Key Logged!", description=f"Successfully logged {number} popped {type}(s) for {member.mention}",
+        if kind != 'event':
+            await utils.check_pops(self.client, member, number, num, type=kind, ctx=ctx)
+        embed = discord.Embed(title="Key Logged!", description=f"Successfully logged {number} popped {kind}(s) for {member.mention}",
                               color=discord.Color.green())
         await ctx.send(embed=embed)
 
@@ -46,7 +51,7 @@ class Logging(commands.Cog):
         if not member:
             member = ctx.author
 
-        setup = VCSelect(self.client, ctx)
+        setup = VCSelect(self.client, ctx, manual_log=True)
         data = await setup.start()
         if isinstance(data, tuple):
             (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
@@ -57,7 +62,7 @@ class Logging(commands.Cog):
             await setup_msg.delete()
         except discord.NotFound:
             pass
-        r_msg = await ctx.send(embed=embeds.dungeon_select())
+        r_msg = await ctx.send(embed=embeds.dungeon_select(manual_log=True))
         def dungeon_check(m):
             return m.author == ctx.author and m.channel == ctx.channel and m.content.isdigit()
 
@@ -80,7 +85,7 @@ class Logging(commands.Cog):
         dungeontitle = dungeon_info[0]
         emojis = dungeon_info[1]
         guild_db = self.client.guild_db.get(ctx.guild.id)
-        logrun = LogRun(self.client, ctx, emojis, [], dungeontitle, [member.id], guild_db.get(sql.gld_cols.rlroleid), hcchannel,
+        logrun = LogRun(self.client, ctx.author, ctx.channel, ctx.guild, emojis, [], dungeontitle, [member.id], guild_db.get(sql.gld_cols.rlroleid), hcchannel,
                         events=inevents, vialreacts=[], helmreacts=[], shieldreacts=[], swordreacts=[], numruns=number, runleader=member)
         await logrun.start()
         
@@ -121,16 +126,44 @@ async def update_leaderboard(client, guild_id):
     top_runs = clean_rl_data(top_runs, guild, rlrole)
     top_assists = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.weeklyassists, False)
     top_assists = clean_rl_data(top_assists, guild, rlrole)
-    top_keys = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.pkey)
+    if guild_id != 660344559074541579:
+        top_keys = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.pkey)
+    else:
+        helmrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.helmrunes)
+        swordrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.swordrunes)
+        shieldrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.shieldrunes)
+        top_runes = {}
+        for r in helmrunes:
+            top_runes[r[0]] = (r[0], r[sql.log_cols.helmrunes])
+        for r in swordrunes:
+            if r[0] in top_runes:
+                top_runes[r[0]] = (r[0], top_runes[r[0]][1]+r[sql.log_cols.swordrunes])
+            else:
+                top_runes[r[0]] = (r[0], r[sql.log_cols.swordrunes])
+        for r in shieldrunes:
+            if r[0] in top_runes:
+                top_runes[r[0]] = (r[0], top_runes[r[0]][1]+r[sql.log_cols.shieldrunes])
+            else:
+                top_runes[r[0]] = (r[0], r[sql.log_cols.shieldrunes])
+        ten_runes = list(top_runes.values())
+        def get_num(elem):
+            return elem[1]
+        ten_runes.sort(key=get_num, reverse=True)
+        ten_runes = ten_runes[:10]
+
+
 
     embed = discord.Embed(title="Top Runs Led This Week", color=discord.Color.gold())
     embed.add_field(name="Runs Led:", value=format_top_data(top_runs, sql.log_cols.weeklyruns)).add_field(name="Runs Assisted:",
                                                                                                           value=format_top_data(top_assists,
                                                                                                                                 sql.log_cols.weeklyassists))
     await leaderboardchannel.send(embed=embed)
-
-    embed = discord.Embed(title="Top Keys Popped", color=discord.Color.gold())
-    embed.add_field(name="Keys Popped:", value=format_top_data(top_keys, sql.log_cols.pkey))
+    if guild_id != 660344559074541579:
+        embed = discord.Embed(title="Top Keys Popped", color=discord.Color.gold())
+        embed.add_field(name="Keys Popped:", value=format_top_data(top_keys, sql.log_cols.pkey))
+    else:
+        embed = discord.Embed(title="Top Runes Popped", color=discord.Color.gold())
+        embed.add_field(name="Runes Popped:", value=format_top_data(ten_runes, 1))
     await leaderboardchannel.send(embed=embed)
 
     zero_runs = await sql.get_0_runs(client.pool, guild_id)

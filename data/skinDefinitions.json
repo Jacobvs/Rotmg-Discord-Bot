@@ -1,0 +1,3915 @@
+{
+  "768": [
+    768,
+    "Rogue",
+    "Rogues",
+    [
+      150,
+      100,
+      10,
+      0,
+      15,
+      15,
+      15,
+      10
+    ],
+    [
+      25,
+      5,
+      1,
+      0,
+      1.5,
+      1.5,
+      0.5,
+      1
+    ],
+    [
+      720,
+      252,
+      50,
+      25,
+      75,
+      75,
+      40,
+      50
+    ],
+    [
+      [
+        0,
+        "Classic",
+        0
+      ],
+      [
+        834,
+        "Bandit",
+        16
+      ],
+      [
+        913,
+        "Brigand",
+        60
+      ],
+      [
+        916,
+        "Eligible Bachelor",
+        68
+      ],
+      [
+        8966,
+        "Platinum Rogue",
+        73
+      ],
+      [
+        9031,
+        "Slime Rogue",
+        49
+      ],
+      [
+        29808,
+        "Jack the Ripper",
+        99
+      ],
+      [
+        8614,
+        "Skuld Set Skin",
+        592
+      ],
+      [
+        29843,
+        "Mini Skuld",
+        115
+      ],
+      [
+        10973,
+        "Beefcake Rogue",
+        599
+      ],
+      [
+        313,
+        "Snowcloaked Rogue",
+        134
+      ],
+      [
+        5910,
+        "Rogue - Artist Extraordinaire",
+        143
+      ],
+      [
+        5999,
+        "Rogue - Dungeon Mastermind",
+        146
+      ],
+      [
+        10933,
+        "Rogue - Future Seeker Tester",
+        154
+      ],
+      [
+        10964,
+        "Sheep Rogue",
+        163
+      ],
+      [
+        19157,
+        "Red Outlaw",
+        178
+      ],
+      [
+        19404,
+        "Thief Queen",
+        197
+      ],
+      [
+        19413,
+        "Twilight Acolyte Rogue",
+        203
+      ],
+      [
+        19417,
+        "Ordinary Box Rogue",
+        207
+      ],
+      [
+        19419,
+        "Stone Statue Rogue",
+        209
+      ],
+      [
+        19494,
+        "Beachcake Rogue",
+        601
+      ],
+      [
+        19563,
+        "Bruno the Rogue Steward",
+        256
+      ],
+      [
+        19567,
+        "Turkey Rogue",
+        260
+      ],
+      [
+        19617,
+        "Heartless Dodger Rogue",
+        267
+      ],
+      [
+        6045,
+        "Barefoot Rogue",
+        276
+      ],
+      [
+        8305,
+        "Oryxmas Rogue",
+        281
+      ],
+      [
+        24600,
+        "Roguish Business Partner",
+        302
+      ],
+      [
+        24640,
+        "Lone Rogue",
+        308
+      ],
+      [
+        24694,
+        "Raccoon Rogue",
+        313
+      ],
+      [
+        9222,
+        "King of Thieves Rogue",
+        351
+      ],
+      [
+        9313,
+        "Dapper Disguiser Rogue",
+        365
+      ],
+      [
+        322,
+        "Lil Beach Rogue",
+        369
+      ],
+      [
+        2418,
+        "Wererat Rogue",
+        373
+      ],
+      [
+        29521,
+        "Cloaked Ascendant Rogue",
+        406
+      ],
+      [
+        9734,
+        "Little Prince Rogue",
+        413
+      ],
+      [
+        29610,
+        "Masked Rogue",
+        421
+      ],
+      [
+        29616,
+        "Vampire Beast Rogue",
+        424
+      ],
+      [
+        6125,
+        "Rogue - Supporter Extraordinaire",
+        428
+      ],
+      [
+        29641,
+        "Ankou Rogue",
+        435
+      ],
+      [
+        24252,
+        "Scorpion Hunter Rogue",
+        451
+      ],
+      [
+        24282,
+        "Space Smuggler Rogue",
+        466
+      ],
+      [
+        10091,
+        "Rogue - Cyber Cop",
+        477
+      ],
+      [
+        10149,
+        "Exiled Princess Rogue",
+        506
+      ],
+      [
+        10161,
+        "Shadow Stalker Rogue",
+        512
+      ],
+      [
+        10187,
+        "Mystery Rogue",
+        525
+      ],
+      [
+        10227,
+        "The 10th Rogue",
+        545
+      ],
+      [
+        9345,
+        "Space Cowboy Rogue",
+        555
+      ],
+      [
+        9395,
+        "Western Miguel Rogue",
+        576
+      ],
+      [
+        9421,
+        "Ghost Captain Rogue",
+        587
+      ]
+    ],
+    1
+  ],
+  "775": [
+    775,
+    "Archer",
+    "Archers",
+    [
+      130,
+      100,
+      12,
+      0,
+      12,
+      12,
+      12,
+      10
+    ],
+    [
+      25,
+      5,
+      1.5,
+      0,
+      1,
+      1,
+      0.5,
+      1
+    ],
+    [
+      700,
+      252,
+      75,
+      25,
+      50,
+      50,
+      40,
+      50
+    ],
+    [
+      [
+        0,
+        "Classic",
+        1
+      ],
+      [
+        835,
+        "Robin Hood",
+        17
+      ],
+      [
+        851,
+        "Little Helper",
+        33
+      ],
+      [
+        855,
+        "Cupid",
+        37
+      ],
+      [
+        904,
+        "Slime Archer",
+        51
+      ],
+      [
+        888,
+        "Ranger",
+        58
+      ],
+      [
+        29799,
+        "Huntsman",
+        93
+      ],
+      [
+        312,
+        "Inuit",
+        133
+      ],
+      [
+        5909,
+        "Archer - Artist Extraordinaire",
+        143
+      ],
+      [
+        6007,
+        "Archer - Dungeon Mastermind",
+        147
+      ],
+      [
+        10941,
+        "Archer - Future Seeker Tester",
+        156
+      ],
+      [
+        10961,
+        "Mini Nut",
+        160
+      ],
+      [
+        10966,
+        "Sheep Archer",
+        165
+      ],
+      [
+        19371,
+        "Elf Archers",
+        182
+      ],
+      [
+        19403,
+        "Sunflower Archer",
+        196
+      ],
+      [
+        19414,
+        "Ethereal Princess Archer",
+        204
+      ],
+      [
+        19416,
+        "Guerilla Archer",
+        206
+      ],
+      [
+        19420,
+        "Stone Statue Archer",
+        210
+      ],
+      [
+        19554,
+        "Chu-Ko-Nu Archer",
+        247
+      ],
+      [
+        19559,
+        "Underworld Archer",
+        252
+      ],
+      [
+        6114,
+        "Water Lily Archer",
+        279
+      ],
+      [
+        8306,
+        "Oryxmas Archer",
+        282
+      ],
+      [
+        24695,
+        "Raven Archer",
+        314
+      ],
+      [
+        9145,
+        "Magma Dweller Archer",
+        333
+      ],
+      [
+        9223,
+        "Kings Bowman Archer",
+        352
+      ],
+      [
+        3586,
+        "Tennis Player Archer",
+        381
+      ],
+      [
+        29850,
+        "Storm Archer",
+        388
+      ],
+      [
+        6124,
+        "Archer - Supporter Extraordinaire",
+        430
+      ],
+      [
+        24236,
+        "Skeleton Archer",
+        443
+      ],
+      [
+        7769,
+        "Ghost ArcherST",
+        610
+      ],
+      [
+        24268,
+        "Mini Ghost Archer",
+        459
+      ],
+      [
+        10089,
+        "Archer - Cyber Cop",
+        476
+      ],
+      [
+        10147,
+        "Moon Maiden Archer",
+        505
+      ],
+      [
+        10189,
+        "Mystery Archer",
+        526
+      ],
+      [
+        9403,
+        "Blindfold Archer",
+        580
+      ]
+    ],
+    2
+  ],
+  "782": [
+    782,
+    "Wizard",
+    "Wizards",
+    [
+      100,
+      100,
+      12,
+      0,
+      10,
+      15,
+      12,
+      12
+    ],
+    [
+      25,
+      10,
+      1.5,
+      0,
+      1,
+      1.5,
+      0.5,
+      1
+    ],
+    [
+      670,
+      385,
+      75,
+      25,
+      50,
+      75,
+      40,
+      60
+    ],
+    [
+      [
+        0,
+        "Classic",
+        2
+      ],
+      [
+        836,
+        "Merlin",
+        18
+      ],
+      [
+        848,
+        "Elder Wizard",
+        30
+      ],
+      [
+        850,
+        "Santa",
+        32
+      ],
+      [
+        914,
+        "Gentleman",
+        57
+      ],
+      [
+        872,
+        "Slime Wizard",
+        48
+      ],
+      [
+        9012,
+        "Witch",
+        87
+      ],
+      [
+        29813,
+        "Mischievous Imp",
+        104
+      ],
+      [
+        1026,
+        "Twilight Archmage Set Skin",
+        593
+      ],
+      [
+        20312,
+        "Slurp Scion Wizard Set Skin",
+        619
+      ],
+      [
+        29844,
+        "Mini Archmage",
+        116
+      ],
+      [
+        32658,
+        "Wizard Supreme",
+        128
+      ],
+      [
+        32677,
+        "Snow Queen",
+        131
+      ],
+      [
+        5912,
+        "Wizard - Artist Extraordinaire",
+        143
+      ],
+      [
+        5994,
+        "Wizard - Dungeon Mastermind",
+        145
+      ],
+      [
+        10937,
+        "Wizard - Future Seeker Tester",
+        155
+      ],
+      [
+        10962,
+        "Miss Shamrock",
+        161
+      ],
+      [
+        10965,
+        "Sheep Wizard",
+        164
+      ],
+      [
+        10969,
+        "The Flamingo",
+        168
+      ],
+      [
+        10971,
+        "Dr. Spellbomb",
+        169
+      ],
+      [
+        19372,
+        "Ordinary Magician",
+        183
+      ],
+      [
+        19421,
+        "Stone Statue Wizard",
+        211
+      ],
+      [
+        19560,
+        "Apprentice Wizard",
+        253
+      ],
+      [
+        19657,
+        "Haunted Robe",
+        269
+      ],
+      [
+        6104,
+        "Spooky Roommate Wizard",
+        277
+      ],
+      [
+        8307,
+        "Oryxmas Wizard",
+        283
+      ],
+      [
+        24596,
+        "Wizard of Christmas Present",
+        298
+      ],
+      [
+        24696,
+        "Bunny Magician",
+        315
+      ],
+      [
+        9143,
+        "Wicked Dragon Wizard",
+        331
+      ],
+      [
+        9216,
+        "Court Wizard",
+        345
+      ],
+      [
+        9245,
+        "Mysterious Wizard",
+        360
+      ],
+      [
+        9302,
+        "Butterfly Wizard",
+        361
+      ],
+      [
+        3592,
+        "Summer Vacation Wizard",
+        387
+      ],
+      [
+        19168,
+        "Hermit Wizard",
+        391
+      ],
+      [
+        25104,
+        "Random Mad Scientist",
+        403
+      ],
+      [
+        29522,
+        "Old Man Wizard",
+        407
+      ],
+      [
+        6127,
+        "Wizard - Supporter Extraordinaire",
+        429
+      ],
+      [
+        24244,
+        "Bolt Caster Wizard",
+        447
+      ],
+      [
+        24246,
+        "Spellmaster Wizard",
+        448
+      ],
+      [
+        24266,
+        "Moss Magus Wizard",
+        458
+      ],
+      [
+        24290,
+        "Angler Wizard",
+        470
+      ],
+      [
+        10095,
+        "Wizard - Cyber Cop",
+        478
+      ],
+      [
+        10119,
+        "Dancer Wizard",
+        491
+      ],
+      [
+        10159,
+        "Little Evil Doer Wizard",
+        511
+      ],
+      [
+        10173,
+        "Fire Battlemaiden Wizard",
+        518
+      ],
+      [
+        10191,
+        "Mystery Wizard",
+        527
+      ],
+      [
+        10233,
+        "Mini Slurp Scion Wizard",
+        548
+      ]
+    ],
+    3
+  ],
+  "784": [
+    784,
+    "Priest",
+    "Priests",
+    [
+      100,
+      100,
+      12,
+      0,
+      12,
+      12,
+      10,
+      15
+    ],
+    [
+      25,
+      10,
+      1,
+      0,
+      1.5,
+      1,
+      0.5,
+      1.5
+    ],
+    [
+      670,
+      385,
+      50,
+      25,
+      55,
+      55,
+      40,
+      75
+    ],
+    [
+      [
+        0,
+        "Classic",
+        3
+      ],
+      [
+        837,
+        "Traditional",
+        19
+      ],
+      [
+        849,
+        "Robed Priest",
+        31
+      ],
+      [
+        852,
+        "Father Time",
+        34
+      ],
+      [
+        905,
+        "Slime Priest",
+        47
+      ],
+      [
+        884,
+        "Nun",
+        54
+      ],
+      [
+        29811,
+        "Zombie Nurse",
+        102
+      ],
+      [
+        29786,
+        "Geb Set Skin",
+        589
+      ],
+      [
+        3899,
+        "Mad God's Messenger Set Skin",
+        611
+      ],
+      [
+        29842,
+        "Mini Geb",
+        114
+      ],
+      [
+        5864,
+        "Ice King Priest",
+        140
+      ],
+      [
+        5914,
+        "Priest - Artist Extraordinaire",
+        143
+      ],
+      [
+        5995,
+        "Priest - Dungeon Mastermind",
+        145
+      ],
+      [
+        10943,
+        "Priest - Future Seeker Tester",
+        157
+      ],
+      [
+        10967,
+        "Sheep Priest",
+        166
+      ],
+      [
+        19156,
+        "Shrine Priestess",
+        177
+      ],
+      [
+        19409,
+        "Bard Priestess",
+        199
+      ],
+      [
+        19418,
+        "Lifeguard Priest",
+        208
+      ],
+      [
+        19422,
+        "Stone Statue Priest",
+        212
+      ],
+      [
+        19557,
+        "Pandora Priestess",
+        250
+      ],
+      [
+        6041,
+        "White Bag-chan Priestess",
+        272
+      ],
+      [
+        6043,
+        "Cleopatra Priestess",
+        274
+      ],
+      [
+        8308,
+        "Oryxmas Priest",
+        284
+      ],
+      [
+        24598,
+        "Snowland Priestess",
+        300
+      ],
+      [
+        24638,
+        "Lunar High Priestess",
+        306
+      ],
+      [
+        24639,
+        "Dionysus Priest",
+        307
+      ],
+      [
+        24697,
+        "Panda Priest",
+        316
+      ],
+      [
+        9144,
+        "Ancient Archivist Priest",
+        332
+      ],
+      [
+        9148,
+        "Ivory Priest",
+        336
+      ],
+      [
+        9225,
+        "Carthusian Monk Priest",
+        354
+      ],
+      [
+        29852,
+        "Hoodoo Priestess",
+        390
+      ],
+      [
+        6129,
+        "Priest - Supporter Extraordinaire",
+        432
+      ],
+      [
+        24224,
+        "Holy Guide Priest",
+        436
+      ],
+      [
+        24238,
+        "Scrooge Priest",
+        444
+      ],
+      [
+        24248,
+        "Archbishop Priest",
+        449
+      ],
+      [
+        24262,
+        "Morris Dancer Priest",
+        456
+      ],
+      [
+        24274,
+        "Doctor Priest",
+        462
+      ],
+      [
+        10099,
+        "Priest - Cyber Cop",
+        479
+      ],
+      [
+        10139,
+        "Mini Messenger Priest",
+        501
+      ],
+      [
+        10143,
+        "The 11th Priest",
+        503
+      ],
+      [
+        10183,
+        "Nurse Priest",
+        523
+      ],
+      [
+        10193,
+        "Mystery Priest",
+        528
+      ],
+      [
+        9407,
+        "Lucky Sapling Priest",
+        623
+      ]
+    ],
+    4
+  ],
+  "785": [
+    785,
+    "Samurai",
+    "Samurai",
+    [
+      150,
+      100,
+      12,
+      0,
+      10,
+      10,
+      12,
+      12
+    ],
+    [
+      25,
+      5,
+      1.5,
+      0,
+      1,
+      1,
+      1,
+      1.5
+    ],
+    [
+      720,
+      252,
+      75,
+      30,
+      55,
+      50,
+      60,
+      60
+    ],
+    [
+      [
+        0,
+        "Classic",
+        14
+      ],
+      [
+        21226,
+        "Daring Discoverer Samurai Set Skin",
+        618
+      ],
+      [
+        6278,
+        "Oni Demon Samurai",
+        378
+      ],
+      [
+        24373,
+        "Tattooed Yakuza Samurai",
+        379
+      ],
+      [
+        6276,
+        "Cowboy Samurai",
+        380
+      ],
+      [
+        29794,
+        "Wanderer Samurai",
+        393
+      ],
+      [
+        10253,
+        "Stone Statue Samurai",
+        394
+      ],
+      [
+        8766,
+        "Chonmage Samurai",
+        395
+      ],
+      [
+        8767,
+        "Baywatch Samurai",
+        396
+      ],
+      [
+        8769,
+        "Kilnmaster Samurai",
+        398
+      ],
+      [
+        8774,
+        "Slime Samurai",
+        399
+      ],
+      [
+        8775,
+        "Onna Bugeisha Samurai",
+        400
+      ],
+      [
+        18504,
+        "Foreign General Samurai",
+        401
+      ],
+      [
+        30056,
+        "Akuma SamuraiST",
+        608
+      ],
+      [
+        29988,
+        "Mini Akuma",
+        411
+      ],
+      [
+        9732,
+        "Masked Samurai",
+        412
+      ],
+      [
+        9736,
+        "Samurai - Future Seeker Tester",
+        414
+      ],
+      [
+        9738,
+        "Silent Samurai",
+        415
+      ],
+      [
+        29600,
+        "Samurai - Artist Extraordinaire",
+        416
+      ],
+      [
+        29602,
+        "Samurai - Dungeon Mastermind",
+        417
+      ],
+      [
+        29604,
+        "Shogun Samurai",
+        418
+      ],
+      [
+        29606,
+        "Airflow Samurai",
+        419
+      ],
+      [
+        29612,
+        "Cyberpunk Samurai",
+        422
+      ],
+      [
+        29614,
+        "Sushi Chef Samurai",
+        423
+      ],
+      [
+        6121,
+        "Samurai - Supporter Extraordinaire",
+        431
+      ],
+      [
+        24228,
+        "Royal Champion Samurai",
+        438
+      ],
+      [
+        19659,
+        "Oryxmas Samurai",
+        440
+      ],
+      [
+        24242,
+        "Guillotiner Samurai",
+        446
+      ],
+      [
+        10109,
+        "Samurai - Cyber Cop",
+        475
+      ],
+      [
+        24304,
+        "Demon Girl Samurai",
+        483
+      ],
+      [
+        10115,
+        "Wind Samurai",
+        489
+      ],
+      [
+        10125,
+        "Odyssey Samurai",
+        494
+      ],
+      [
+        10127,
+        "Indy James Samurai",
+        495
+      ],
+      [
+        10165,
+        "Lord Doku Samurai",
+        514
+      ],
+      [
+        10179,
+        "Samurai Quack",
+        521
+      ],
+      [
+        10215,
+        "Mystery Samurai",
+        539
+      ],
+      [
+        10231,
+        "Mini Discoverer Samurai",
+        547
+      ],
+      [
+        9399,
+        "Fire Flower Samurai",
+        578
+      ]
+    ],
+    15
+  ],
+  "796": [
+    796,
+    "Bard",
+    "Bards",
+    [
+      100,
+      100,
+      10,
+      0,
+      10,
+      15,
+      12,
+      15
+    ],
+    [
+      25,
+      10,
+      1.5,
+      0,
+      1,
+      1.5,
+      1,
+      1.5
+    ],
+    [
+      670,
+      385,
+      55,
+      25,
+      55,
+      70,
+      45,
+      75
+    ],
+    [
+      [
+        0,
+        "Classic",
+        15
+      ],
+      [
+        19968,
+        "Angelic Bard",
+        621
+      ],
+      [
+        9335,
+        "Ukulele Girl Bard",
+        550
+      ],
+      [
+        9337,
+        "Bird Masked Bard",
+        551
+      ],
+      [
+        9339,
+        "Traveling Songster Bard",
+        552
+      ],
+      [
+        9359,
+        "Virgil the Rockstar of the Abyss",
+        562
+      ],
+      [
+        9365,
+        "Tavern Bard",
+        565
+      ],
+      [
+        9369,
+        "Skeleton Trumpeter Bard",
+        567
+      ],
+      [
+        9371,
+        "Baby Bard",
+        568
+      ],
+      [
+        9373,
+        "The Fiddler Bard",
+        569
+      ],
+      [
+        9375,
+        "Twintailed Vocalist Bard",
+        570
+      ],
+      [
+        9377,
+        "Treacherous Trout Bard",
+        571
+      ],
+      [
+        9379,
+        "Wandering Spellcaster Bard",
+        572
+      ],
+      [
+        9381,
+        "Slime Bard",
+        573
+      ],
+      [
+        9383,
+        "Bard - Future Seeker Tester",
+        156
+      ],
+      [
+        9385,
+        "Bard - Dungeon Mastermind",
+        147
+      ],
+      [
+        9387,
+        "Bard - Artist Extraordinaire",
+        143
+      ],
+      [
+        9389,
+        "Oryxmas Bard",
+        574
+      ],
+      [
+        9391,
+        "Bard - Cyber Cop",
+        476
+      ],
+      [
+        9393,
+        "Stone Statue Bard",
+        575
+      ],
+      [
+        9397,
+        "Mini Angelic Bard",
+        577
+      ],
+      [
+        9411,
+        "Brad the Bard",
+        582
+      ]
+    ],
+    16
+  ],
+  "797": [
+    797,
+    "Warrior",
+    "Warriors",
+    [
+      200,
+      100,
+      15,
+      0,
+      7,
+      10,
+      10,
+      10
+    ],
+    [
+      25,
+      5,
+      1.5,
+      0,
+      1,
+      1,
+      1.5,
+      1
+    ],
+    [
+      770,
+      252,
+      75,
+      25,
+      50,
+      50,
+      75,
+      50
+    ],
+    [
+      [
+        0,
+        "Classic",
+        4
+      ],
+      [
+        838,
+        "Juggernaut",
+        20
+      ],
+      [
+        853,
+        "Down Under",
+        35
+      ],
+      [
+        883,
+        "Shoveguy",
+        53
+      ],
+      [
+        8967,
+        "B.B. Wolf",
+        74
+      ],
+      [
+        8965,
+        "Platinum Warrior",
+        72
+      ],
+      [
+        9032,
+        "Slime Warrior",
+        50
+      ],
+      [
+        29790,
+        "Skeleton Warrior",
+        90
+      ],
+      [
+        29816,
+        "Hunchback",
+        96
+      ],
+      [
+        32718,
+        "Dragon Tamer Set Skin",
+        598
+      ],
+      [
+        8671,
+        "Pirate King Warrior Set Skin",
+        612
+      ],
+      [
+        32701,
+        "Dragon Tamer",
+        132
+      ],
+      [
+        1027,
+        "Olive Gladiator",
+        594
+      ],
+      [
+        1028,
+        "Ivory Gladiator",
+        595
+      ],
+      [
+        32675,
+        "Rudolph the Berzerk",
+        129
+      ],
+      [
+        5878,
+        "Warrior - Artist Extraordinaire",
+        143
+      ],
+      [
+        6000,
+        "Warrior - Dungeon Mastermind",
+        146
+      ],
+      [
+        10930,
+        "Warrior - Future Seeker Tester",
+        153
+      ],
+      [
+        10963,
+        "Sheep Warrior",
+        162
+      ],
+      [
+        10972,
+        "Explorer",
+        172
+      ],
+      [
+        19410,
+        "Princess Warrior",
+        200
+      ],
+      [
+        19411,
+        "Light Cavalry Warrior",
+        201
+      ],
+      [
+        19423,
+        "Stone Statue Warrior",
+        213
+      ],
+      [
+        19483,
+        "Lodestar Warrior",
+        225
+      ],
+      [
+        19496,
+        "Athena Warrior",
+        230
+      ],
+      [
+        19558,
+        "Living Armor Warrior",
+        251
+      ],
+      [
+        19568,
+        "Adorable Lil' Warrior",
+        261
+      ],
+      [
+        19655,
+        "Gladiator",
+        117
+      ],
+      [
+        8309,
+        "Oryxmas Warrior",
+        285
+      ],
+      [
+        24599,
+        "Frost Raider Warrior",
+        301
+      ],
+      [
+        24642,
+        "Sand Monk Warrior",
+        310
+      ],
+      [
+        24698,
+        "Penguin Warrior",
+        317
+      ],
+      [
+        9140,
+        "Harrowed Slinger Warrior",
+        328
+      ],
+      [
+        9203,
+        "Scarecrow Warrior",
+        339
+      ],
+      [
+        9213,
+        "Kingsman Cavalry Warrior",
+        342
+      ],
+      [
+        9244,
+        "Rabbit Warrior",
+        359
+      ],
+      [
+        807,
+        "Dragon Slayer Warrior",
+        370
+      ],
+      [
+        1301,
+        "Angry Orc Warrior",
+        374
+      ],
+      [
+        6346,
+        "Beefcake Brutus Warrior",
+        607
+      ],
+      [
+        3591,
+        "Buckethead Warrior",
+        386
+      ],
+      [
+        24618,
+        "Giant Sword Warrior",
+        392
+      ],
+      [
+        29520,
+        "Lizardman Warrior",
+        405
+      ],
+      [
+        29523,
+        "Singer Warrior",
+        408
+      ],
+      [
+        6119,
+        "Warrior - Supporter Extraordinaire",
+        427
+      ],
+      [
+        29639,
+        "Gravekeeper Warrior",
+        434
+      ],
+      [
+        24230,
+        "Armored Champion Warrior",
+        439
+      ],
+      [
+        24270,
+        "Pirate Chief Warrior",
+        460
+      ],
+      [
+        24286,
+        "Shroom Warrior",
+        468
+      ],
+      [
+        24294,
+        "Miner Warrior",
+        472
+      ],
+      [
+        10081,
+        "Warrior - Cyber Cop",
+        474
+      ],
+      [
+        24308,
+        "Chinese Princess Warrior",
+        485
+      ],
+      [
+        10117,
+        "Indecisive Reaper Warrior",
+        490
+      ],
+      [
+        10141,
+        "Mini Pirate King Warrior",
+        502
+      ],
+      [
+        10157,
+        "Saber Wielder Warrior",
+        510
+      ],
+      [
+        10175,
+        "Wolf Headdress Warrior",
+        519
+      ],
+      [
+        10195,
+        "Mystery Warrior",
+        529
+      ],
+      [
+        10221,
+        "Earth Battlemaiden Warrior",
+        542
+      ],
+      [
+        9355,
+        "Pegasus Warrior",
+        560
+      ],
+      [
+        9357,
+        "Zombie Gal Warrior",
+        561
+      ],
+      [
+        9405,
+        "Decapod Crustacean Warrior",
+        622
+      ]
+    ],
+    5
+  ],
+  "798": [
+    798,
+    "Knight",
+    "Knights",
+    [
+      200,
+      100,
+      15,
+      0,
+      7,
+      10,
+      10,
+      10
+    ],
+    [
+      25,
+      5,
+      1.5,
+      0,
+      1,
+      1,
+      1.5,
+      1
+    ],
+    [
+      770,
+      252,
+      50,
+      40,
+      50,
+      50,
+      75,
+      50
+    ],
+    [
+      [
+        0,
+        "Classic",
+        5
+      ],
+      [
+        839,
+        "Knight of the Round",
+        21
+      ],
+      [
+        903,
+        "Slime Knight",
+        46
+      ],
+      [
+        902,
+        "Iceman",
+        66
+      ],
+      [
+        8964,
+        "Platinum Knight",
+        71
+      ],
+      [
+        29818,
+        "Frankenstein's Monster",
+        98
+      ],
+      [
+        2521,
+        "Slurp Knight",
+        123
+      ],
+      [
+        1025,
+        "Oryx Set Skin",
+        588
+      ],
+      [
+        29847,
+        "Mini Oryx",
+        111
+      ],
+      [
+        5860,
+        "Penguin Knight",
+        136
+      ],
+      [
+        5861,
+        "Frimar Knight",
+        137
+      ],
+      [
+        5880,
+        "Knight - Artist Extraordinaire",
+        143
+      ],
+      [
+        6004,
+        "Knight - Dungeon Mastermind",
+        146
+      ],
+      [
+        10931,
+        "Knight - Future Seeker Tester",
+        153
+      ],
+      [
+        19159,
+        "Shield Maiden",
+        180
+      ],
+      [
+        19373,
+        "Heroic Knight",
+        184
+      ],
+      [
+        19415,
+        "Antique Diver Knight",
+        205
+      ],
+      [
+        19424,
+        "Stone Statue Knight",
+        214
+      ],
+      [
+        19549,
+        "Knight Lady",
+        242
+      ],
+      [
+        19556,
+        "Monster Hunter Knight",
+        249
+      ],
+      [
+        19566,
+        "Haunted Knight",
+        259
+      ],
+      [
+        6039,
+        "Ducky Knight",
+        270
+      ],
+      [
+        8310,
+        "Oryxmas Knight",
+        286
+      ],
+      [
+        24641,
+        "Wise Swine Knight",
+        309
+      ],
+      [
+        24699,
+        "Turtle Knight",
+        318
+      ],
+      [
+        9209,
+        "Templar Knight",
+        340
+      ],
+      [
+        9214,
+        "Kingsman Guard Knight",
+        343
+      ],
+      [
+        9241,
+        "Lustrous Champion Knight",
+        356
+      ],
+      [
+        3588,
+        "Snorkeler Knight",
+        383
+      ],
+      [
+        25102,
+        "Silex Almighty Knight",
+        402
+      ],
+      [
+        29524,
+        "Grail Warden Knight",
+        409
+      ],
+      [
+        6122,
+        "Knight - Supporter Extraordinaire",
+        427
+      ],
+      [
+        24234,
+        "Skeleton Knight",
+        442
+      ],
+      [
+        24240,
+        "Glacius Knight",
+        445
+      ],
+      [
+        24276,
+        "Astronaut Knight",
+        463
+      ],
+      [
+        24278,
+        "Lost Lands Knight",
+        464
+      ],
+      [
+        10085,
+        "Knight - Cyber Cop",
+        474
+      ],
+      [
+        24302,
+        "Locomotive Knight",
+        482
+      ],
+      [
+        10155,
+        "Disgraced Knight",
+        509
+      ],
+      [
+        10197,
+        "Mystery Knight",
+        530
+      ],
+      [
+        9353,
+        "Shielded Pal Knight",
+        559
+      ],
+      [
+        9361,
+        "Clown Knight",
+        563
+      ]
+    ],
+    6
+  ],
+  "799": [
+    799,
+    "Paladin",
+    "Paladins",
+    [
+      200,
+      100,
+      12,
+      0,
+      12,
+      10,
+      10,
+      10
+    ],
+    [
+      25,
+      5,
+      1.5,
+      0,
+      1,
+      1,
+      0.5,
+      1.5
+    ],
+    [
+      770,
+      252,
+      50,
+      30,
+      55,
+      45,
+      40,
+      75
+    ],
+    [
+      [
+        0,
+        "Classic",
+        6
+      ],
+      [
+        840,
+        "Decorated Paladin",
+        22
+      ],
+      [
+        854,
+        "Founding Father",
+        36
+      ],
+      [
+        915,
+        "Bashing Bride",
+        67
+      ],
+      [
+        885,
+        "Holy Avenger",
+        55
+      ],
+      [
+        9030,
+        "Slime Paladin",
+        45
+      ],
+      [
+        29800,
+        "Demon Spawn",
+        94
+      ],
+      [
+        29788,
+        "Swoll Paladin Set Skin",
+        591
+      ],
+      [
+        29845,
+        "Mini Swoll",
+        113
+      ],
+      [
+        32654,
+        "Headless Rider",
+        125
+      ],
+      [
+        32656,
+        "Pilgrim Father",
+        126
+      ],
+      [
+        32676,
+        "Miss Santa",
+        130
+      ],
+      [
+        5879,
+        "Paladin - Artist Extraordinaire",
+        143
+      ],
+      [
+        6003,
+        "Paladin - Dungeon Mastermind",
+        146
+      ],
+      [
+        10932,
+        "Paladin - Future Seeker Tester",
+        153
+      ],
+      [
+        10974,
+        "Iron Maiden",
+        171
+      ],
+      [
+        19390,
+        "Patriot Paladin",
+        191
+      ],
+      [
+        19425,
+        "Stone Statue Paladin",
+        215
+      ],
+      [
+        19487,
+        "Mad Dwarf Paladin",
+        229
+      ],
+      [
+        19497,
+        "Valkyrie Paladin",
+        231
+      ],
+      [
+        19553,
+        "Cleaner Maid Paladin",
+        246
+      ],
+      [
+        19569,
+        "Nerd Paladin",
+        262
+      ],
+      [
+        6042,
+        "Monkey King Paladin",
+        273
+      ],
+      [
+        8311,
+        "Oryxmas Paladin",
+        287
+      ],
+      [
+        24636,
+        "Halberdier Paladin",
+        305
+      ],
+      [
+        24700,
+        "Mouse Paladin",
+        319
+      ],
+      [
+        9141,
+        "Oni Paladin",
+        329
+      ],
+      [
+        9215,
+        "Kingsman Armorbearer Paladin",
+        344
+      ],
+      [
+        9243,
+        "Poisson d'Avril Paladin",
+        358
+      ],
+      [
+        9311,
+        "Blessed Champion Paladin",
+        363
+      ],
+      [
+        9312,
+        "Sworded Inquisitor Paladin",
+        364
+      ],
+      [
+        1332,
+        "Monk Paladin",
+        376
+      ],
+      [
+        3590,
+        "Banana Boat Paladin",
+        385
+      ],
+      [
+        29851,
+        "Foreign Prince Paladin",
+        389
+      ],
+      [
+        6120,
+        "Paladin - Supporter Extraordinaire",
+        427
+      ],
+      [
+        24250,
+        "Hero Paladin",
+        450
+      ],
+      [
+        24284,
+        "Exploratory Bot Paladin",
+        467
+      ],
+      [
+        24292,
+        "Lighthouse Keeper Paladin",
+        471
+      ],
+      [
+        10083,
+        "Paladin - Cyber Cop",
+        474
+      ],
+      [
+        24310,
+        "Keyper Paladin",
+        486
+      ],
+      [
+        10163,
+        "Scalette Paladin",
+        513
+      ],
+      [
+        10199,
+        "Mystery Paladin",
+        531
+      ],
+      [
+        9349,
+        "Presidential Paladin",
+        557
+      ],
+      [
+        9363,
+        "Chemist of Steel Paladin",
+        564
+      ],
+      [
+        9401,
+        "Celtic Spearwoman Paladin",
+        579
+      ],
+      [
+        9417,
+        "Merfolk Paladin",
+        585
+      ]
+    ],
+    7
+  ],
+  "800": [
+    800,
+    "Assassin",
+    "Assassins",
+    [
+      150,
+      100,
+      12,
+      0,
+      15,
+      15,
+      15,
+      10
+    ],
+    [
+      25,
+      5,
+      1,
+      0,
+      1.5,
+      1.5,
+      0.5,
+      1.5
+    ],
+    [
+      720,
+      252,
+      60,
+      25,
+      75,
+      75,
+      40,
+      60
+    ],
+    [
+      [
+        0,
+        "Classic",
+        7
+      ],
+      [
+        841,
+        "Stealth",
+        23
+      ],
+      [
+        912,
+        "Agent",
+        52
+      ],
+      [
+        9029,
+        "Slime Assassin",
+        44
+      ],
+      [
+        29770,
+        "Puppet Master",
+        88
+      ],
+      [
+        29791,
+        "Infected Assassin",
+        92
+      ],
+      [
+        29814,
+        "Vampire Hunter",
+        105
+      ],
+      [
+        3036,
+        "Parasitic Host Set",
+        606
+      ],
+      [
+        19275,
+        "Acidified Assassin Set Skin",
+        614
+      ],
+      [
+        5911,
+        "Assassin - Artist Extraordinaire",
+        143
+      ],
+      [
+        6001,
+        "Assassin - Dungeon Mastermind",
+        146
+      ],
+      [
+        10934,
+        "Assassin - Future Seeker Tester",
+        154
+      ],
+      [
+        6024,
+        "Romeo",
+        150
+      ],
+      [
+        10970,
+        "Mini Stheno",
+        170
+      ],
+      [
+        19375,
+        "Dark Elf Assassin",
+        186
+      ],
+      [
+        19389,
+        "Redcoat Assassin",
+        190
+      ],
+      [
+        19426,
+        "Stone Statue Assassin",
+        216
+      ],
+      [
+        19484,
+        "Alice Assassin",
+        226
+      ],
+      [
+        19546,
+        "Plague Doctor Assassin",
+        239
+      ],
+      [
+        19565,
+        "Vampire Groom Assassin",
+        258
+      ],
+      [
+        19613,
+        "Schankmaid Assassin",
+        263
+      ],
+      [
+        6115,
+        "Arms Merchant Assassin",
+        280
+      ],
+      [
+        8312,
+        "Oryxmas Assassin",
+        288
+      ],
+      [
+        24601,
+        "Snowball Kid Assassin",
+        303
+      ],
+      [
+        24634,
+        "Champagne Lady Assassin",
+        304
+      ],
+      [
+        24701,
+        "Blue Frog Assassin",
+        320
+      ],
+      [
+        9220,
+        "Blackguard Mercenary Assassin",
+        349
+      ],
+      [
+        1305,
+        "Mini Flesh Collector",
+        375
+      ],
+      [
+        2180,
+        "Hazmat Suit Assassin",
+        377
+      ],
+      [
+        3587,
+        "Beach Assassin",
+        382
+      ],
+      [
+        29608,
+        "Peddler Assassin",
+        420
+      ],
+      [
+        29618,
+        "Gravekeeper Assassin",
+        425
+      ],
+      [
+        6126,
+        "Assassin - Supporter Extraordinaire",
+        428
+      ],
+      [
+        10093,
+        "Assassin - Cyber Cop",
+        477
+      ],
+      [
+        24300,
+        "Lazy Skeleton Assassin",
+        481
+      ],
+      [
+        10111,
+        "Infested Assassin",
+        487
+      ],
+      [
+        10121,
+        "Cave Guy Assassin",
+        492
+      ],
+      [
+        10167,
+        "Mini Acidified Assassin",
+        515
+      ],
+      [
+        10177,
+        "Cronus Entity Assassin",
+        520
+      ],
+      [
+        10201,
+        "Mystery Assassin",
+        532
+      ],
+      [
+        9341,
+        "Star Shooter Assassin",
+        553
+      ]
+    ],
+    8
+  ],
+  "801": [
+    801,
+    "Necromancer",
+    "Necromancers",
+    [
+      100,
+      100,
+      12,
+      0,
+      10,
+      15,
+      10,
+      12
+    ],
+    [
+      25,
+      10,
+      1.5,
+      0,
+      1,
+      1.5,
+      0.5,
+      1.5
+    ],
+    [
+      670,
+      385,
+      75,
+      25,
+      50,
+      60,
+      30,
+      75
+    ],
+    [
+      [
+        0,
+        "Classic",
+        8
+      ],
+      [
+        842,
+        "Death Mage",
+        24
+      ],
+      [
+        898,
+        "Witch Doctor",
+        62
+      ],
+      [
+        9028,
+        "Slime Necromancer",
+        43
+      ],
+      [
+        29810,
+        "Tiny Avatar",
+        101
+      ],
+      [
+        19460,
+        "Hollow King Set Skin",
+        604
+      ],
+      [
+        32766,
+        "Vampire Lord",
+        124
+      ],
+      [
+        5862,
+        "Frozen King",
+        138
+      ],
+      [
+        5913,
+        "Necromancer - Artist Extraordinaire",
+        143
+      ],
+      [
+        5996,
+        "Necromancer - Dungeon Mastermind",
+        145
+      ],
+      [
+        10938,
+        "Necromancer - Future Seeker Tester",
+        155
+      ],
+      [
+        6026,
+        "Carnivalmancer",
+        152
+      ],
+      [
+        19158,
+        "Shadow Mage",
+        179
+      ],
+      [
+        19427,
+        "Stone Statue Necromancer",
+        217
+      ],
+      [
+        19433,
+        "Voodoo Magus Necromancer",
+        223
+      ],
+      [
+        19545,
+        "Heartless Necromancer",
+        238
+      ],
+      [
+        19547,
+        "Jack-o-mancer",
+        240
+      ],
+      [
+        19550,
+        "Hollow Prince Necromancer",
+        243
+      ],
+      [
+        19562,
+        "Lady Violetta Necromancer",
+        255
+      ],
+      [
+        19614,
+        "Catrina Necromancer",
+        264
+      ],
+      [
+        19618,
+        "Heart Thief Necromancer",
+        268
+      ],
+      [
+        8313,
+        "Oryxmas Necromancer",
+        289
+      ],
+      [
+        24597,
+        "Necro of Christmas Yet-to-Come",
+        299
+      ],
+      [
+        24702,
+        "Anubis Necromancer",
+        321
+      ],
+      [
+        9212,
+        "Skink Necromancer",
+        341
+      ],
+      [
+        9217,
+        "Demon Summoner Necromancer",
+        346
+      ],
+      [
+        3589,
+        "Beach Party Necromancer",
+        384
+      ],
+      [
+        6128,
+        "Necromancer - Supporter Extraordinaire",
+        429
+      ],
+      [
+        24272,
+        "Dragon Skull Necromancer",
+        461
+      ],
+      [
+        24288,
+        "Plague Necromancer",
+        469
+      ],
+      [
+        10097,
+        "Necromancer - Cyber Cop",
+        478
+      ],
+      [
+        10185,
+        "Vengeful Yokai Necromancer",
+        524
+      ],
+      [
+        10203,
+        "Mystery Necromancer",
+        533
+      ],
+      [
+        10219,
+        "Mistral Druid Necromancer",
+        541
+      ],
+      [
+        9413,
+        "Abyss Adventurer Necromancer",
+        583
+      ],
+      [
+        9415,
+        "Leech Robot Necromancer",
+        584
+      ]
+    ],
+    9
+  ],
+  "802": [
+    802,
+    "Huntress",
+    "Huntresses",
+    [
+      130,
+      100,
+      12,
+      0,
+      12,
+      12,
+      12,
+      10
+    ],
+    [
+      25,
+      5,
+      1.5,
+      0,
+      1,
+      1,
+      0.5,
+      1
+    ],
+    [
+      700,
+      252,
+      75,
+      25,
+      50,
+      50,
+      40,
+      50
+    ],
+    [
+      [
+        0,
+        "Classic",
+        9
+      ],
+      [
+        843,
+        "Amazonian",
+        25
+      ],
+      [
+        900,
+        "Scarlett",
+        64
+      ],
+      [
+        901,
+        "Artemis",
+        69
+      ],
+      [
+        8977,
+        "Nexus no Miko",
+        84
+      ],
+      [
+        9027,
+        "Slime Huntress",
+        42
+      ],
+      [
+        29789,
+        "Ghost Huntress",
+        91
+      ],
+      [
+        29801,
+        "Dark Elf Huntress",
+        95
+      ],
+      [
+        29848,
+        "Mini Thessal",
+        110
+      ],
+      [
+        2299,
+        "Swarming Huntress Set Skin",
+        600
+      ],
+      [
+        6217,
+        "Horticultural Huntress Set Skin",
+        613
+      ],
+      [
+        19407,
+        "Mini Queen Bee Huntress",
+        198
+      ],
+      [
+        5968,
+        "Huntress - Artist Extraordinaire",
+        144
+      ],
+      [
+        6006,
+        "Huntress - Dungeon Mastermind",
+        147
+      ],
+      [
+        10942,
+        "Huntress - Future Seeker Tester",
+        156
+      ],
+      [
+        6023,
+        "Heartseeker",
+        149
+      ],
+      [
+        19154,
+        "Woodland Huntress",
+        175
+      ],
+      [
+        19370,
+        "Markswoman Huntress",
+        181
+      ],
+      [
+        19392,
+        "Swimsuit Huntress",
+        193
+      ],
+      [
+        19428,
+        "Stone Statue Huntress",
+        218
+      ],
+      [
+        19540,
+        "Drake Hunter",
+        236
+      ],
+      [
+        19564,
+        "Misery Ghost Bride Huntress",
+        257
+      ],
+      [
+        19616,
+        "Sunrise Hunter",
+        266
+      ],
+      [
+        6113,
+        "Eagle Eye Hunter",
+        278
+      ],
+      [
+        8314,
+        "Oryxmas Huntress",
+        290
+      ],
+      [
+        24594,
+        "Helping Huntress",
+        296
+      ],
+      [
+        24703,
+        "Reptilian Hunter",
+        322
+      ],
+      [
+        9149,
+        "Moonlight Elf Huntress",
+        337
+      ],
+      [
+        9224,
+        "Forest Tracker Huntress",
+        353
+      ],
+      [
+        9310,
+        "Demonhunter Huntress",
+        362
+      ],
+      [
+        6131,
+        "Huntress - Supporter Extraordinaire",
+        430
+      ],
+      [
+        29637,
+        "Gravekeeper Hunter",
+        433
+      ],
+      [
+        10103,
+        "Huntress - Cyber Cop",
+        476
+      ],
+      [
+        10137,
+        "Mini Horticultural Huntress",
+        500
+      ],
+      [
+        10205,
+        "Mystery Huntress",
+        534
+      ]
+    ],
+    10
+  ],
+  "803": [
+    803,
+    "Mystic",
+    "Mystics",
+    [
+      100,
+      100,
+      10,
+      0,
+      12,
+      10,
+      15,
+      15
+    ],
+    [
+      25,
+      10,
+      1.5,
+      0,
+      1,
+      1,
+      0.5,
+      1.5
+    ],
+    [
+      670,
+      385,
+      60,
+      25,
+      60,
+      55,
+      40,
+      75
+    ],
+    [
+      [
+        0,
+        "Classic",
+        10
+      ],
+      [
+        844,
+        "Seer",
+        26
+      ],
+      [
+        8968,
+        "Lil Red",
+        75
+      ],
+      [
+        9026,
+        "Slime Mystic",
+        41
+      ],
+      [
+        29815,
+        "Poltergeist",
+        106
+      ],
+      [
+        29787,
+        "Phylactery Set Skin",
+        590
+      ],
+      [
+        19272,
+        "Magmatic Mystic Set Skin",
+        615
+      ],
+      [
+        29846,
+        "Mini Phylactery",
+        112
+      ],
+      [
+        32657,
+        "Pilgrim Mother",
+        127
+      ],
+      [
+        5865,
+        "Icicle Dial Mystic",
+        141
+      ],
+      [
+        5866,
+        "Yuki Onna Mystic",
+        142
+      ],
+      [
+        5969,
+        "Mystic - Artist Extraordinaire",
+        144
+      ],
+      [
+        5998,
+        "Mystic - Dungeon Mastermind",
+        145
+      ],
+      [
+        10940,
+        "Mystic - Future Seeker Tester",
+        155
+      ],
+      [
+        10960,
+        "Leprechaun Mystic",
+        159
+      ],
+      [
+        10968,
+        "Lil' Bo-Peep",
+        167
+      ],
+      [
+        19152,
+        "Mystic Emeritus",
+        173
+      ],
+      [
+        19388,
+        "Hula Mystic",
+        189
+      ],
+      [
+        19391,
+        "Swimsuit Mystic",
+        192
+      ],
+      [
+        19412,
+        "Clockwork Mystic",
+        202
+      ],
+      [
+        19429,
+        "Stone Statue Mystic",
+        219
+      ],
+      [
+        19561,
+        "Grand Enchantress Mystic",
+        254
+      ],
+      [
+        19615,
+        "Lunar Mystic",
+        265
+      ],
+      [
+        6044,
+        "Timelock Mystic",
+        275
+      ],
+      [
+        8315,
+        "Oryxmas Mystic",
+        291
+      ],
+      [
+        24595,
+        "Mystic of Christmas Past",
+        297
+      ],
+      [
+        24693,
+        "Aphrodite Mystic",
+        312
+      ],
+      [
+        24704,
+        "Mystical Owl",
+        323
+      ],
+      [
+        9218,
+        "Wandering Gypsy Mystic",
+        347
+      ],
+      [
+        30054,
+        "Lightning Mystic",
+        410
+      ],
+      [
+        6132,
+        "Mystic - Supporter Extraordinaire",
+        429
+      ],
+      [
+        24264,
+        "Fire Goddess Mystic",
+        457
+      ],
+      [
+        24280,
+        "Mini Totalia Mystic",
+        465
+      ],
+      [
+        10105,
+        "Mystic - Cyber Cop",
+        478
+      ],
+      [
+        24306,
+        "Urglemancer Mystic",
+        484
+      ],
+      [
+        10123,
+        "Cave Girl Mystic",
+        493
+      ],
+      [
+        10135,
+        "Fortune Teller Mystic",
+        499
+      ],
+      [
+        10169,
+        "Mini Magmatic Mystic",
+        516
+      ],
+      [
+        10207,
+        "Mystery Mystic",
+        535
+      ]
+    ],
+    11
+  ],
+  "804": [
+    804,
+    "Trickster",
+    "Tricksters",
+    [
+      150,
+      100,
+      10,
+      0,
+      12,
+      15,
+      12,
+      12
+    ],
+    [
+      25,
+      5,
+      1.5,
+      0,
+      1.5,
+      1.5,
+      0.5,
+      1
+    ],
+    [
+      720,
+      252,
+      65,
+      25,
+      75,
+      75,
+      40,
+      60
+    ],
+    [
+      [
+        0,
+        "Classic",
+        11
+      ],
+      [
+        845,
+        "Loki",
+        27
+      ],
+      [
+        917,
+        "Deadly Vixen",
+        65
+      ],
+      [
+        8979,
+        "Drow Trickster",
+        86
+      ],
+      [
+        8969,
+        "King Knifeula",
+        76
+      ],
+      [
+        9014,
+        "Slime Trickster",
+        40
+      ],
+      [
+        29771,
+        "Jester",
+        89
+      ],
+      [
+        29817,
+        "Vampiress",
+        97
+      ],
+      [
+        2301,
+        "Lost Golem Set Skin",
+        602
+      ],
+      [
+        19529,
+        "Mini Lost Golem Trickster",
+        233
+      ],
+      [
+        5859,
+        "Chinese Dress Trickster",
+        135
+      ],
+      [
+        5970,
+        "Trickster - Artist Extraordinaire",
+        144
+      ],
+      [
+        6005,
+        "Trickster - Dungeon Mastermind",
+        146
+      ],
+      [
+        10935,
+        "Trickster - Future Seeker Tester",
+        154
+      ],
+      [
+        6022,
+        "Juliet",
+        148
+      ],
+      [
+        19155,
+        "Bunny Trickster",
+        176
+      ],
+      [
+        19387,
+        "Beach Trickster",
+        188
+      ],
+      [
+        19393,
+        "Swimsuit Trickster",
+        194
+      ],
+      [
+        19430,
+        "Stone Statue Trickster",
+        220
+      ],
+      [
+        19485,
+        "Mad Hatter Trickster",
+        227
+      ],
+      [
+        19539,
+        "Soubrette Trickster",
+        235
+      ],
+      [
+        8316,
+        "Oryxmas Trickster",
+        292
+      ],
+      [
+        24593,
+        "Santa Trickster",
+        295
+      ],
+      [
+        24669,
+        "Gnome Trickster",
+        311
+      ],
+      [
+        24705,
+        "Fox Trickster",
+        324
+      ],
+      [
+        9201,
+        "Irish Dancer Trickster",
+        338
+      ],
+      [
+        9219,
+        "Village Peasant Trickster",
+        348
+      ],
+      [
+        9320,
+        "Jellyhead Trickster",
+        367
+      ],
+      [
+        6133,
+        "Trickster - Supporter Extraordinaire",
+        428
+      ],
+      [
+        24226,
+        "Jiangshi Trickster",
+        437
+      ],
+      [
+        24232,
+        "Time Traveler Trickster",
+        441
+      ],
+      [
+        24254,
+        "Night Elf Queen Trickster",
+        452
+      ],
+      [
+        24260,
+        "Queen of Misrule Trickster",
+        455
+      ],
+      [
+        24296,
+        "Brandon the Fish Trickster",
+        473
+      ],
+      [
+        10107,
+        "Trickster - Cyber Cop",
+        477
+      ],
+      [
+        24298,
+        "Haunted Doll Trickster",
+        480
+      ],
+      [
+        10113,
+        "Stygian Figure Trickster",
+        488
+      ],
+      [
+        10131,
+        "Dante Trickster of the Abyss",
+        497
+      ],
+      [
+        10133,
+        "Playful Demon Trickster",
+        498
+      ],
+      [
+        10209,
+        "Mystery Trickster",
+        536
+      ],
+      [
+        10217,
+        "Occult Mercenary Trickster",
+        540
+      ],
+      [
+        10225,
+        "Lunatic Bunny Trickster",
+        544
+      ],
+      [
+        9343,
+        "Emo Trickster",
+        554
+      ],
+      [
+        9347,
+        "Web Kid Trickster",
+        556
+      ],
+      [
+        9351,
+        "Sand Wanderer Trickster",
+        558
+      ],
+      [
+        9367,
+        "Red Prismed Trickster",
+        566
+      ]
+    ],
+    12
+  ],
+  "805": [
+    805,
+    "Sorcerer",
+    "Sorcerers",
+    [
+      100,
+      100,
+      12,
+      0,
+      12,
+      12,
+      10,
+      15
+    ],
+    [
+      25,
+      10,
+      1.5,
+      0,
+      1.5,
+      1,
+      1.5,
+      1.5
+    ],
+    [
+      670,
+      385,
+      70,
+      25,
+      60,
+      60,
+      75,
+      60
+    ],
+    [
+      [
+        0,
+        "Classic",
+        12
+      ],
+      [
+        846,
+        "Warlock",
+        28
+      ],
+      [
+        899,
+        "Sorceress",
+        63
+      ],
+      [
+        8855,
+        "Stanley the Spring Bunny",
+        70
+      ],
+      [
+        9013,
+        "Slime Sorcerer",
+        39
+      ],
+      [
+        8976,
+        "Ascended Sorcerer",
+        83
+      ],
+      [
+        3009,
+        "Horrific Sorcerer Set Skin",
+        605
+      ],
+      [
+        19357,
+        "Court Magician Sorcerer Set Skin",
+        620
+      ],
+      [
+        5863,
+        "Blizzard Sorcerer",
+        139
+      ],
+      [
+        5915,
+        "Sorcerer - Artist Extraordinaire",
+        143
+      ],
+      [
+        5997,
+        "Sorcerer - Dungeon Mastermind",
+        145
+      ],
+      [
+        10944,
+        "Sorcerer - Future Seeker Tester",
+        157
+      ],
+      [
+        6025,
+        "Mardi Gras Jester",
+        151
+      ],
+      [
+        19374,
+        "Ancient Sorcerer",
+        185
+      ],
+      [
+        19385,
+        "Cunning Sorcerer",
+        187
+      ],
+      [
+        19431,
+        "Stone Statue Sorcerer",
+        221
+      ],
+      [
+        19482,
+        "Undine Sorcerer",
+        224
+      ],
+      [
+        19486,
+        "Queen Of Hearts Sorcerer",
+        228
+      ],
+      [
+        19498,
+        "Nameless Sorcerer",
+        232
+      ],
+      [
+        19531,
+        "Thunder God Sorcerer",
+        603
+      ],
+      [
+        19548,
+        "Mini Malus Sorcerer",
+        241
+      ],
+      [
+        19552,
+        "Candle Maid Sorceress",
+        245
+      ],
+      [
+        8317,
+        "Oryxmas Sorcerer",
+        293
+      ],
+      [
+        24706,
+        "Piglet Sorcerer",
+        325
+      ],
+      [
+        9146,
+        "Yin Yang Sorcerer",
+        334
+      ],
+      [
+        9147,
+        "Ebony Sorcerer",
+        335
+      ],
+      [
+        9226,
+        "Royal Sorcerer",
+        355
+      ],
+      [
+        9242,
+        "Discoverer Sorcerer",
+        357
+      ],
+      [
+        3010,
+        "Mini Horrific",
+        139
+      ],
+      [
+        9314,
+        "Wise Elder Sorcerer",
+        366
+      ],
+      [
+        28677,
+        "Mini Horrific Sorcerer",
+        368
+      ],
+      [
+        402,
+        "Inari Sorcerer",
+        371
+      ],
+      [
+        2416,
+        "Indian Beauty Sorceress",
+        372
+      ],
+      [
+        29620,
+        "Cultist of Unknown Origin",
+        426
+      ],
+      [
+        6130,
+        "Sorcerer - Supporter Extraordinaire",
+        432
+      ],
+      [
+        23361,
+        "Honey Scepter Acolyte",
+        617
+      ],
+      [
+        24258,
+        "Electronic Scholar Sorcerer",
+        454
+      ],
+      [
+        10101,
+        "Sorcerer - Cyber Cop",
+        479
+      ],
+      [
+        10145,
+        "Quickdraw Cowboy Sorcerer",
+        504
+      ],
+      [
+        10151,
+        "Raven Grandmaster Sorcerer",
+        507
+      ],
+      [
+        10153,
+        "Bunny Sorcerer",
+        508
+      ],
+      [
+        10181,
+        "Water Battlemaiden Sorcerer",
+        522
+      ],
+      [
+        10211,
+        "Mystery Sorcerer",
+        537
+      ],
+      [
+        10223,
+        "Shadow Land Sorcerer",
+        543
+      ],
+      [
+        10229,
+        "F.E.R.A.L. Sorcerer",
+        546
+      ],
+      [
+        10235,
+        "Mini Court Magician Sorcerer",
+        549
+      ],
+      [
+        9409,
+        "The 12th Sorcerer",
+        581
+      ]
+    ],
+    13
+  ],
+  "806": [
+    806,
+    "Ninja",
+    "Ninjas",
+    [
+      150,
+      100,
+      15,
+      0,
+      10,
+      12,
+      12,
+      12
+    ],
+    [
+      25,
+      5,
+      1.5,
+      0,
+      1,
+      1.5,
+      1,
+      1.5
+    ],
+    [
+      720,
+      252,
+      70,
+      25,
+      60,
+      70,
+      60,
+      70
+    ],
+    [
+      [
+        0,
+        "Classic",
+        13
+      ],
+      [
+        847,
+        "Shadow",
+        29
+      ],
+      [
+        856,
+        "Slime Ninja",
+        38
+      ],
+      [
+        29809,
+        "Death",
+        100
+      ],
+      [
+        29840,
+        "Baby Djinja",
+        118
+      ],
+      [
+        29841,
+        "Mini Rosen",
+        119
+      ],
+      [
+        19280,
+        "Crystal Kunoichi Set Skin",
+        616
+      ],
+      [
+        1029,
+        "Rosen Blade",
+        596
+      ],
+      [
+        1030,
+        "Djinja",
+        597
+      ],
+      [
+        5881,
+        "Ninja - Artist Extraordinaire",
+        143
+      ],
+      [
+        6002,
+        "Ninja - Dungeon Mastermind",
+        417
+      ],
+      [
+        10936,
+        "Ninja - Future Seeker Tester",
+        414
+      ],
+      [
+        10959,
+        "Wind Flower Ninja",
+        158
+      ],
+      [
+        19153,
+        "Silver Ninja",
+        174
+      ],
+      [
+        19394,
+        "Slashing Beauty Ninja",
+        195
+      ],
+      [
+        19432,
+        "Stone Statue Ninja",
+        222
+      ],
+      [
+        19541,
+        "Pharaoh Ninja",
+        237
+      ],
+      [
+        19551,
+        "Kabuki Ninja",
+        244
+      ],
+      [
+        19555,
+        "Dark Rider Ninja",
+        248
+      ],
+      [
+        6040,
+        "Gardener Ninja",
+        271
+      ],
+      [
+        8318,
+        "Oryxmas Ninja",
+        294
+      ],
+      [
+        24707,
+        "Feline Blade Ninja",
+        326
+      ],
+      [
+        9139,
+        "Parasol Maiden Ninja",
+        327
+      ],
+      [
+        9142,
+        "Dual Duelist Ninja",
+        330
+      ],
+      [
+        9221,
+        "Sensei Ninja",
+        350
+      ],
+      [
+        8768,
+        "Shark Hunter Ninja",
+        397
+      ],
+      [
+        25106,
+        "Krathman",
+        404
+      ],
+      [
+        6123,
+        "Ninja - Supporter Extraordinaire",
+        431
+      ],
+      [
+        7766,
+        "Raijin NinjaST",
+        609
+      ],
+      [
+        7767,
+        "Mini Raijin Ninja",
+        453
+      ],
+      [
+        10087,
+        "Ninja - Cyber Cop",
+        475
+      ],
+      [
+        10129,
+        "Masked Ninja",
+        496
+      ],
+      [
+        10171,
+        "Mini Crystal Kunoichi",
+        517
+      ],
+      [
+        10213,
+        "Mystery Ninja",
+        538
+      ],
+      [
+        9419,
+        "Swimsuit Ninja",
+        586
+      ]
+    ],
+    14
+  ]
+}

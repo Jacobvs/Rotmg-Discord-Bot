@@ -43,6 +43,38 @@ async def get_user_from_ign(pool, name):
             user = await cursor.fetchone()
             return user
 
+async def get_patreon_status(pool, uid):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "SELECT * from rotmg.users where (id = %s)"
+            await cursor.execute(sql, (uid,))
+            data = await cursor.fetchone()
+            return True if data and data[usr_cols.is_patreon] == 1 else False
+
+async def set_patreon_status(pool, uid, ign, status: bool):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "SELECT * FROM rotmg.users where (id = %s)"
+            await cursor.execute(sql, uid)
+            data = await cursor.fetchone()
+            if not data:
+                sql = "INSERT INTO rotmg.users (id, ign, verifiedguilds, is_patreon) VALUES (%s, %s, %s, %s)"
+                await cursor.execute(sql, (uid, ign, 'Dungeoneer Exalt O3', status))
+                await conn.commit()
+            else:
+                status = 1 if status else 0
+                sql = "UPDATE rotmg.users SET is_patreon=%s WHERE id=%s"
+                await cursor.execute(sql, (status, uid))
+                await conn.commit()
+
+async def get_all_patreons(pool):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "SELECT * from rotmg.users where is_patreon = true"
+            await cursor.execute(sql)
+            data = await cursor.fetchall()
+            return data
+
 async def add_alt_name(pool, uid, altname):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
@@ -233,7 +265,7 @@ async def get_casino_player(pool, id):
             if not data:
                 now = datetime.utcnow()
                 now = now.strftime('%Y-%m-%d %H:%M:%S')
-                sql = ("INSERT INTO rotmg.casino (id, balance, dailycooldown, workcooldown, searchcooldown) VALUES (%s, %s, %s, %s, %s)")
+                sql = ("REPLACE INTO rotmg.casino (id, balance, dailycooldown, workcooldown, searchcooldown) VALUES (%s, %s, %s, %s, %s)")
                 data = [id, 7500, now, now, now]
                 await cursor.execute(sql, data)
                 await conn.commit()
@@ -363,14 +395,14 @@ async def log_runs(pool, guild_id, member_id, column=1, number=1):
             else:
                 data = data[column]
 
-            name = "pkey" if column == 1 else "vials" if column == 2 else "helmrunes" if column == 3 else "shieldrunes" if column == 4 else\
-                "swordrunes" if column == 5 else "eventkeys" if column == 6 else "runsdone" if column == 7 else "eventsdone" if column == 8\
-                else "srunled" if column == 9 else "frunled" if column == 10 else "eventled" if column == 11 else "runsassisted" if\
-                column == 12 else "eventsassisted"
-            if column == 9 or column == 10 or column == 11:
+            name = "pkey" if column == 2 else "vials" if column == 3 else "helmrunes" if column == 4 else "shieldrunes" if column == 5 else\
+                "swordrunes" if column == 6 else "eventkeys" if column == 7 else "runsdone" if column == 8 else "eventsdone" if column == 9\
+                else "srunled" if column == 10 else "frunled" if column == 11 else "eventled" if column == 12 else "runsassisted" if\
+                column == 13 else "eventsassisted" if column == 14 else "ocompletes" if column == 17 else 'oattempts'
+            if column == 10 or column == 11 or column == 12:
                 await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number}, weeklyruns = weeklyruns + {number} "
                                      f"WHERE uid = {member_id} AND gid = {guild_id}")
-            elif column == 12:
+            elif column == 13:
                 await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number}, weeklyassists = weeklyassists + {number} "
                                      f"WHERE uid = {member_id} AND gid = {guild_id}")
             else:
@@ -395,10 +427,11 @@ async def get_log(pool, guild_id, member_id):
 async def get_top_10_logs(pool, guild_id, column, only_10=True):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
-            name = "pkey" if column == 1 else "vials" if column == 2 else "helmrunes" if column == 3 else "shieldrunes" if column == 4 \
-                else "swordrunes" if column == 5 else "eventkeys" if column == 6 else "runsdone" if column == 7 else "eventsdone" if \
-                column == 8 else "srunled" if column == 9 else "frunled" if column == 10 else "eventled" if column == 11 else \
-                "runsassisted" if column == 12 else "eventsassisted" if column == 13 else "weeklyruns" if column == 14 else "weeklyassists"
+            name = "pkey" if column == 2 else "vials" if column == 3 else "helmrunes" if column == 4 else "shieldrunes" if column == 5 \
+                else "swordrunes" if column == 6 else "eventkeys" if column == 7 else "runsdone" if column == 8 else "eventsdone" if \
+                column == 9 else "srunled" if column == 10 else "frunled" if column == 11 else "eventled" if column == 12 else \
+                "runsassisted" if column == 13 else "eventsassisted" if column == 14 else "weeklyruns" if column == 15 else "weeklyassists" if column == 16 \
+                else 'ocompletes' if column == 17 else 'oattempts'
             if only_10:
                 await cursor.execute(f"SELECT * from rotmg.logging WHERE gid = {guild_id} ORDER BY {name} DESC LIMIT 10")
             else:
@@ -502,6 +535,8 @@ class log_cols(enum.IntEnum):
     eventsassisted = 14
     weeklyruns = 15
     weeklyassists = 16
+    ocompletes = 17
+    oattempts = 18
 
 class casino_cols(enum.IntEnum):
     id = 0
@@ -523,12 +558,13 @@ class usr_cols(enum.IntEnum):
     verifiedguilds = 6  # String (CSV)
     alt1 = 7
     alt2 = 8
+    is_patreon = 9
 
 # Define which DB records are of what type
 # Channels (Text, Voice, Category)
-gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 46, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71]
+gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 46, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
 # Roles
-gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43, 47, 48, 50, 52, 54, 58]
+gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43, 47, 48, 50, 52, 54, 58, 73, 75, 79]
 
 class gld_cols(enum.IntEnum):
     """Contains References to rotmg.guilds table for easy access"""
@@ -604,3 +640,11 @@ class gld_cols(enum.IntEnum):
     eventvc3 = 69
     eventhc4 = 70
     eventvc4 = 71
+    modmailstoragechannel = 72
+    runepopper1role = 73
+    runepopper1loc = 74
+    runepopper2role = 75
+    runepopper2loc = 76
+    numpopsfirstrune = 77
+    numpopssecondrune = 78
+    eventraiderroleid = 79
