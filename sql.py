@@ -75,6 +75,23 @@ async def get_all_patreons(pool):
             data = await cursor.fetchall()
             return data
 
+async def change_username(pool, uid, newname):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "SELECT * from rotmg.users WHERE id = %s AND status = 'verified'"
+            data = (uid)
+            await cursor.execute(sql, data)
+            data = await cursor.fetchone()
+            if not data:
+                return False
+            if data[usr_cols.ign]:
+                return False
+            sql = f"UPDATE rotmg.users SET ign = %s WHERE id = %s"
+            data = (newname, uid)
+            await cursor.execute(sql, data)
+            await conn.commit()
+            return True
+
 async def add_alt_name(pool, uid, altname):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
