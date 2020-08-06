@@ -9,7 +9,6 @@ from discord.ext import commands
 import checks
 import embeds
 import sql
-import re
 import utils
 from checks import manual_verify_channel, has_manage_roles
 from cogs import verification
