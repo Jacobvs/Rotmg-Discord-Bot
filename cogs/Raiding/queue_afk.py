@@ -26,6 +26,7 @@ class QAfk:
         self.meetup = utils.get_server(is_US)
         self.raid_vc = None
         self.in_run = False
+        self.raid_msg = None
         self.max_patreons = 6
 
         self.raiderids = set()
@@ -71,6 +72,14 @@ class QAfk:
         #     await self.ctx.send("`1` (Oryx 3) Is the only dungeon configured for this command yet!", delete_after=7)
         #
         # await setup_msg.delete()
+
+        d = await sql.get_all_missed(self.client.pool, self.ctx.guild.id)
+        n_priority = 0
+        n_regular = 0
+        self.missed_runs = {}
+        for r in d:
+            is_priority = True if r[2] > 0 else False
+            self.missed_runs.update({r[0]: is_priority})
 
         # Grab dungeon info from utils
         dungeon_info = utils.q_dungeon_info(1)
@@ -159,6 +168,17 @@ class QAfk:
 
     async def dequeue(self):
         print('in dequeue')
+        self.raid_msg = await self.hcchannel.fetch_message(self.raid_msg.id)
+        for r in self.raid_msg.reactions:
+            print(r)
+            if str(r.emoji) == self.dungeon_emoji:
+                async for m in r.users():
+                    if m.id not in self.client.queues[self.queuechannel.id]:
+                        if m.voice and m.voice.channel == self.queuechannel:
+                            self.client.queues[self.queuechannel.id].append(m.id)
+                    self.confirmed_raiders[m.id] = m
+        print(self.confirmed_raiders)
+
         await self.class_message.delete()
         task = asyncio.get_event_loop().create_task(self.move_members())
         await self.raid_msg.clear_reactions()
@@ -178,30 +198,31 @@ class QAfk:
 
 
     async def move_members(self):
-        print('moving priority')
-        for id in self.confirmed_priority:
-            if len(self.raid_vc.members) >= self.max_members:
-                break
-            if id in self.client.queues[self.queuechannel.id]:
-                member = self.confirmed_priority[id]
-                if member.voice:
-                    await member.move_to(self.raid_vc)
-                    if member.id not in self.raiderids:
-                        self.raiderids.add(member.id)
-                    self.client.active_raiders[member.id] = self.raid_vc.id
 
         print('moving confirmed')
-        for id in self.confirmed_raiders:
-            if len(self.raid_vc.members) >= self.max_members:
+        qnum = 0
+        all = len(self.raid_vc.members)
+        for id in self.client.queues[self.queuechannel.id]:
+            qnum += 1
+            if all >= self.max_members:
+                print(f'ended moving at len vc: {len(self.raid_vc.members)}')
+                print(f'ended moving at normal moved: {all}')
                 break
-            if id in self.client.queues[self.queuechannel.id]:
+            if id in self.confirmed_raiders:
                 member = self.confirmed_raiders[id]
-                if member.voice:
-                    await member.move_to(self.raid_vc)
-                    if member.id not in self.raiderids:
-                        self.raiderids.add(member.id)
-                    self.client.active_raiders[member.id] = self.raid_vc.id
+                if member and member.voice:
+                    try:
+                        await member.move_to(self.raid_vc)
+                        if member.id not in self.raiderids:
+                            self.raiderids.add(member.id)
+                        self.client.active_raiders[member.id] = self.raid_vc.id
+                        all += 1
+                        print(f"position: {qnum} | movednum: {all}")
+                    except discord.Forbidden or discord.HTTPException:
+                        print(f"MEMBER FAILED TO BE MOVED: {member.display_name}")
+                        continue
         print('done moving')
+        print(f'Num regular moved: {all}')
 
 
     async def end_afk(self):
@@ -309,6 +330,7 @@ class QAfk:
         del self.client.raid_db[self.ctx.guild.id]['cp'][self.cp_msg.id]
 
         members_left = self.raid_vc.members
+
         for r in self.raiderids:
             self.client.active_raiders.pop(r, None)
 
@@ -390,10 +412,10 @@ class QAfk:
         emote = str(payload.emoji)
         if emote == self.dungeon_emoji:
             if (self.firstpopperrole in payload.member.roles and self.firstpopperrole and self.firstpopperearlyloc) or \
-               (self.secondpopperrole in payload.member.roles and self.secondpopperrole and self.secondpopperearlyloc) or \
-               (self.thirdpopperrole in payload.member.roles and self.thirdpopperrole and self.thirdpopperearlyloc) or \
-               (self.firstrunerole in payload.member.roles and self.firstrunerole and self.firstruneearlyloc) or \
-               (self.secondrunerole in payload.member.roles and self.secondrunerole and self.secondruneearlyloc):
+                    (self.secondpopperrole in payload.member.roles and self.secondpopperrole and self.secondpopperearlyloc) or \
+                    (self.thirdpopperrole in payload.member.roles and self.thirdpopperrole and self.thirdpopperearlyloc) or \
+                    (self.firstrunerole in payload.member.roles and self.firstrunerole and self.firstruneearlyloc) or \
+                    (self.secondrunerole in payload.member.roles and self.secondrunerole and self.secondruneearlyloc):
                 if payload.member not in self.confirmed_priority:
                     self.confirmed_priority[payload.member.id] = payload.member
             else:
@@ -526,7 +548,11 @@ class QAfk:
     # Utility Methods
     # Update starting embed
     async def update_start_embed(self, update_msg=False):
-        nqueue = len(self.confirmed_raiders)+len(self.confirmed_priority)
+        if self.raid_msg:
+            self.raid_msg = await self.hcchannel.fetch_message(self.raid_msg.id)
+            nqueue = next((r.count for r in self.raid_msg.reactions if str(r.emoji) == self.dungeon_emoji), 1)-1
+        else:
+            nqueue = 0
         nvc = len(self.raid_vc.members) if self.raid_vc else 0
         capacity_bar = utils.textProgressBar(nqueue, self.max_members, prefix="", percent_suffix=" Full", suffix="", decimals=0, length=18)
         desc = f"**Join __{self.queuechannel.name}__ to to join the raiding queue!**\nUse `!position` to check your position in the queue.\n\n" \
@@ -569,7 +595,11 @@ class QAfk:
                      f"{' | '.join([m.mention for m in self.patreons])} |⇒ ({len(self.patreons)}/{self.max_patreons})"
         self.cp_embed.set_field_at(3, name="Nitro Boosters / Patreons:", value=nitro_str, inline=False)
 
-        nqueue = len(self.confirmed_raiders)+len(self.confirmed_priority)
+        if self.raid_msg:
+            self.raid_msg = await self.hcchannel.fetch_message(self.raid_msg.id)
+            nqueue = next((r.count for r in self.raid_msg.reactions if str(r.emoji) == self.dungeon_emoji), 1) - 1
+        else:
+            nqueue = 0
         nvc = len(self.raid_vc.members)
         q_capacity_bar = utils.textProgressBar(nqueue, self.max_members, prefix="", percent_suffix=" Full", suffix="", decimals=0, length=15)
         n_capacity_bar = utils.textProgressBar(nvc, self.max_members, prefix="", percent_suffix=" Full", suffix="", decimals=0, length=15)

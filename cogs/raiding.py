@@ -29,7 +29,7 @@ class Raiding(commands.Cog):
 
     @commands.command(usage='qafk <location>', description="Start a Queue afk check for the location specified.")
     @commands.guild_only()
-    # @commands.is_owner()
+    @commands.is_owner()
     @commands.max_concurrency(1, per=BucketType.guild, wait=False)
     async def qafk(self, ctx, *, location):
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
@@ -55,29 +55,31 @@ class Raiding(commands.Cog):
         self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
 
-    @commands.command(usage='position', description="Check your position within the raiding queue!", aliases=['queue'])
-    @commands.guild_only()
-    async def position(self, ctx):
-        try:
-            await ctx.message.delete()
-        except discord.NotFound:
-            pass
+    # @commands.command(usage='position', description="Check your position within the raiding queue!", aliases=['queue'])
+    # @commands.guild_only()
+    # async def position(self, ctx):
+    #     try:
+    #         await ctx.message.delete()
+    #     except discord.NotFound:
+    #         pass
+    #
+    #     index = None
+    #     for id in self.client.queues:
+    #         if ctx.author.id in self.client.queues[id]:
+    #             index = self.client.queues[id].index(ctx.author.id)+1
+    #             channel_id = id
+    #             break
+    #     if index:
+    #         d = self.client.queue_links[channel_id]
+    #         await ctx.send(f"{ctx.author.mention} - Your position in the Queue for {d[1].name} is **{index}**")
+    #     else:
+    #         await ctx.send(f"You are not currently in any raiding queues!")
 
-        index = None
-        for id in self.client.queues:
-            if ctx.author.id in self.client.queues[id]:
-                index = self.client.queues[id].index(ctx.author.id)+1
-                channel_id = id
-                break
-        if index:
-            d = self.client.queue_links[channel_id]
-            await ctx.send(f"{ctx.author.mention} - Your position in the Queue for {d[1].name} is **{index}**")
-        else:
-            await ctx.send(f"You are not currently in any raiding queues!")
 
     @commands.command(usage="afk <location>", description="Starts an AFK check for the location specified.", aliases=['afkcheck', 'startafk'])
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
+    # @checks.exclude_dungeoneer()
     @commands.max_concurrency(1, per=BucketType.guild, wait=False)
     async def afk(self, ctx, *, location):
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:

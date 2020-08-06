@@ -12,10 +12,8 @@ from PIL import Image
 from discord.ext import commands
 from discord.ext.commands import BucketType
 
-import checks
 import sql
 import utils
-from checks import not_raiding_vc, is_bot_owner, is_dj
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -328,79 +326,43 @@ class Patreon(commands.Cog):
         base_embed.add_field(name="Info", value=info, inline=False)
         await msg.edit(embed=base_embed)
 
-
-    @commands.command(aliases=["ahhaha"], usage="laugh", description="Ah-Ha-hA (VC Required)")
+    @commands.command(usage='soundboard <soundname>', description='Play a sound effect! (Must be in VC)', aliases=['sb'])
     @commands.guild_only()
-    @commands.check_any(is_dj(), not_raiding_vc(), is_bot_owner())
-    @checks.in_voice_channel()
-    async def laugh(self, ctx):
+    @commands.cooldown(1, 600, type=BucketType.member)
+    async def soundboard(self, ctx, soundname=""):
+        if not ctx.author.voice:
+            commands.Command.reset_cooldown(ctx.command, ctx)
+            return await ctx.send("You must be in a VC to use this command!")
+
+        if ctx.author.id != self.client.owner_id:
+            if ctx.author.voice.channel in ctx.bot.guild_db.get(ctx.guild.id) or "Raid" in str(ctx.author.voice.channel.name):
+                commands.Command.reset_cooldown(ctx.command, ctx)
+                return await ctx.send("You cannot use this command in a raiding VC!")
+
+
+        soundname = soundname.strip().lower()
+        if soundname not in ['ph', 'ahhaha', 'bully', 'fbi', 'roll', 'richard', 'sax', 'knock']:
+            commands.Command.reset_cooldown(ctx.command, ctx)
+            return await ctx.send("Please choose a valid sound option! Usage: `!sb <soundname>`\nOptions: `ph`, `ahhaha`, `bully`, `fbi`, `richard`, `roll`, `sax`, `knock`")
+
+        file = 'files/'
+        file += 'ph.mp3' if soundname == 'ph' else 'ahhaha.mp3' if soundname == 'ahhaha' else 'bully-me.mp3' if soundname == 'bully' else 'roll.mp3' if soundname == 'roll' \
+            else 'fbi.mp3' if soundname == 'fbi' else 'richard.mp3' if soundname == 'richard' else 'sax.mp3' if soundname == 'sax' else 'knock.mp3'
+
+        message = 'Where have you heard this before... ?' if soundname == 'ph' else 'Ah-Ha-Ha' if soundname == 'ahhaha' else 'Why you bully me?' if soundname == 'bully' else \
+            'youtube.com/watch?v=dQw4w9WgXcQ' if soundname == 'roll' else 'FBI, OPEN UP' if soundname == 'fbi' else 'What the fuck, Richard?' if soundname == 'richard' else \
+            '( ͡° ͜ʖ ͡°)' if soundname == 'sax' else "who's there?"
+
         voice = await connect_helper(self, ctx)
         client = ctx.guild.voice_client
         if not client.source:
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/ahhaha.mp3", options=ffmpeg_options['options']),
-                                                  volume=1)
+            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(file, options=ffmpeg_options['options']),
+                                                  volume=0.3)
             ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
-            await ctx.send("Ah-Ha-hA")
+            await ctx.send(message)
         else:
             await ctx.send("Audio is already playing!")
 
-    @commands.command(usage="bully", description="Why you bully me? (VC Required)")
-    @commands.guild_only()
-    @commands.check_any(is_dj(), not_raiding_vc(), is_bot_owner())
-    @checks.in_voice_channel()
-    async def bully(self, ctx):
-        voice = await connect_helper(self, ctx)
-        client = ctx.guild.voice_client
-        if not client.source:
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/bully-me.mp3", options=ffmpeg_options['options']),
-                                                  volume=1)
-            ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
-            await ctx.send("Why you bully me?")
-        else:
-            await ctx.send("Audio is already playing!")
-
-    @commands.command(usage="roll", description="Not quite sure what this is. (VC Required)")
-    @commands.guild_only()
-    @commands.check_any(is_dj(), not_raiding_vc(), is_bot_owner())
-    @checks.in_voice_channel()
-    async def roll(self, ctx):
-        voice = await connect_helper(self, ctx)
-        client = ctx.guild.voice_client
-        if not client.source:
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/roll.mp3", options=ffmpeg_options['options']), volume=1)
-            ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
-            await ctx.send("youtube.com/watch?v=dQw4w9WgXcQ")
-        else:
-            await ctx.send("Audio is already playing!")
-
-    @commands.command(usage="fbi", description="FBI, OPEN UP. (VC Required)")
-    @commands.guild_only()
-    @commands.check_any(is_dj(), not_raiding_vc(), is_bot_owner())
-    @checks.in_voice_channel()
-    async def fbi(self, ctx):
-        voice = await connect_helper(self, ctx)
-        client = ctx.guild.voice_client
-        if not client.source:
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/fbi.mp3", options=ffmpeg_options['options']), volume=1)
-            ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
-            await ctx.send("FBI, OPEN UP")
-        else:
-            await ctx.send("Audio is already playing!")
-
-    @commands.command(usage="richard", description="RICHARD! (VC Required)")
-    @commands.guild_only()
-    @commands.check_any(is_dj(), not_raiding_vc(), is_bot_owner())
-    @checks.in_voice_channel()
-    async def richard(self, ctx):
-        voice = await connect_helper(self, ctx)
-        client = ctx.guild.voice_client
-        if not client.source:
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/richard.mp3", options=ffmpeg_options['options']),
-                                                  volume=1)
-            ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice=voice))
-            await ctx.send("What the fuck, Richard?")
-        else:
-            await ctx.send("Audio is already playing!")
 
     @commands.command(usage='joke', description='Tell a joke.')
     async def joke(self, ctx):

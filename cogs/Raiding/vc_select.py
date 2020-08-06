@@ -29,7 +29,10 @@ class VCSelect:
 
     async def start(self):
         if not self.parse:
-            await self.ctx.message.delete()
+            try:
+                await self.ctx.message.delete()
+            except discord.NotFound:
+                pass
 
         if self.ctx.channel == self.guild_db.get(sql.gld_cols.raidcommandschannel):
             s = ""
@@ -119,9 +122,12 @@ class VCSelect:
             reaction, user = await self.client.wait_for('reaction_add', timeout=60, check=location_check)
         except asyncio.TimeoutError:
             try:
+                if self.ctx.author.id in self.client.raid_db[self.ctx.guild.id]['leaders']:
+                    self.client.raid_db[self.ctx.guild.id]['leaders'].remove(self.ctx.author.id)
                 embed = discord.Embed(title="Timed out!", description="You didn't choose a channel in time!", color=discord.Color.red())
                 await self.setup_msg.clear_reactions()
                 return await self.setup_msg.edit(embed=embed)
+
             except discord.NotFound:
                 await self.ctx.send("Timed out while selecting channel.")
         else:

@@ -81,7 +81,10 @@ class Logging(commands.Cog):
 
         await r_msg.delete()
         dungeon_info = utils.dungeon_info(int(msg.content))
-        await msg.delete()
+        try:
+            await msg.delete()
+        except discord.NotFound:
+            pass
         dungeontitle = dungeon_info[0]
         emojis = dungeon_info[1]
         guild_db = self.client.guild_db.get(ctx.guild.id)
@@ -118,63 +121,64 @@ async def update_leaderboards(client):
   
 async def update_leaderboard(client, guild_id):
     guild = client.get_guild(guild_id)
-    leaderboardchannel = client.guild_db.get(guild_id)[sql.gld_cols.leaderboardchannel]
-    zerorunschannel = client.guild_db.get(guild_id)[sql.gld_cols.zerorunchannel]
-    rlrole = client.guild_db.get(guild_id)[sql.gld_cols.rlroleid]
+    if guild:
+        leaderboardchannel = client.guild_db.get(guild_id)[sql.gld_cols.leaderboardchannel]
+        zerorunschannel = client.guild_db.get(guild_id)[sql.gld_cols.zerorunchannel]
+        rlrole = client.guild_db.get(guild_id)[sql.gld_cols.rlroleid]
 
-    top_runs = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.weeklyruns, False)
-    top_runs = clean_rl_data(top_runs, guild, rlrole)
-    top_assists = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.weeklyassists, False)
-    top_assists = clean_rl_data(top_assists, guild, rlrole)
-    if guild_id != 660344559074541579:
-        top_keys = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.pkey)
-    else:
-        helmrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.helmrunes)
-        swordrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.swordrunes)
-        shieldrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.shieldrunes)
-        top_runes = {}
-        for r in helmrunes:
-            top_runes[r[0]] = (r[0], r[sql.log_cols.helmrunes])
-        for r in swordrunes:
-            if r[0] in top_runes:
-                top_runes[r[0]] = (r[0], top_runes[r[0]][1]+r[sql.log_cols.swordrunes])
-            else:
-                top_runes[r[0]] = (r[0], r[sql.log_cols.swordrunes])
-        for r in shieldrunes:
-            if r[0] in top_runes:
-                top_runes[r[0]] = (r[0], top_runes[r[0]][1]+r[sql.log_cols.shieldrunes])
-            else:
-                top_runes[r[0]] = (r[0], r[sql.log_cols.shieldrunes])
-        ten_runes = list(top_runes.values())
-        def get_num(elem):
-            return elem[1]
-        ten_runes.sort(key=get_num, reverse=True)
-        ten_runes = ten_runes[:10]
+        top_runs = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.weeklyruns, False)
+        top_runs = clean_rl_data(top_runs, guild, rlrole)
+        top_assists = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.weeklyassists, False)
+        top_assists = clean_rl_data(top_assists, guild, rlrole)
+        if guild_id != 660344559074541579:
+            top_keys = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.pkey)
+        else:
+            helmrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.helmrunes)
+            swordrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.swordrunes)
+            shieldrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.shieldrunes)
+            top_runes = {}
+            for r in helmrunes:
+                top_runes[r[0]] = (r[0], r[sql.log_cols.helmrunes])
+            for r in swordrunes:
+                if r[0] in top_runes:
+                    top_runes[r[0]] = (r[0], top_runes[r[0]][1]+r[sql.log_cols.swordrunes])
+                else:
+                    top_runes[r[0]] = (r[0], r[sql.log_cols.swordrunes])
+            for r in shieldrunes:
+                if r[0] in top_runes:
+                    top_runes[r[0]] = (r[0], top_runes[r[0]][1]+r[sql.log_cols.shieldrunes])
+                else:
+                    top_runes[r[0]] = (r[0], r[sql.log_cols.shieldrunes])
+            ten_runes = list(top_runes.values())
+            def get_num(elem):
+                return elem[1]
+            ten_runes.sort(key=get_num, reverse=True)
+            ten_runes = ten_runes[:10]
 
 
 
-    embed = discord.Embed(title="Top Runs Led This Week", color=discord.Color.gold())
-    embed.add_field(name="Runs Led:", value=format_top_data(top_runs, sql.log_cols.weeklyruns)).add_field(name="Runs Assisted:",
-                                                                                                          value=format_top_data(top_assists,
-                                                                                                                                sql.log_cols.weeklyassists))
-    await leaderboardchannel.send(embed=embed)
-    if guild_id != 660344559074541579:
-        embed = discord.Embed(title="Top Keys Popped", color=discord.Color.gold())
-        embed.add_field(name="Keys Popped:", value=format_top_data(top_keys, sql.log_cols.pkey))
-    else:
-        embed = discord.Embed(title="Top Runes Popped", color=discord.Color.gold())
-        embed.add_field(name="Runes Popped:", value=format_top_data(ten_runes, 1))
-    await leaderboardchannel.send(embed=embed)
+        embed = discord.Embed(title="Top Runs Led This Week", color=discord.Color.gold())
+        embed.add_field(name="Runs Led:", value=format_top_data(top_runs, sql.log_cols.weeklyruns)).add_field(name="Runs Assisted:",
+                                                                                                              value=format_top_data(top_assists,
+                                                                                                                                    sql.log_cols.weeklyassists))
+        await leaderboardchannel.send(embed=embed)
+        if guild_id != 660344559074541579:
+            embed = discord.Embed(title="Top Keys Popped", color=discord.Color.gold())
+            embed.add_field(name="Keys Popped:", value=format_top_data(top_keys, sql.log_cols.pkey))
+        else:
+            embed = discord.Embed(title="Top Runes Popped", color=discord.Color.gold())
+            embed.add_field(name="Runes Popped:", value=format_top_data(ten_runes, 1))
+        await leaderboardchannel.send(embed=embed)
 
-    zero_runs = await sql.get_0_runs(client.pool, guild_id)
-    zero_runs = clean_rl_data(zero_runs, guild, rlrole, False)
+        zero_runs = await sql.get_0_runs(client.pool, guild_id)
+        zero_runs = clean_rl_data(zero_runs, guild, rlrole, False)
 
-    if zero_runs:
-        desc = "".join("<@" + str(r[0]) + "> - (Assists: " + str(r[sql.log_cols.weeklyassists]) + ")\n" for r in zero_runs)
-    else:
-        desc = "All rl's completed at least 1 run this week."
-    embed = discord.Embed(title="RL's With 0 Runs", description=desc, color=discord.Color.orange())
-    await zerorunschannel.send(embed=embed)
+        if zero_runs:
+            desc = "".join("<@" + str(r[0]) + "> - (Assists: " + str(r[sql.log_cols.weeklyassists]) + ")\n" for r in zero_runs)
+        else:
+            desc = "All rl's completed at least 1 run this week."
+        embed = discord.Embed(title="RL's With 0 Runs", description=desc, color=discord.Color.orange())
+        await zerorunschannel.send(embed=embed)
             
 
 def clean_rl_data(data, guild, rlrole, truncate=True):

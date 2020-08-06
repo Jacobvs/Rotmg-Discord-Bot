@@ -45,8 +45,6 @@ class Punishments(commands.Cog):
     async def mute(self, ctx, member: utils.MemberLookupConverter, duration: utils.Duration, *, reason):
         if member.bot:
             return await ctx.send(f'Cannot mute `{member.display_name}` (is a bot).')
-        if member.guild_permissions.kick_members:
-            return await ctx.send(f'Cannot mute `{member.display_name}` due to roles.')
         if ctx.author.top_role <= member.top_role:
             return await ctx.send(f'Cannot mute `{member.display_name}` as you have equal or lower roles than them.')
         if ctx.guild.me.top_role <= member.top_role:
@@ -82,8 +80,8 @@ class Punishments(commands.Cog):
     async def unmute(self, ctx, member: utils.MemberLookupConverter, *, reason):
         if member.bot:
             return await ctx.send(f'Cannot un-mute `{member.display_name}` (is a bot).')
-        if member.guild_permissions.kick_members:
-            return await ctx.send(f'Cannot un-mute `{member.display_name}` due to roles.')
+        if ctx.author.top_role <= member.top_role:
+            return await ctx.send(f'Cannot unmute `{member.display_name}` as you have equal or lower roles than them.')
         if not reason:
             reason = "No reason specified"
         already_active = await sql.has_active(self.client.pool, member.id, ctx.guild.id, 'mute')
@@ -106,8 +104,6 @@ class Punishments(commands.Cog):
     async def suspend(self, ctx, member: utils.MemberLookupConverter, duration: utils.Duration, *, reason):
         if member.bot:
             return await ctx.send(f'Cannot suspend `{member.display_name}` (is a bot).')
-        if member.guild_permissions.kick_members:
-            return await ctx.send(f'Cannot suspend `{member.display_name}` due to roles.')
         if ctx.author.top_role <= member.top_role:
             return await ctx.send(f'Cannot suspend `{member.display_name}` as you have equal or lower roles than them.')
         if ctx.guild.me.top_role <= member.top_role:
@@ -153,8 +149,8 @@ class Punishments(commands.Cog):
     async def unsuspend(self, ctx, member: utils.MemberLookupConverter, *, reason):
         if member.bot:
             return await ctx.send(f'Cannot un-suspend `{member.display_name}` (is a bot).')
-        if member.guild_permissions.kick_members:
-            return await ctx.send(f'Cannot un-suspend `{member.display_name}` due to roles.')
+        if ctx.author.top_role <= member.top_role:
+            return await ctx.send(f'Cannot unsuspend `{member.display_name}` as you have equal or lower roles than them.')
         if not reason:
             reason = "No reason specified"
         already_active = await sql.has_active(self.client.pool, member.id, ctx.guild.id, 'suspend')
@@ -181,8 +177,8 @@ class Punishments(commands.Cog):
         if member.bot:
             return await ctx.send(f'Cannot vblacklist `{member.display_name}` (is a bot).')
         if ctx.author.id not in self.client.owner_ids:
-            if member.guild_permissions.kick_members:
-                return await ctx.send(f'Cannot vblacklist `{member.display_name}` due to roles.')
+            if ctx.author.top_role <= member.top_role:
+                return await ctx.send(f'Cannot blacklist `{member.display_name}` as you have equal or lower roles than them.')
         if not reason:
             reason = "No reason specified"
         exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'verification')
@@ -202,8 +198,8 @@ class Punishments(commands.Cog):
             return await ctx.send(f'Cannot mblacklist `{member.display_name}` (is a bot).')
 
         if ctx.author.id not in self.client.owner_ids:
-            if member.guild_permissions.kick_members:
-                return await ctx.send(f'Cannot mblacklist `{member.display_name}` due to roles.')
+            if ctx.author.top_role <= member.top_role:
+                return await ctx.send(f'Cannot blacklist `{member.display_name}` as you have equal or lower roles than them.')
         if not reason:
             reason = "No reason specified"
         exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'modmail')
@@ -224,8 +220,8 @@ class Punishments(commands.Cog):
             return await ctx.send(f'Cannot rblacklist `{member.display_name}` (is a bot).')
 
         if ctx.author.id not in self.client.owner_ids:
-            if member.guild_permissions.kick_members:
-                return await ctx.send(f'Cannot rblacklist `{member.display_name}` due to roles.')
+            if ctx.author.top_role <= member.top_role:
+                return await ctx.send(f'Cannot blacklist `{member.display_name}` as you have equal or lower roles than them.')
         if not reason:
             reason = "No reason specified"
         exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'reporting')
@@ -248,8 +244,8 @@ class Punishments(commands.Cog):
         if ctx.author.id not in self.client.owner_ids:
             if ctx.author.id == member.id:
                 return await ctx.send(f'You cannot un-blacklist yourself!')
-            if member.guild_permissions.kick_members:
-                return await ctx.send(f'Cannot un-vblacklist `{member.display_name}` due to roles.')
+            if ctx.author.top_role <= member.top_role:
+                return await ctx.send(f'Cannot unblacklist `{member.display_name}` as you have equal or lower roles than them.')
         exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'verification')
         if not exists:
             return await ctx.send(f"That member ({member.mention}) doesn't have an active verification blacklist!")
@@ -268,8 +264,8 @@ class Punishments(commands.Cog):
         if ctx.author.id not in self.client.owner_ids:
             if ctx.author.id == member.id:
                 return await ctx.send(f'You cannot un-blacklist yourself!')
-            if member.guild_permissions.kick_members:
-                return await ctx.send(f'Cannot un-mblacklist `{member.display_name}` due to roles.')
+            if ctx.author.top_role <= member.top_role:
+                return await ctx.send(f'Cannot unblacklist `{member.display_name}` as you have equal or lower roles than them.')
         exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'modmail')
         if not exists:
             return await ctx.send(f"That member ({member.mention}) doesn't have an active modmail blacklist!")
@@ -288,8 +284,8 @@ class Punishments(commands.Cog):
         if ctx.author.id not in self.client.owner_ids:
             if ctx.author.id == member.id:
                 return await ctx.send(f'You cannot un-blacklist yourself!')
-            if member.guild_permissions.kick_members:
-                return await ctx.send(f'Cannot un-rblacklist `{member.display_name}` due to roles.')
+            if ctx.author.top_role <= member.top_role:
+                return await ctx.send(f'Cannot unblacklist `{member.display_name}` as you have equal or lower roles than them.')
         exists = await sql.get_blacklist(self.client.pool, member.id, ctx.guild.id, 'reporting')
         if not exists:
             return await ctx.send(f"That member ({member.mention}) doesn't have an active reporting blacklist!")
@@ -332,7 +328,10 @@ class Punishments(commands.Cog):
         if ptype == 'Suspension' and guild.id == 703987028567523468:
             embed.set_thumbnail(url='https://i.imgur.com/ZDuZLx8.gif')
         await channel.send(embed=embed)
-        await user.send(f"{ptype} in {guild.name} | {user.mention}", embed=embed)
+        try:
+            await user.send(f"{ptype} in {guild.name} | {user.mention}", embed=embed)
+        except discord.Forbidden:
+            await channel.send("The user specified has disabled DM's from server members. Please find another way to contact them to let them know why they were punished.")
 
 def setup(client):
     client.add_cog(Punishments(client))

@@ -260,13 +260,15 @@ class Mail(commands.Cog):
         member = ctx.guild.get_member(int(ctx.channel.topic.split(" - ")[0].split("Channel ")[1]))
 
         embed = discord.Embed(title="Ticket closed", description=f"Closed by {ctx.author.mention} for reason:\n\n{reason}.", color=discord.Color.red())
-        embed.set_author(name=member.display_name, icon_url=member.avatar_url)
+        if member:
+            embed.set_author(name=member.display_name, icon_url=member.avatar_url)
         embed.set_footer(text="Closed at ")
         embed.timestamp = datetime.datetime.utcnow()
         await modmail_log_channel.send(embed=embed)
 
         embed = discord.Embed(title=f"Modmail Thread Closed by: {ctx.author.name}", description=f"Closed for reason:\n\n{reason}.", color=discord.Color.red())
-        await member.send(embed=embed)
+        if member:
+            await member.send(embed=embed)
 
         await ctx.channel.delete()
 

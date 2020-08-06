@@ -406,7 +406,7 @@ async def log_runs(pool, guild_id, member_id, column=1, number=1):
                 await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number}, weeklyassists = weeklyassists + {number} "
                                      f"WHERE uid = {member_id} AND gid = {guild_id}")
             else:
-                await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number} WHERE uid = {member_id} AND gid = {guild_id}")
+                await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + %s WHERE uid = %s AND gid = %s", (number, member_id, guild_id))
             await conn.commit()
 
             return data + number
@@ -497,6 +497,27 @@ async def set_unactive(pool, gid, uid, ptype):
             await cursor.execute(f"UPDATE rotmg.punishments SET active = FALSE WHERE uid = {uid} AND gid = {gid} AND type = '{ptype}'")
             await conn.commit()
 
+
+async def mass_update_missed(pool, data):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "REPLACE INTO rotmg.missed_runs (uid, gid, num_missed) VALUES (%s, %s, %s)"
+            await cursor.executemany(sql, data)
+            await conn.commit()
+
+async def get_all_missed(pool, gid):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "SELECT * FROM rotmg.missed_runs WHERE gid = %s"
+            await cursor.execute(sql, (gid,))
+            data = await cursor.fetchall()
+            return data
+
+
+class missed_cold(enum.IntEnum):
+    uid = 0
+    gid = 1
+    num_missed = 2
 
 class punish_cols(enum.IntEnum):
     uid = 0

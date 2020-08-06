@@ -29,7 +29,7 @@ class Misc(commands.Cog):
 
 
     @commands.command(usage="stats [member]", description="Check your or someone else's run stats.")
-    async def stats(self, ctx, member:utils.MemberLookupConverter =None):
+    async def stats(self, ctx, what=None):
         # if member:
         #     converter = utils.MemberLookupConverter()
         #     mem = await converter.convert(ctx, member, is_logging=True)
@@ -44,64 +44,58 @@ class Misc(commands.Cog):
         # else:
         #     mem = None
         #     uid = ctx.author.id
+        member = None
+        server_id = None
+        if what:
+            if what.strip().lower() == 'wonderland' or what.strip().lower() == 'woland':
+                server_id = 666063675416641539
+                server_name = "Wonderland ✶"
+            else:
+                converter = utils.MemberLookupConverter()
+                member = await converter.convert(ctx, what)
 
         author = member if member else ctx.author
-        if not ctx.guild:
-            servers = []
-            for g in self.client.guilds:
-                if g.get_member(author.id):
-                    servers.append(g)
-            serverstr = ""
-            for i, s in enumerate(servers[:10]):
-                serverstr += self.numbers[i] + " - " + s.name + "\n"
-            embed = discord.Embed(description="What server would you like to check stats for?\n"+serverstr, color=discord.Color.gold())
-            msg = await author.send(embed=embed)
-            for e in self.numbers[:len(servers)]:
-                await msg.add_reaction(e)
+        if not server_id:
+            if not ctx.guild:
+                servers = []
+                for g in self.client.guilds:
+                    if g.get_member(author.id):
+                        servers.append(g)
+                serverstr = ""
+                for i, s in enumerate(servers[:10]):
+                    serverstr += self.numbers[i] + " - " + s.name + "\n"
+                embed = discord.Embed(description="What server would you like to check stats for?\n"+serverstr, color=discord.Color.gold())
+                msg = await author.send(embed=embed)
+                for e in self.numbers[:len(servers)]:
+                    await msg.add_reaction(e)
 
-            def check(react, usr):
-                return usr == ctx.author and react.message.id == msg.id and str(react.emoji) in self.numbers[:len(servers)]
-            try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=1800, check=check)  # Wait 1/2 hr max
-            except asyncio.TimeoutError:
-                embed = discord.Embed(title="Timed out!", description="You didn't choose a server in time!", color=discord.Color.red())
-                await msg.clear_reactions()
-                return await msg.edit(embed=embed)
+                def check(react, usr):
+                    return usr == ctx.author and react.message.id == msg.id and str(react.emoji) in self.numbers[:len(servers)]
+                try:
+                    reaction, user = await self.client.wait_for('reaction_add', timeout=1800, check=check)  # Wait 1/2 hr max
+                except asyncio.TimeoutError:
+                    embed = discord.Embed(title="Timed out!", description="You didn't choose a server in time!", color=discord.Color.red())
+                    await msg.clear_reactions()
+                    return await msg.edit(embed=embed)
 
-            server = servers[self.numbers.index(str(reaction.emoji))]
-            author = servers[self.numbers.index(str(reaction.emoji))].get_member(author.id)
-            await msg.delete()
-        else:
-            try:
-                await ctx.message.delete()
-            except discord.NotFound:
-                pass
-            server = ctx.guild
+                server = servers[self.numbers.index(str(reaction.emoji))]
+                server_id = server.id
+                server_name = server.name
+                author = servers[self.numbers.index(str(reaction.emoji))].get_member(author.id)
+                await msg.delete()
+            else:
+                try:
+                    await ctx.message.delete()
+                except discord.NotFound:
+                    pass
+                server = ctx.guild
+                server_id = server.id
+                server_name = server.name
 
-        data = await sql.get_log(self.client.pool, server.id, author.id)
-        # if all(v == 0 for v in data[2:]):
-        #     other_id = uid
-        #     if " | " in member.display_name:
-        #         names = member.display_name.split(" | ")
-        #         for n in names:
-        #             name = ''.join([c for c in n if c.isalpha()])
-        #             o_id = await sql.get_user_from_ign(self.client.pool, name)
-        #             if other_id:
-        #                 other_id = o_id[0]
-        #                 break
-        #     else:
-        #         name = ''.join([c for c in member.display_name if c.isalpha()])
-        #         o_id = await sql.get_user_from_ign(self.client.pool, name)
-        #         if other_id:
-        #             other_id = o_id[0]
-        #
-        #     other_data = await sql.get_log(self.client.pool, server.id, other_id)
-        #     if not all(v == 0 for v in other_data[2:]):
-        #         data = other_data
+        data = await sql.get_log(self.client.pool, server_id, author.id)
 
 
-
-        embed = discord.Embed(title=f"Stats for {author.display_name} in {server.name}", color=discord.Color.green())
+        embed = discord.Embed(title=f"Stats for {author.display_name} in {server_name}", color=discord.Color.green())
         embed.set_thumbnail(url=author.avatar_url)
         embed.add_field(name="__**Key Stats**__", value="Popped: "
                         f"**{data[sql.log_cols.pkey]}**\nEvent Keys: **{data[sql.log_cols.eventkeys]}**\nVials: "
@@ -109,14 +103,22 @@ class Misc(commands.Cog):
                         f"**{data[sql.log_cols.shieldrunes]}**\nHelm Runes: **{data[sql.log_cols.helmrunes]}**", inline=False)\
                         .add_field(name="__**Run Stats**__", value=f"Completed: **{data[sql.log_cols.runsdone]}**\nEvents Completed: "
                         f"**{data[sql.log_cols.eventsdone]}**", inline=False)
-        erl = self.client.guild_db.get(server.id)[sql.gld_cols.eventrlid]
-        role = erl if erl else self.client.guild_db.get(server.id)[sql.gld_cols.rlroleid]
-        if author.top_role >= role:
+        gdb = self.client.guild_db.get(server_id)
+        if gdb:
+            erl = gdb[sql.gld_cols.eventrlid]
+            role = erl if erl else gdb[sql.gld_cols.rlroleid]
+            if author.top_role >= role:
+                embed.add_field(name="__**Leading Stats**__", value="Successful Runs: "
+                            f"**{data[sql.log_cols.srunled]}**\nFailed Runs: **{data[sql.log_cols.frunled]}**\nAssisted: "
+                            f"**{data[sql.log_cols.runsassisted]}**\nEvents: **{data[sql.log_cols.eventled]}**\nEvents Assisted: "
+                            f"**{data[sql.log_cols.eventsassisted]}**\nWeekly Runs Led: **{data[sql.log_cols.weeklyruns]}**\n"
+                            f"Weekly Runs Assisted: **{data[sql.log_cols.weeklyassists]}**", inline=False)
+        else:
             embed.add_field(name="__**Leading Stats**__", value="Successful Runs: "
-                        f"**{data[sql.log_cols.srunled]}**\nFailed Runs: **{data[sql.log_cols.frunled]}**\nAssisted: "
-                        f"**{data[sql.log_cols.runsassisted]}**\nEvents: **{data[sql.log_cols.eventled]}**\nEvents Assisted: "
-                        f"**{data[sql.log_cols.eventsassisted]}**\nWeekly Runs Led: **{data[sql.log_cols.weeklyruns]}**\n"
-                        f"Weekly Runs Assisted: **{data[sql.log_cols.weeklyassists]}**", inline=False)
+                            f"**{data[sql.log_cols.srunled]}**\nFailed Runs: **{data[sql.log_cols.frunled]}**\nAssisted: "
+                            f"**{data[sql.log_cols.runsassisted]}**\nEvents: **{data[sql.log_cols.eventled]}**\nEvents Assisted: "
+                            f"**{data[sql.log_cols.eventsassisted]}**\nWeekly Runs Led: **{data[sql.log_cols.weeklyruns]}**\n"
+                            f"Weekly Runs Assisted: **{data[sql.log_cols.weeklyassists]}**", inline=False)
         embed.timestamp = datetime.utcnow()
         if ctx.guild:
             return await ctx.send(embed=embed)
@@ -209,6 +211,16 @@ class Misc(commands.Cog):
 
         self.client.beaned_ids.remove(member.id)
         await ctx.send(f"Lorlie's Custom Patreon Command!\n__{member.display_name}__ was Un-Beaned!")
+
+
+    @commands.command(usage='exalted <member>', description="Make a member exalted!")
+    @commands.guild_only()
+    async def exalted(self, ctx, member: utils.MemberLookupConverter):
+        b = bool(random.getrandbits(1))
+        title = f"{member.display_name} was killed by O3!" if b else f"{member.display_name} slaughtered O3"
+        embed = discord.Embed(title=title, color=discord.Color.gold())
+        embed.set_image(url=utils.get_random_oryx())
+        await ctx.send(f"{member.mention} was exalted by {ctx.author.display_name}", embed=embed)
 
 
 def setup(client):

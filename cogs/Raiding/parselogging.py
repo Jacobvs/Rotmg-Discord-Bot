@@ -185,7 +185,9 @@ class ParseLog:
         await self.msg.edit(content=None, embed=embed)
 
         print(members)
+        members.append(self.author)
         for m in members:
+            print(type(m))
             print(m)
             if m.top_role >= self.rlrole:
                 print('logging rl')
@@ -197,7 +199,7 @@ class ParseLog:
         attempted = 0
         print(self.all_members)
         attempted_members = [m for m in self.all_members if m not in members]
-        print(attempted_members)
+        print(type(attempted_members))
         if attempted_members:
             for m in attempted_members:
                 attempted += 1
@@ -365,7 +367,7 @@ def parse_image(image, member_list):
             names = name.split(" ")
             name = names[0]
         if name.strip().lower() not in cleaned_members:
-            matches = get_close_matches(name.strip().lower(), cleaned_members.keys(), n=1, cutoff=0.6)
+            matches = get_close_matches(name.strip().lower(), cleaned_members.keys(), n=1, cutoff=0.65)
             if len(matches) != 0:
                 if matches[0] in cleaned_members:
                     completed.append(cleaned_members[matches[0]])
