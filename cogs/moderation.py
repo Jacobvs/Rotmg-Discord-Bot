@@ -9,6 +9,7 @@ from discord.ext import commands
 import checks
 import embeds
 import sql
+import re
 import utils
 from checks import manual_verify_channel, has_manage_roles
 from cogs import verification
@@ -122,7 +123,7 @@ class Moderation(commands.Cog):
             embed = discord.Embed(title="Error!", description="Something went wrong, username couldn't be changed in SQL", color=discord.Color.red())
             return await ctx.send(embed=embed)
 
-        embed = ""
+        embed = None
         for g in self.client.guilds:
             m = await g.get_member(member.id)
             if m:
@@ -134,16 +135,17 @@ class Moderation(commands.Cog):
                     
                 separator = " | "
                 s_name = name.split(separator)
-                s_name[0] = newname
+                symbols = "".join([c for c in s_name[0] if not c.isalpha()])
+                s_name[0] = symbols+newname
                 s_name = separator.join(s_name)
 
                 try:
                     await m.edit(nick=s_name)
                 except discord.Forbidden:
                     embed = discord.Embed("There was an error changing this person's name in {g.name} (Perms).\n" f"Please message someone from that guild this and change their name manually: ` {s_name} `\n{m.mention}")
-
-        embed = discord.Embed(title="Success!", description=f"`{s_name}` is now the name of {m.mention}.",
-                            color=discord.Color.green())
+        if embed is None:
+            embed = discord.Embed(title="Success!", description=f"`{s_name}` is now the name of {m.mention}.",
+                                color=discord.Color.green())
         return await ctx.send(embed=embed)
 
     @commands.command(usage='addalt <member> <altname>', description="Add an alternate account to a user (limit 2).")
