@@ -156,23 +156,6 @@ class RealmClear:
         embed.set_thumbnail(url="https://www.realmeye.com/forum/uploads/default/original/1X/842ee5c4e569c7b7c1b0bf688e465a7435235fc8.png")
         embed.timestamp = datetime.utcnow()
         await self.afkmsg.edit(content="", embed=embed)
-        if self.inraiding:
-            if self.raidnum == 0:
-                self.client.raid_db[self.ctx.guild.id]["raiding"][0] = None
-            elif self.raidnum == 1:
-                self.client.raid_db[self.ctx.guild.id]["raiding"][1] = None
-            else:
-                self.client.raid_db[self.ctx.guild.id]["raiding"][2] = None
-        elif self.invet:
-            if self.raidnum == 0:
-                self.client.raid_db[self.ctx.guild.id]["vet"][0] = None
-            else:
-                self.client.raid_db[self.ctx.guild.id]["vet"][1] = None
-        elif self.inevents:
-            if self.raidnum == 0:
-                self.client.raid_db[self.ctx.guild.id]["events"][0] = None
-            else:
-                self.client.raid_db[self.ctx.guild.id]["events"][1] = None
 
         await self.vcchannel.set_permissions(self.raiderrole, connect=False, view_channel=True, speak=False)
 

@@ -76,7 +76,7 @@ class MemberLookupConverter(discord.ext.commands.MemberConverter):
                         nicks.append(m.nick.lower())
                         mems.append(m)
 
-                res = difflib.get_close_matches(mem.lower(), nicks, n=1, cutoff=0.75)
+                res = difflib.get_close_matches(mem.lower(), nicks, n=1, cutoff=0.8)
                 if res:
                     index = nicks.index(res[0])
                     return mems[index]

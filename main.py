@@ -3,7 +3,6 @@ import importlib
 import json
 import logging
 import os
-import pickle
 from sys import modules
 
 import aiomysql
@@ -63,7 +62,7 @@ async def on_ready():
     bot.mapmarkers = {}
     bot.players_in_game = []
     bot.active_raiders = {}
-    bot.serverwleaderboard = [666063675416641539, 703987028567523468, 660344559074541579, 713655609760940044, 719406991117647893, 691607211046076471]
+    bot.serverwleaderboard = [660344559074541579, 703987028567523468, 739573333242150975, 691607211046076471, 719406991117647893, 713655609760940044]
     await build_guild_db()
     for g in bot.guild_db:
         bot.raid_db[g] = {"afk": {}, "cp": {}, "leaders": []}
@@ -80,19 +79,21 @@ async def on_ready():
         active = await sql.get_all_active_punishments(bot.pool)
         for p in active:
             guild = bot.get_guild(p[sql.punish_cols.gid])
-            member = guild.get_member(p[sql.punish_cols.uid])
-            if member:
-                ptype = p[sql.punish_cols.type]
-                until = p[sql.punish_cols.endtime]
-                tsecs = (until - datetime.datetime.utcnow()).total_seconds()
-                if ptype == 'suspend':
-                    roles = await sql.get_suspended_roles(bot.pool, member.id, guild)
-                    t = bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs, roles))
-                else:
-                    t = bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs))
-                bot.active_punishments[str(guild.id)+str(member.id)+ptype] = t
+            if guild:
+                member = guild.get_member(p[sql.punish_cols.uid])
+                if member:
+                    ptype = p[sql.punish_cols.type]
+                    until = p[sql.punish_cols.endtime]
+                    tsecs = (until - datetime.datetime.utcnow()).total_seconds()
+                    if ptype == 'suspend':
+                        roles = await sql.get_suspended_roles(bot.pool, member.id, guild)
+                        t = bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs, roles))
+                    else:
+                        t = bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs))
+                    bot.active_punishments[str(guild.id)+str(member.id)+ptype] = t
 
-    init_queues()
+    # init_queues()
+    bot.in_queue = {0: [], 1: []}
     guild = bot.get_guild(660344559074541579)
     bot.patreon_role = guild.get_role(736954974545641493)
     pdata = await sql.get_all_patreons(bot.pool)
@@ -106,34 +107,34 @@ async def on_ready():
 async def build_guild_db():
     bot.guild_db = await sql.construct_guild_database(bot.pool, bot)
 
-# Link queue to raiding category (queue_channel, category)
-# 1. Dungeoneer (oryx raiding `Queue`)
-queue_links = [(660347818061332481, 660347478620766227), (736226011733033041, 736220007356432426)]
-def init_queues():
-    bot.queue_links = {}
-    bot.queues = {}
-    if os.path.isfile('data/queues.pkl'):
-        with open('data/queues.pkl', 'rb') as file:
-            bot.queues = pickle.load(file)
-        print('Loaded queue from file')
-    else:
-        for i in queue_links:
-            queue = bot.get_channel(i[0])
-            bot.queues[i[0]] = []
-            for m in queue.members:
-                bot.queues[i[0]].append(m.id)
-    for i in queue_links:
-        queue = bot.get_channel(i[0])
-        category = bot.get_channel(i[1])
-
-        bot.queue_links[queue.id] = (queue, category)
-        bot.queue_links[category.id] = (queue, category)
-
-
-@bot.command(usage="resetqueues")
-@commands.is_owner()
-async def resetqueues(ctx):
-    init_queues()
+# # Link queue to raiding category (queue_channel, category)
+# # 1. Dungeoneer (oryx raiding `Queue`)
+# queue_links = [(660347818061332481, 660347478620766227), (736226011733033041, 736220007356432426)]
+# def init_queues():
+#     bot.queue_links = {}
+#     bot.queues = {}
+#     if os.path.isfile('data/queues.pkl'):
+#         with open('data/queues.pkl', 'rb') as file:
+#             bot.queues = pickle.load(file)
+#         print('Loaded queue from file')
+#     else:
+#         for i in queue_links:
+#             queue = bot.get_channel(i[0])
+#             bot.queues[i[0]] = []
+#             for m in queue.members:
+#                 bot.queues[i[0]].append(m.id)
+#     for i in queue_links:
+#         queue = bot.get_channel(i[0])
+#         category = bot.get_channel(i[1])
+#
+#         bot.queue_links[queue.id] = (queue, category)
+#         bot.queue_links[category.id] = (queue, category)
+#
+#
+# @bot.command(usage="resetqueues")
+# @commands.is_owner()
+# async def resetqueues(ctx):
+#     init_queues()
 
 
 @bot.command(usage="load <cog>")
@@ -298,10 +299,10 @@ async def maintenance(ctx):
     else:
         bot.maintenance_mode = True
         await bot.change_presence(status=discord.Status.idle, activity=discord.Game("IN MAINTENANCE MODE!"))
-        with open('data/queues.pkl', 'wb') as file:
-            pickle.dump(bot.queues, file, pickle.HIGHEST_PROTOCOL)
-
-        print('Saved queue to file')
+        # with open('data/queues.pkl', 'wb') as file:
+        #     pickle.dump(bot.queues, file, pickle.HIGHEST_PROTOCOL)
+        #
+        # print('Saved queue to file')
         await ctx.send("Maintenance mode has been turned on!")
     with open("data/variables.json", 'r+') as f:
         data = json.load(f)

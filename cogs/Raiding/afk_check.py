@@ -159,6 +159,8 @@ class AfkCheck:
                 if payload.member.id not in self.raiderids:
                     self.raiderids.append(payload.member.id)
                 if not payload.member.voice or not payload.member.voice.channel == self.vcchannel:
+                    if len(self.vcchannel.members) >= self.vcchannel.user_limit:
+                        return
                     try:
                         await payload.member.edit(voice_channel=self.vcchannel)
                     except discord.Forbidden:
@@ -392,7 +394,7 @@ class AfkCheck:
             await self.cpmsg.edit(embed=cp)
 
     async def wait_for_end(self):
-        await asyncio.sleep(480)  # Wait 8 minutes
+        await asyncio.sleep(1200)  # Wait 20 minutes
         await self.post_afk(True)
 
     async def post_afk(self, automatic: bool, ended: discord.Member = None):

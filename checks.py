@@ -16,7 +16,7 @@ def is_rl_or_higher_check():
         db = ctx.bot.guild_db.get(ctx.guild.id)
         eventc = db[sql.gld_cols.eventcommandschannel]
         vetc = db[sql.gld_cols.vetcommandschannel]
-        role = db[sql.gld_cols.eventrlid] if (eventc and ctx.channel == eventc) else \
+        role = db[sql.gld_cols.eventrlid] if eventc else \
                 db[sql.gld_cols.vetrlroleid] if (vetc and ctx.channel == vetc) else db[sql.gld_cols.rlroleid]
         return ctx.author.top_role >= role
     return commands.check(predicate)
@@ -62,7 +62,7 @@ def in_voice_channel():
 
 def not_raiding_vc():
     def predicate(ctx):
-        return ctx.author.voice and ctx.author.voice.channel not in ctx.bot.guild_db.get(ctx.guild.id) and "Raid" not in ctx.author.voice.channel.name
+        return ctx.author.voice and ctx.author.voice.channel not in ctx.bot.guild_db.get(ctx.guild.id) and "Raid" not in str(ctx.author.voice.channel.name)
     return commands.check(predicate)
 
 def is_dj():
@@ -76,6 +76,12 @@ def is_dj():
         #await ctx.say("The 'DJ' Role is required to use this command.", delete_after=4)
         return False
     return commands.check(predicate)
+
+def exclude_dungeoneer():
+    def predicate(ctx):
+        return ctx.guild.id != 660344559074541579
+    return commands.check(predicate)
+
 
 # async def audio_playing(ctx):
 #     """Checks that audio is currently playing before continuing."""
