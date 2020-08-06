@@ -29,6 +29,7 @@ PRELOADED_MODULES = set(modules.values())
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
 gh_token = os.getenv('GITHUB_TOKEN')
+nebula_token = os.getenv('NEBULA_TOKEN')
 is_testing = os.getenv('TESTING')
 is_testing = True if is_testing == '1' else False
 
@@ -48,6 +49,7 @@ bot = commands.Bot(command_prefix='!')
 bot.remove_command('help')
 bot.owner_id = 196282885601361920
 bot.gh_token = gh_token
+bot.nebula_token = nebula_token
 with open('data/variables.json', 'r') as file:
     bot.maintenance_mode = json.load(file).get("maintenance_mode")
 

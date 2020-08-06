@@ -607,6 +607,46 @@ async def image_upload(binary, sendable, is_rc=True):
     return res
 
 
+blacklisted_servers = ['uswest3', 'australia', 'asiaaoutheast']
+async def get_good_realms(client):
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
+            async with cs.request("GET", 'http://www.nebulanotifier.com/api/get/all', headers={'Authorization': client.nebula_token}) as r:
+                if r.status == 200:
+                    data = await r.json()
+                    if data:
+                        for r in data:
+                            if r.lower() in blacklisted_servers:
+                                del data[r]
+                                continue
+                            total = 0
+                            for s in data[r]:
+                                total += data[r][s]['Population']
+                                if data[r][s]['Population'] > 10:
+                                    del data[r][s]
+
+                            if total > 80:
+                                del data[r]
+                                continue
+
+                        newd = {}
+                        for r in data:
+                            for s in data[r]:
+                                newd.update({f"{r} {s}": {'Population': data[r][s]['Population'], "Events": data[r][s]['Events']}})
+                        data = newd
+                        import json
+                        print(f"CLEANED SERVER DATA: {json.dumps(data, indent=4)}")
+                        data = sorted(data, key=lambda x: x[1]['Population'])
+                        data = data[:5]
+                        data = sorted(data, key=lambda x: x[1]['Events'])
+                        print(f"SORTED SERVER DATA: {json.dumps(data, indent=4)}")
+                        return data
+
+                return None
+    except asyncio.TimeoutError:
+        return None
+
+
 servers = {"US" : ("USWest3", "USWest2", "USWest", "USSouthWest", "USSouth3", "USSouth2", "USSouth", "USNorthWest", "USMidWest2", "USMidWest", "USEast3", "USEast2", "USEast"),
            "EU" : ("EUWest", "EUSouthWest", "EUSouth", "EUNorth2", "EUNorth", "EUEast")}
 
