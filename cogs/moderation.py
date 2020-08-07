@@ -102,20 +102,21 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @checks.is_security_or_higher_check()
     async def changename(self, ctx, member: utils.MemberLookupConverter, newname):
-        async with aiohttp.ClientSession() as cs:
-            async with cs.get(f'https://rotmg-discord-bot.wm.r.appspot.com/?player={newname}', ssl=False) as r:
-                if r.status == 403:
-                    print("ERROR: API ACCESS FORBIDDEN")
-                    await ctx.send(f"<@{self.client.owner_id}> ERROR: API ACCESS REVOKED!.")
-                data = await r.json()  # returns dict
-        if not data:
-            return await ctx.send("There was an issue retrieving realmeye data. Please try the command later.")
-        if 'error' in data:
-            embed = discord.Embed(title='Error!', description=f"There were no players found on realmeye with the name `{altname}`.",
-                                  color=discord.Color.red())
-            return await ctx.send(embed=embed)
-
-        cleaned_name = str(data["player"])
+        # async with aiohttp.ClientSession() as cs:
+        #     async with cs.get(f'https://rotmg-discord-bot.wm.r.appspot.com/?player={newname}', ssl=False) as r:
+        #         if r.status == 403:
+        #             print("ERROR: API ACCESS FORBIDDEN")
+        #             await ctx.send(f"<@{self.client.owner_id}> ERROR: API ACCESS REVOKED!.")
+        #         data = await r.json()  # returns dict
+        # if not data:
+        #     return await ctx.send("There was an issue retrieving realmeye data. Please try the command later.")
+        # if 'error' in data:
+        #     embed = discord.Embed(title='Error!', description=f"There were no players found on realmeye with the name `{altname}`.",
+        #                           color=discord.Color.red())
+        #     return await ctx.send(embed=embed)
+        #
+        # cleaned_name = str(data["player"])
+        cleaned_name = newname
 
         res = await sql.change_username(self.client.pool, member.id, cleaned_name)
         if not res:
@@ -124,7 +125,7 @@ class Moderation(commands.Cog):
 
         embed = None
         for g in self.client.guilds:
-            m = await g.get_member(member.id)
+            m = g.get_member(member.id)
             if m:
                 name = m.display_name
 
@@ -141,7 +142,10 @@ class Moderation(commands.Cog):
                 try:
                     await m.edit(nick=s_name)
                 except discord.Forbidden:
-                    embed = discord.Embed("There was an error changing this person's name in {g.name} (Perms).\n" f"Please message someone from that guild this and change their name manually: ` {s_name} `\n{m.mention}")
+                    embed = discord.Embed(title="Error!", description=f"There was an error changing this person's name in {g.name} (Perms).\n" 
+                                                                      f"Please message someone from that guild this and change their nickname to this manually: ` {s_name} `\
+                                                                      {m.mention}",
+                                          color=discord.Color.red())
         if embed is None:
             embed = discord.Embed(title="Success!", description=f"`{s_name}` is now the name of {m.mention}.",
                                 color=discord.Color.green())
