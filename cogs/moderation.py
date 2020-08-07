@@ -97,7 +97,55 @@ class Moderation(commands.Cog):
         else:
             embed.add_field(name="Punishments:", value="No punishment or blacklist logs found!")
             await ctx.send(embed=embed)
+            
+    @commands.command(usage='changename <member> <newname>', description="Change the users name.")
+    @commands.guild_only()
+    @checks.is_security_or_higher_check()
+    async def changename(self, ctx, member: utils.MemberLookupConverter, newname):
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f'https://rotmg-discord-bot.wm.r.appspot.com/?player={newname}', ssl=False) as r:
+                if r.status == 403:
+                    print("ERROR: API ACCESS FORBIDDEN")
+                    await ctx.send(f"<@{self.client.owner_id}> ERROR: API ACCESS REVOKED!.")
+                data = await r.json()  # returns dict
+        if not data:
+            return await ctx.send("There was an issue retrieving realmeye data. Please try the command later.")
+        if 'error' in data:
+            embed = discord.Embed(title='Error!', description=f"There were no players found on realmeye with the name `{altname}`.",
+                                  color=discord.Color.red())
+            return await ctx.send(embed=embed)
 
+        cleaned_name = str(data["player"])
+
+        res = await sql.change_username(self.client.pool, member.id, cleaned_name)
+        if not res:
+            embed = discord.Embed(title="Error!", description="Something went wrong, username couldn't be changed in SQL", color=discord.Color.red())
+            return await ctx.send(embed=embed)
+
+        embed = None
+        for g in self.client.guilds:
+            m = await g.get_member(member.id)
+            if m:
+                name = m.display_name
+
+                if cleaned_name.lower() in name.lower():
+                    embed = discord.Embed(title="Error!", description="Name specified is the same name as the user's name currently!",
+                                        color=discord.Color.red())
+                    
+                separator = " | "
+                s_name = name.split(separator)
+                symbols = "".join([c for c in s_name[0] if not c.isalpha()])
+                s_name[0] = symbols+newname
+                s_name = separator.join(s_name)
+
+                try:
+                    await m.edit(nick=s_name)
+                except discord.Forbidden:
+                    embed = discord.Embed("There was an error changing this person's name in {g.name} (Perms).\n" f"Please message someone from that guild this and change their name manually: ` {s_name} `\n{m.mention}")
+        if embed is None:
+            embed = discord.Embed(title="Success!", description=f"`{s_name}` is now the name of {m.mention}.",
+                                color=discord.Color.green())
+        return await ctx.send(embed=embed)
 
     @commands.command(usage='addalt <member> <altname>', description="Add an alternate account to a user (limit 2).")
     @commands.guild_only()
