@@ -607,7 +607,7 @@ async def image_upload(binary, sendable, is_rc=True):
     return res
 
 
-blacklisted_servers = ['uswest3', 'australia', 'asiaaoutheast']
+blacklisted_servers = ['uswest3', 'uswest', 'euwest', 'eueast', 'ussouth3', 'australia', 'asiaeast', 'asiasoutheast']
 async def get_good_realms(client):
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
@@ -622,25 +622,30 @@ async def get_good_realms(client):
                             total = 0
                             for s in data[r]:
                                 total += data[r][s]['Population']
-                                if data[r][s]['Population'] > 10:
+                                if data[r][s]['Population'] > 7:
                                     del data[r][s]
 
                             if total > 80:
                                 del data[r]
                                 continue
 
-                        newd = {}
+                        usdata = {}
+                        eudata = {}
                         for r in data:
                             for s in data[r]:
-                                newd.update({f"{r} {s}": {'Population': data[r][s]['Population'], "Events": data[r][s]['Events']}})
-                        data = newd
+                                if 'us' in r.lower():
+                                    usdata.update({f"{r} {s}": {'Population': data[r][s]['Population'], "Events": data[r][s]['Events']}})
+                                else:
+                                    eudata.update({f"{r} {s}": {'Population': data[r][s]['Population'], "Events": data[r][s]['Events']}})
+
                         import json
-                        print(f"CLEANED SERVER DATA: {json.dumps(data, indent=4)}")
-                        data = sorted(data, key=lambda x: x[1]['Population'])
-                        data = data[:5]
-                        data = sorted(data, key=lambda x: x[1]['Events'])
-                        print(f"SORTED SERVER DATA: {json.dumps(data, indent=4)}")
-                        return data
+                        print(f"CLEANED SERVER DATA: {json.dumps(usdata, indent=4)}")
+                        usdata = sorted(usdata, key=lambda x: x[1]['Events'])
+                        usdata = usdata[:3]
+                        print(f"SORTED SERVER DATA: {json.dumps(usdata, indent=4)}")
+                        eudata = sorted(eudata, key=lambda x: x[1]['Events'])
+                        eudata = eudata[:3]
+                        return usdata, eudata
 
                 return None
     except asyncio.TimeoutError:

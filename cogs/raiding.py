@@ -17,6 +17,7 @@ from cogs.Raiding.afk_check import AfkCheck
 from cogs.Raiding.fametrain import FameTrain
 from cogs.Raiding.headcount import Headcount
 from cogs.Raiding.queue_afk import QAfk
+from cogs.Raiding.realm_select import RealmSelect
 from cogs.Raiding.realmclear import RealmClear
 from cogs.Raiding.vc_select import VCSelect
 
@@ -27,16 +28,19 @@ class Raiding(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @commands.command(usage='qafk <location>', description="Start a Queue afk check for the location specified.")
+    @commands.command(usage='qafk', description="Start a Queue afk check for the location specified.")
     @commands.guild_only()
     @commands.is_owner()
     @commands.max_concurrency(1, per=BucketType.guild, wait=False)
-    async def qafk(self, ctx, *, location):
+    async def qafk(self, ctx):
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             return await ctx.send("You cannot start another AFK while an AFK check is still up or a run log has not been completed.")
 
-        if not ('us' in location.lower() or 'eu' in location.lower()):
-            return await ctx.send("Please Choose a US or EU Location!")
+        rs = RealmSelect(self.client, ctx)
+        location = await rs.start()
+
+        if location is None:
+            return
 
         is_us = True if 'us' in location.lower() else False
 
@@ -90,7 +94,8 @@ class Raiding(commands.Cog):
         if isinstance(data, tuple):
             (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
         else:
-            self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
+            if ctx.author.id in self.client.raid_db[ctx.guild.id]:
+                self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
             return
         afk = AfkCheck(self.client, ctx, location, raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg)
         await afk.start()

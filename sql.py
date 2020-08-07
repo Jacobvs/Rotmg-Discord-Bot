@@ -2,6 +2,8 @@ import enum
 import json
 from datetime import datetime, timedelta
 
+import aiomysql
+
 
 async def get_user(pool, uid):
     """Return user data from rotmg.users table"""
@@ -79,8 +81,11 @@ async def change_username(pool, uid, newname):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             sql = "INSERT INTO rotmg.users (id, ign) VALUES (%s, %s) ON DUPLICATE KEY UPDATE ign = %s"
-            await cursor.execute(sql, (uid, newname, newname))
-            await conn.commit()
+            try:
+                await cursor.execute(sql, (uid, newname, newname))
+                await conn.commit()
+            except aiomysql.Error:
+                return False
             return True
 
 async def add_alt_name(pool, uid, altname):
