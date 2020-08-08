@@ -608,24 +608,26 @@ async def image_upload(binary, sendable, is_rc=True):
 
 
 blacklisted_servers = ['uswest3', 'uswest', 'euwest', 'eueast', 'ussouth3', 'australia', 'asiaeast', 'asiasoutheast']
-async def get_good_realms(client):
+async def get_good_realms(client, max_pop, max_server_pop=70):
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
             async with cs.request("GET", 'http://www.nebulanotifier.com/api/get/all', headers={'Authorization': client.nebula_token}) as r:
                 if r.status == 200:
                     data = await r.json()
                     if data:
-                        for r in data:
+                        for r in list(data.keys()):
                             if r.lower() in blacklisted_servers:
                                 del data[r]
                                 continue
                             total = 0
-                            for s in data[r]:
+                            for s in list(data[r].keys()):
                                 total += data[r][s]['Population']
-                                if data[r][s]['Population'] > 7:
+                                if data[r][s]['Population'] > max_pop:
+                                    del data[r][s]
+                                elif data[r][s]['Events'] < 5:
                                     del data[r][s]
 
-                            if total > 80:
+                            if total > max_server_pop:
                                 del data[r]
                                 continue
 
@@ -633,18 +635,26 @@ async def get_good_realms(client):
                         eudata = {}
                         for r in data:
                             for s in data[r]:
-                                if 'us' in r.lower():
-                                    usdata.update({f"{r} {s}": {'Population': data[r][s]['Population'], "Events": data[r][s]['Events']}})
+                                if 'US' == r[:2]:
+                                    usdata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events']}
                                 else:
-                                    eudata.update({f"{r} {s}": {'Population': data[r][s]['Population'], "Events": data[r][s]['Events']}})
+                                    eudata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events']}
 
                         import json
                         print(f"CLEANED SERVER DATA: {json.dumps(usdata, indent=4)}")
-                        usdata = sorted(usdata, key=lambda x: x[1]['Events'])
-                        usdata = usdata[:3]
-                        print(f"SORTED SERVER DATA: {json.dumps(usdata, indent=4)}")
-                        eudata = sorted(eudata, key=lambda x: x[1]['Events'])
-                        eudata = eudata[:3]
+                        d = sorted(usdata, key=lambda x: usdata[x]['Events'])
+                        d = d[:3]
+                        d2 = []
+                        for s in d:
+                            d2.append((s, usdata[s]['Population'], usdata[s]['Events']))
+                        usdata = d2
+                        print(f"SORTED SERVER DATA: {usdata}")
+                        d = sorted(eudata, key=lambda x: eudata[x]['Events'])
+                        d = d[:3]
+                        d2 = []
+                        for s in d:
+                            d2.append((s, eudata[s]['Population'], eudata[s]['Events']))
+                        eudata = d2
                         return usdata, eudata
 
                 return None

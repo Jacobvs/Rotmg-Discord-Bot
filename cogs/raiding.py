@@ -24,6 +24,7 @@ from cogs.Raiding.vc_select import VCSelect
 
 class Raiding(commands.Cog):
     """Commands to organize ROTMG Raids & More!"""
+    letters = ["🇦", "🇧", "🇨", "🇽", "🇾", "🇿"]
 
     def __init__(self, client):
         self.client = client
@@ -79,6 +80,71 @@ class Raiding(commands.Cog):
     #     else:
     #         await ctx.send(f"You are not currently in any raiding queues!")
 
+    @commands.command(usage="findloc", description="Find a good location to start an O3 run in.")
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def findloc(self, ctx):
+        servers = await utils.get_good_realms(self.client)
+        server_opts = {}
+        if servers:
+            desc = ""
+            num = 0
+
+            for l in servers[0]:
+                desc += f"{self.letters[num]} - {l[0]} | Population: **{l[1]}** | Events: **{l[2]}**\n"
+                server_opts[self.letters[num]] = l[0]
+                num += 1
+            if not desc:
+                desc = "No suitable US servers found."
+            embed = discord.Embed(title="Locations", description="Possible locations in which to start an O3 Raid.", color=discord.Color.gold())
+            embed.add_field(name="Top US Servers", value=desc, inline=False)
+            num = 3
+            desc = ""
+            for l in servers[1]:
+                desc += f"{self.letters[num]} - {l[0]} | Population: **{l[1]}** | Events: **{l[2]}**\n"
+                server_opts[self.letters[num]] = l[0]
+                num += 1
+            if not desc:
+                desc = "No suitable EU servers found."
+            embed.add_field(name="Top EU Servers", value=desc, inline=False)
+
+        else:
+            embed = discord.Embed(title="Error!", description="No suitable locations found. Please scout a location yourself.", color=discord.Color.red())
+
+        await ctx.send(embed=embed)
+
+    @commands.command(usage="findloc", description="Find a good location to start a Realm Clearing run in.")
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def findrc(self, ctx):
+        servers = await utils.get_good_realms(self.client, 20, 100)
+        server_opts = {}
+        if servers:
+            desc = ""
+            num = 0
+
+            for l in servers[0]:
+                desc += f"{self.letters[num]} - {l[0]} | Population: **{l[1]}** | Events: **{l[2]}**\n"
+                server_opts[self.letters[num]] = l[0]
+                num += 1
+            if not desc:
+                desc = "No suitable US servers found."
+            embed = discord.Embed(title="Locations", description="Possible locations in which to start realm clearing.", color=discord.Color.gold())
+            embed.add_field(name="Top US Servers", value=desc, inline=False)
+            num = 3
+            desc = ""
+            for l in servers[1]:
+                desc += f"{self.letters[num]} - {l[0]} | Population: **{l[1]}** | Events: **{l[2]}**\n"
+                server_opts[self.letters[num]] = l[0]
+                num += 1
+            if not desc:
+                desc = "No suitable EU servers found."
+            embed.add_field(name="Top EU Servers", value=desc, inline=False)
+
+        else:
+            embed = discord.Embed(title="Error!", description="No suitable locations found. Please scout a location yourself.", color=discord.Color.red())
+
+        await ctx.send(embed=embed)
 
     @commands.command(usage="afk <location>", description="Starts an AFK check for the location specified.", aliases=['afkcheck', 'startafk'])
     @commands.guild_only()
@@ -125,7 +191,7 @@ class Raiding(commands.Cog):
         if len(ctx.message.attachments) > 1:
             return await ctx.send("Please only attach 1 image.", delete_after=10)
         attachment = ctx.message.attachments[0]
-        if not ".jpg" in attachment.filename and not ".png" in attachment.filename:
+        if not attachment.height or 'mp4' in attachment.filename.lower() or 'mov' in attachment.filename.lower():
             return await ctx.send("Please only attach an image of type 'png' or 'jpg'.", delete_after=10)
         image = io.BytesIO()
         await attachment.save(image, seek_begin=True)

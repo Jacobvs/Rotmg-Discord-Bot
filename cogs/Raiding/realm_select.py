@@ -6,7 +6,7 @@ import utils
 
 
 class RealmSelect:
-    letters = ["🇦", "🇧", "🇨", "🇨", "🇾", "🇿"]
+    letters = ["🇦", "🇧", "🇨", "🇽", "🇾", "🇿"]
 
     def __init__(self, client, ctx):
         self.client = client
@@ -20,16 +20,17 @@ class RealmSelect:
             desc = ""
             num = 0
 
-            for s in servers[0]:
-                desc += f"{self.letters[num]} - {s} | Population: **{servers[0][s]['Population']}** | Events: **{servers[0][s]['Events']}**\n"
-                server_opts[self.letters[num]] = s
+            for l in servers[0]:
+                desc += f"{self.letters[num]} - {l[0]} | Population: **{l[1]}** | Events: **{l[2]}**\n"
+                server_opts[self.letters[num]] = l[0]
                 num += 1
             embed = discord.Embed(title="Location Selection", description="Choose a realm or press 🔄 to manually enter a location.", color=discord.Color.gold())
             embed.add_field(name="Top US Servers", value=desc, inline=False)
             num = 3
-            for s in servers[1]:
-                desc += f"{self.letters[num]} - {s} | Population: **{servers[1][s]['Population']}** | Events: **{servers[1][s]['Events']}**\n"
-                server_opts[self.letters[num]] = s
+            desc = ""
+            for l in servers[1]:
+                desc += f"{self.letters[num]} - {l[0]} | Population: **{l[1]}** | Events: **{l[2]}**\n"
+                server_opts[self.letters[num]] = l[0]
                 num += 1
             embed.add_field(name="Top EU Servers", value=desc, inline=False)
             msg = await self.ctx.send(embed=embed)
