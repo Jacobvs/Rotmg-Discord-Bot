@@ -198,12 +198,12 @@ class Core(commands.Cog):
                         value=f"**`{len(self.client.guilds)}`** servers with **`{mcount}`** total members.")
         embed.add_field(name="\u200b", value="\u200b")
         embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.")
-        lines = line_count('/home/pi/Rotmg-Bot/') + line_count('/home/pi/Rotmg-Bot/cogs') + line_count(
-            '/home/pi/Rotmg-Bot/cogs/Raiding') + line_count('/home/pi/Rotmg-Bot/cogs/Minigames')
+        lines = line_count('/home/jacobvs/Rotmg-Discord-Bot/') + line_count('/home/jacobvs/Rotmg-Discord-Bot/cogs') + line_count(
+            '/home/jacobvs/Rotmg-Discord-Bot/cogs/Raiding') + line_count('/home/jacobvs/Rotmg-Discord-Bot/cogs/Minigames')
         embed.add_field(name="Lines of Code:", value=(f"**`{lines}`** lines of code."))
         embed.add_field(name="\u200b", value="\u200b")
         embed.add_field(name="Server Status:",
-                        value=(f"```yaml\nServer: 0 GHz Potato\nCPU: {psutil.cpu_percent()}% utilization."
+                        value=(f"```yaml\nServer: AWS Compute (Ubuntu 18.04)\nCPU: {psutil.cpu_percent()}% utilization."
                                f"\nMemory: {psutil.virtual_memory().percent}% utilization."
                                f"\nDisk: {psutil.disk_usage('/').percent}% utilization."
                                f"\nNetwork: {round(psutil.net_io_counters().bytes_recv*0.000001)} MB in "

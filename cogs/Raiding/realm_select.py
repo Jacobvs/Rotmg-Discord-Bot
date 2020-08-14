@@ -6,7 +6,7 @@ import utils
 
 
 class RealmSelect:
-    letters = ["🇦", "🇧", "🇨", "🇽", "🇾", "🇿"]
+    letters = ["🇦", "🇧", "🇨", "🇩", "🇼", "🇽", "🇾", "🇿"]
 
     def __init__(self, client, ctx):
         self.client = client
@@ -26,7 +26,7 @@ class RealmSelect:
                 num += 1
             embed = discord.Embed(title="Location Selection", description="Choose a realm or press 🔄 to manually enter a location.", color=discord.Color.gold())
             embed.add_field(name="Top US Servers", value=desc, inline=False)
-            num = 3
+            num = 4
             desc = ""
             for l in servers[1]:
                 desc += f"{self.letters[num]} - {l[0]} | Population: **{l[1]}** | Events: **{l[2]}**\n"

@@ -48,18 +48,19 @@ max_stats = {
 }
 
 
-async def connect_helper(self, ctx):
+async def connect_helper(self, ctx, vc=None):
     if ctx.message.guild is None:
         await ctx.message.author.send("This command can only be used in a server when connected to a VC.")
         return None
 
-    channel = ctx.message.author.voice.channel
+    if not vc:
+        vc = ctx.message.author.voice.channel
     voice = discord.utils.get(self.client.voice_clients, guild=ctx.guild)
 
     if voice and voice.is_connected():
-        await voice.move_to(channel)
+        await voice.move_to(vc)
     else:
-        voice = await channel.connect()
+        voice = await vc.connect()
 
     return voice
 
@@ -329,13 +330,20 @@ class Patreon(commands.Cog):
     @commands.command(usage='soundboard <soundname>', description='Play a sound effect! (Must be in VC)', aliases=['sb'])
     @commands.guild_only()
     @commands.cooldown(1, 600, type=BucketType.member)
-    async def soundboard(self, ctx, soundname=""):
-        if not ctx.author.voice:
-            commands.Command.reset_cooldown(ctx.command, ctx)
+    async def soundboard(self, ctx, soundname="", voice_channel: discord.VoiceChannel = None):
+        if ctx.author.id != self.client.owner_id:
+            if not ctx.author.voice:
+                commands.Command.reset_cooldown(ctx.command, ctx)
+                return await ctx.send("You must be in a VC to use this command!")
+            else:
+                vc = ctx.author.voice.channel
+        elif not voice_channel:
             return await ctx.send("You must be in a VC to use this command!")
+        else:
+            vc = voice_channel
 
         if ctx.author.id != self.client.owner_id:
-            if ctx.author.voice.channel in ctx.bot.guild_db.get(ctx.guild.id) or "Raid" in str(ctx.author.voice.channel.name):
+            if vc in ctx.bot.guild_db.get(ctx.guild.id) or "Raid" in str(vc.name):
                 commands.Command.reset_cooldown(ctx.command, ctx)
                 return await ctx.send("You cannot use this command in a raiding VC!")
 
@@ -353,7 +361,7 @@ class Patreon(commands.Cog):
             'youtube.com/watch?v=dQw4w9WgXcQ' if soundname == 'roll' else 'FBI, OPEN UP' if soundname == 'fbi' else 'What the fuck, Richard?' if soundname == 'richard' else \
             '( ͡° ͜ʖ ͡°)' if soundname == 'sax' else "who's there?"
 
-        voice = await connect_helper(self, ctx)
+        voice = await connect_helper(self, ctx, vc)
         client = ctx.guild.voice_client
         if not client.source:
             source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(file, options=ffmpeg_options['options']),
@@ -362,6 +370,28 @@ class Patreon(commands.Cog):
             await ctx.send(message)
         else:
             await ctx.send("Audio is already playing!")
+
+
+    @commands.command(usage='booga <encoded_text>', description='Decode booga text.')
+    async def booga(self, ctx, *, text):
+        try:
+            await ctx.message.delete()
+        except discord.Forbidden:
+            pass
+
+        bs = ""
+        for s in text.split(" - "):
+            for c in s.split(" "):
+                if c == "Ooga":
+                    bs += "0"
+                else:
+                    bs += "1"
+            bs += " "
+        try:
+            await ctx.author.send(f"Decoded text:\n{''.join([chr(int(binary, 2)) for binary in bs.split(' ') if binary])}")
+            await ctx.send(embed=discord.Embed(description="The decoded text has been sent to your DM's!"))
+        except discord.Forbidden:
+            await ctx.send("Please enable DM's to use this command!")
 
 
     @commands.command(usage='joke', description='Tell a joke.')

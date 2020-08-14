@@ -4,10 +4,12 @@ import difflib
 import logging
 import random
 import re
+import time
 from enum import Enum
 
 import aiohttp
 import discord
+import humanfriendly as humanfriendly
 import numpy as np
 from discord.embeds import _EmptyEmbed
 from discord.ext.commands import BadArgument, Converter
@@ -608,7 +610,9 @@ async def image_upload(binary, sendable, is_rc=True):
 
 
 blacklisted_servers = ['uswest3', 'uswest', 'euwest', 'eueast', 'ussouth3', 'australia', 'asiaeast', 'asiasoutheast']
+semi_blacklisted = ['uswest3', 'australia', 'asiasoutheast', 'asiaeast']
 async def get_good_realms(client, max_pop, max_server_pop=70):
+    blacklist = semi_blacklisted if max_pop > 10 else blacklisted_servers
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
             async with cs.request("GET", 'http://www.nebulanotifier.com/api/get/all', headers={'Authorization': client.nebula_token}) as r:
@@ -616,7 +620,7 @@ async def get_good_realms(client, max_pop, max_server_pop=70):
                     data = await r.json()
                     if data:
                         for r in list(data.keys()):
-                            if r.lower() in blacklisted_servers:
+                            if r.lower() in blacklist:
                                 del data[r]
                                 continue
                             total = 0
@@ -624,7 +628,7 @@ async def get_good_realms(client, max_pop, max_server_pop=70):
                                 total += data[r][s]['Population']
                                 if data[r][s]['Population'] > max_pop:
                                     del data[r][s]
-                                elif data[r][s]['Events'] < 5:
+                                elif data[r][s]['Events'] < 4:
                                     del data[r][s]
 
                             if total > max_server_pop:
@@ -635,25 +639,26 @@ async def get_good_realms(client, max_pop, max_server_pop=70):
                         eudata = {}
                         for r in data:
                             for s in data[r]:
+                                stime = humanfriendly.format_timespan(int(time.time() - (data[r][s]['Timestamp']/1000)))
                                 if 'US' == r[:2]:
-                                    usdata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events']}
+                                    usdata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
+                                                          'Time': stime}
                                 else:
-                                    eudata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events']}
+                                    eudata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
+                                                          'Time': stime}
 
                         import json
-                        print(f"CLEANED SERVER DATA: {json.dumps(usdata, indent=4)}")
                         d = sorted(usdata, key=lambda x: usdata[x]['Events'])
-                        d = d[:3]
+                        d = d[:4]
                         d2 = []
                         for s in d:
-                            d2.append((s, usdata[s]['Population'], usdata[s]['Events']))
+                            d2.append((s, usdata[s]['Population'], usdata[s]['Events'], usdata[s]['Curr_Event'], usdata[s]['Time']))
                         usdata = d2
-                        print(f"SORTED SERVER DATA: {usdata}")
                         d = sorted(eudata, key=lambda x: eudata[x]['Events'])
-                        d = d[:3]
+                        d = d[:4]
                         d2 = []
                         for s in d:
-                            d2.append((s, eudata[s]['Population'], eudata[s]['Events']))
+                            d2.append((s, eudata[s]['Population'], eudata[s]['Events'], eudata[s]['Curr_Event'], eudata[s]['Time']))
                         eudata = d2
                         return usdata, eudata
 

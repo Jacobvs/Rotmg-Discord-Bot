@@ -169,6 +169,36 @@ class Misc(commands.Cog):
         # TODO: Implement counter, add check to only allow reactions to 1 option (remove all but last react from each person)
         # TODO: add option to ping @here or @everyone
 
+    @commands.command(usage="ooga <text>", description="Translate text into booga.")
+    @commands.guild_only()
+    @commands.cooldown(1, 300, type=BucketType.member)
+    async def ooga(self, ctx, *, text):
+        try:
+            await ctx.message.delete()
+        except discord.Forbidden:
+            pass
+
+        if len(text) > 52:
+            return await ctx.send("Please send a message 50 characters or less.")
+
+        if not all(ord(c) < 128 for c in text):
+            return await ctx.send("Please only use alphanumeric characters!")
+
+        str = ' '.join(["{0:b}".format(x) for x in bytes(text, "ascii")])
+        obs = []
+        for c in str.split(" "):
+            cs = []
+            for b in c:
+                if b == '0':
+                    cs.append("Ooga")
+                else:
+                    cs.append("Booga")
+            obs.append(" ".join(cs))
+
+        embed = discord.Embed(title=f"Oogified text | Decode with {ctx.prefix}booga <encoded_text>", description=" - ".join(obs), color=discord.Color.teal())
+        embed.set_footer(text=f"Requested by {ctx.author.display_name}")
+        await ctx.send(embed=embed)
+
 
     @commands.command(usage='isgay <member>', description="Preed's Custom Patreon Command")
     async def isgay(self, ctx, member: utils.MemberLookupConverter):

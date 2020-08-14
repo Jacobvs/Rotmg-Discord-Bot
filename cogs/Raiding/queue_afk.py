@@ -73,12 +73,16 @@ class QAfk:
         #
         # await setup_msg.delete()
 
-        d = await sql.get_all_missed(self.client.pool, self.ctx.guild.id)
+        d = await sql.get_all_missed(self.client.pool)
         n_priority = 0
         n_regular = 0
         self.missed_runs = {}
         for r in d:
-            is_priority = True if r[2] > 0 else False
+            is_priority = True if r[1] > 0 else False
+            if is_priority:
+                n_priority += 1
+            else:
+                n_regular += 1
             self.missed_runs.update({r[0]: is_priority})
 
         # Grab dungeon info from utils

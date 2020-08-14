@@ -22,6 +22,42 @@ class Moderation(commands.Cog):
     def __init__(self, client):
         self.client = client
 
+    @commands.command(usage='listall <role>', description="List all members with a role")
+    @commands.guild_only()
+    @checks.is_security_or_higher_check()
+    async def listall(self, ctx, role: discord.Role):
+        # nsections = int(len(role.members)/20)-1
+        # embed = discord.Embed(title=f"Members with the role: {role.name}", color=role.color)
+        # for i in range(nsections):
+        #     embed.add_field(name="Members", value="".join([m.mention for m in role.members[20*i:20*(i+1)]]), inline=False)
+        # await ctx.send(embed=embed)
+        mstrs = []
+        for m in role.members:
+            if " | " in m.display_name:
+                mstrs.extend(m.display_name.split(" | "))
+            else:
+                mstrs.append(m.display_name)
+        str = f"[{', '.join([''.join([c for c in m if c.isalpha()]) for m in mstrs])}]"
+        await ctx.send(str)
+
+    @commands.command(usage="listvc", description="Return a list of people in a VC")
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def listvc(self, ctx):
+        if not ctx.author.voice:
+            return await ctx.send("You must be in a VC to use this command!")
+
+        mstrs = []
+        for m in ctx.author.voice.channel.members:
+            if " | " in m.display_name:
+                mstrs.extend(m.display_name.split(" | "))
+            else:
+                mstrs.append(m.display_name)
+        str = '["' + '", "'.join([''.join([c for c in m if c.isalpha()]) for m in mstrs]) + '"]'
+        await ctx.send(str)
+
+
+
     @commands.command(usage="change_prefix <prefix>", description="Change the bot's prefix for all commands.")
     @commands.guild_only()
     @commands.has_permissions(administrator=True)

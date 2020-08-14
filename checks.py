@@ -9,7 +9,6 @@ def is_bot_owner():
         return ctx.author.id == ctx.bot.owner_id
     return commands.check(predicate)
 
-
 def is_rl_or_higher_check():
     """Check if user has rl or higher roles"""
     def predicate(ctx):
@@ -81,6 +80,10 @@ def exclude_dungeoneer():
     def predicate(ctx):
         return ctx.guild.id != 660344559074541579
     return commands.check(predicate)
+
+async def is_bot_commands_channel(ctx):
+    return ctx.channel == ctx.bot.guild_db.get(ctx.guild.id)[sql.gld_cols.eventcommandschannel] or ctx.channel == ctx.bot.guild_db.get(ctx.guild.id)[
+        sql.gld_cols.vetcommandschannel] or ctx.channel == ctx.bot.guild_db.get(ctx.guild.id)[sql.gld_cols.raidcommandschannel]
 
 
 # async def audio_playing(ctx):
