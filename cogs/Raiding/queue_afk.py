@@ -31,12 +31,13 @@ class QAfk:
 
         self.raiderids = set()
         self.confirmed_raiders = {}
-        self.confirmed_priority = {}
         self.raiderids.add(ctx.author.id)
         self.nitroboosters = []
         self.patreons = []
         self.last_edited = datetime.utcnow()
         self.awaiting_confirmations = set()
+        self.priority_order = []
+        self.normal_order = []
 
         self.firstpopperrole = self.guild_db[sql.gld_cols.firstpopperrole]
         self.secondpopperrole = self.guild_db[sql.gld_cols.secondpopperrole]
@@ -129,7 +130,6 @@ class QAfk:
         self.raid_vc: discord.VoiceChannel = await self.category.create_voice_channel(name=f"{self.ctx.author.display_name}'s {self.dungeontitle} Raid", overwrites=overwrites,
                                                                 user_limit=self.max_members)
         await self.raid_vc.edit(position=self.queuechannel.position+1)
-        self.client.qraid_vcs[self.raid_vc.id] = self.raid_vc
 
         # Setup Control Panel
         self.cp_embed = discord.Embed(description=f"QAFK [**Control Panel**]({self.raid_msg.jump_url}) for **{self.dungeontitle}** | Started by {self.ctx.author.mention}",
@@ -172,6 +172,7 @@ class QAfk:
 
     async def dequeue(self):
         print('in dequeue')
+        # TODO: fix this -- should check all reactions & add anyone who was missed
         self.raid_msg = await self.hcchannel.fetch_message(self.raid_msg.id)
         for r in self.raid_msg.reactions:
             print(r)
@@ -202,32 +203,45 @@ class QAfk:
 
 
     async def move_members(self):
-
-        print('moving confirmed')
-        qnum = 0
+        print('moving priority')
         all = len(self.raid_vc.members)
-        for id in self.client.queues[self.queuechannel.id]:
-            qnum += 1
+        for id in self.priority_order:
             if all >= self.max_members:
                 print(f'ended moving at len vc: {len(self.raid_vc.members)}')
                 print(f'ended moving at normal moved: {all}')
                 break
             if id in self.confirmed_raiders:
                 member = self.confirmed_raiders[id]
-                if member and member.voice:
-                    try:
-                        await member.move_to(self.raid_vc)
-                        if member.id not in self.raiderids:
-                            self.raiderids.add(member.id)
-                        self.client.active_raiders[member.id] = self.raid_vc.id
-                        all += 1
-                        print(f"position: {qnum} | movednum: {all}")
-                    except discord.Forbidden or discord.HTTPException:
-                        print(f"MEMBER FAILED TO BE MOVED: {member.display_name}")
-                        continue
+                res = await self.movem(member)
+                all += 1 if res else 0
+
+
+        print('moving confirmed')
+        for id in self.normal_order:
+            if all >= self.max_members:
+                print(f'ended moving at len vc: {len(self.raid_vc.members)}')
+                print(f'ended moving at normal moved: {all}')
+                break
+            if id in self.confirmed_raiders:
+                member = self.confirmed_raiders[id]
+                res = await self.movem(member)
+                all += 1 if res else 0
+
         print('done moving')
         print(f'Num regular moved: {all}')
 
+    async def movem(self, member):
+        if member and member.voice:
+            try:
+                await member.move_to(self.raid_vc)
+                if member.id not in self.raiderids:
+                    self.raiderids.add(member.id)
+                self.client.active_raiders[member.id] = self.raid_vc.id
+                return True
+            except discord.Forbidden or discord.HTTPException:
+                print(f"MEMBER FAILED TO BE MOVED: {member.display_name}")
+                return False
+        return False
 
     async def end_afk(self):
         print("in end afk")
@@ -303,7 +317,6 @@ class QAfk:
         self.in_run = True
 
 
-
     async def unlock_vc(self, member: discord.Member):
         voice = discord.utils.get(self.client.voice_clients, guild=self.ctx.guild)
 
@@ -360,12 +373,12 @@ class QAfk:
 
         client = self.ctx.guild.voice_client
         if not client.source:
+            # TODO: make mp3 file thanking raiders for joining & telling them to send modmail for +/- remarks
             source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/movebacktoqueue.mp3", options=ffmpeg_options['options']), volume=0.5)
             self.ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice))
 
         await asyncio.sleep(5)
 
-        del self.client.qraid_vcs[self.raid_vc.id]
         await self.raid_vc.delete()
 
         log = ParseLog(self.client, self.ctx.author, self.ctx.channel, self.ctx.guild, self.required_items, self.dungeontitle, all_members, members_left,
@@ -408,25 +421,32 @@ class QAfk:
             await asyncio.sleep(1)
 
 
-
-
     # Handlers
     # Reaction Handler
     async def reaction_handler(self, payload):
         emote = str(payload.emoji)
         if emote == self.dungeon_emoji:
-            if (self.firstpopperrole in payload.member.roles and self.firstpopperrole and self.firstpopperearlyloc) or \
+
+            if payload.member.id in self.missed_runs:
+                if self.missed_runs.get(payload.member.id):
+                    if payload.member.id not in self.confirmed_raiders:
+                        self.priority_order.append(payload.member.id)
+                        self.confirmed_raiders[payload.member.id] = payload.member
+                else:
+                    if payload.member.id not in self.confirmed_raiders:
+                        self.normal_order.append(payload.member.id)
+                        self.confirmed_raiders[payload.member.id] = payload.member
+            elif (self.firstpopperrole in payload.member.roles and self.firstpopperrole and self.firstpopperearlyloc) or \
                     (self.secondpopperrole in payload.member.roles and self.secondpopperrole and self.secondpopperearlyloc) or \
                     (self.thirdpopperrole in payload.member.roles and self.thirdpopperrole and self.thirdpopperearlyloc) or \
                     (self.firstrunerole in payload.member.roles and self.firstrunerole and self.firstruneearlyloc) or \
                     (self.secondrunerole in payload.member.roles and self.secondrunerole and self.secondruneearlyloc):
-                if payload.member not in self.confirmed_priority:
-                    self.confirmed_priority[payload.member.id] = payload.member
+                if payload.member not in self.confirmed_raiders:
+                    self.priority_order.append(payload.member.id)
+                    self.confirmed_raiders[payload.member.id] = payload.member
             else:
                 if payload.member not in self.confirmed_raiders:
-                    if payload.member.id not in self.client.queues[self.queuechannel.id]:
-                        if payload.member.voice and payload.member.voice.channel == self.queuechannel:
-                            self.client.queues[self.queuechannel.id].append(payload.member.id)
+                    self.normal_order.append(payload.member.id)
                     self.confirmed_raiders[payload.member.id] = payload.member
         elif emote in self.required_items and payload.member not in self.required_items[emote]['confirmed']:
             if payload.user_id not in self.awaiting_confirmations:
@@ -540,9 +560,7 @@ class QAfk:
         if member.id in self.awaiting_confirmations:
             self.awaiting_confirmations.remove(member.id)
         await member.move_to(self.raid_vc, reason=reason)
-        if member.id in self.confirmed_priority:
-            del self.confirmed_priority[member.id]
-        elif member.id in self.confirmed_raiders:
+        if member.id in self.confirmed_raiders:
             del self.confirmed_raiders[member.id]
         if member.id not in self.raiderids:
             self.raiderids.add(member.id)

@@ -135,14 +135,17 @@ class Logging(commands.Cog):
                 return elem[1]
 
             runes.sort(key=get_num, reverse=True)
-            top = format_top_data(runes[:20], 1)
+            top = format_top_data(runes[:20], 1, aslist=True)
         else:
             col = sql.log_cols.pkey if type == 'keys' else sql.log_cols.runsdone if type == 'runs' else sql.log_cols.srunled if type == 'led' else sql.log_cols.weeklyruns
             top = await sql.get_top_10_logs(self.client.pool, ctx.guild.id, column=col, only_10=False, limit=20)
-            top = format_top_data(top, col)
+            top = format_top_data(top, col, aslist=True)
 
         name = 'Keys' if type == 'keys' else "Runes" if type == 'runes' else "Runs Completed" if type == 'runs' else "Runs Led" if type == 'led' else "Weekly Runs Led"
-        embed = discord.Embed(title=f"Top {name} in {ctx.guild.name}", color=discord.Color.gold()).add_field(name='Data', value=top).set_thumbnail(url=ctx.guild.icon_url)
+        embed = discord.Embed(title=f"Top {name} in {ctx.guild.name}", color=discord.Color.gold()).add_field(name='Top 10', value="".join(top[:10]), inline=False)
+        if len(top) > 10:
+            embed.add_field(name="Top 20", value="".join(top[10:]), inline=False)
+        embed.set_thumbnail(url=ctx.guild.icon_url)
         embed.timestamp = datetime.datetime.utcnow()
         await ctx.send(embed=embed)
 
@@ -236,9 +239,15 @@ def clean_rl_data(data, guild, rlrole, truncate=True):
     return temp
 
 
-def format_top_data(data, col):
-    top = ""
-    for i, r in enumerate(data):
-        top += f"#{i+1}. <@{r[0]}> - {r[col]}\n"
+def format_top_data(data, col, aslist=False):
+    if not aslist:
+        top = ""
+        for i, r in enumerate(data):
+            top += f"#{i+1}. <@{r[0]}> - {r[col]}\n"
+        return top
+    else:
+        top = []
+        for i, r in enumerate(data):
+            top.append(f"#{i + 1}. <@{r[0]}> - {r[col]}\n")
+        return top
 
-    return top

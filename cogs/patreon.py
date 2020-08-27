@@ -338,7 +338,9 @@ class Patreon(commands.Cog):
             else:
                 vc = ctx.author.voice.channel
         elif not voice_channel:
-            return await ctx.send("You must be in a VC to use this command!")
+            if not ctx.author.voice:
+                return await ctx.send("You must be in a VC to use this command!")
+            vc = ctx.author.voice.channel
         else:
             vc = voice_channel
 

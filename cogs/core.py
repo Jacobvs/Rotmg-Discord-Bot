@@ -27,6 +27,13 @@ class Core(commands.Cog):
     def __init__(self, client):
         self.client = client
 
+    @commands.command(usage='setcreds <member> <num>', description="Set someone's casino credits")
+    @checks.is_bot_owner()
+    async def setcreds(self, ctx, member: utils.MemberLookupConverter, amount: int):
+        await sql.change_balance(self.client.pool, ctx.guild.id, member.id, amount)
+        embed = discord.Embed(title='Sucess!', description=f"{member.mention}'s balance was set to: **{amount:,}** credits.", color=discord.Color.green())
+        await ctx.send(embed=embed)
+
     @commands.command(usage='patreon', description='Show patreon info.')
     async def patreon(self, ctx):
         is_patreon = await sql.get_patreon_status(self.client.pool, ctx.author.id)

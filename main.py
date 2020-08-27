@@ -57,7 +57,7 @@ with open('data/variables.json', 'r') as file:
 @bot.event
 async def on_ready():
     """Wait until bot has connected to discord"""
-    bot.pool = await aiomysql.create_pool(host=os.getenv("MYSQL_HOST"), port=3306, user='root', password=os.getenv("MYSQL_PASSWORD"),
+    bot.pool = await aiomysql.create_pool(host=os.getenv("MYSQL_HOST"), port=3306, user='jacobvs', password=os.getenv("MYSQL_PASSWORD"),
                                           db='mysql', loop=bot.loop)
     bot.start_time = datetime.datetime.now()
     bot.raid_db = {}
@@ -94,7 +94,7 @@ async def on_ready():
                         t = bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs))
                     bot.active_punishments[str(guild.id)+str(member.id)+ptype] = t
 
-    # init_queues()
+    init_queues()
     bot.in_queue = {0: [], 1: []}
     guild = bot.get_guild(660344559074541579)
     bot.patreon_role = guild.get_role(736954974545641493)
@@ -103,40 +103,33 @@ async def on_ready():
     bot.patreon_ids = set(lst)
 
     bot.beaned_ids = set([])
-    bot.qraid_vcs = {}
     print(f'{bot.user.name} has connected to Discord!')
 
 async def build_guild_db():
     bot.guild_db = await sql.construct_guild_database(bot.pool, bot)
 
-# # Link queue to raiding category (queue_channel, category)
-# # 1. Dungeoneer (oryx raiding `Queue`)
-# queue_links = [(660347818061332481, 660347478620766227), (736226011733033041, 736220007356432426)]
-# def init_queues():
-#     bot.queue_links = {}
-#     bot.queues = {}
-#     if os.path.isfile('data/queues.pkl'):
-#         with open('data/queues.pkl', 'rb') as file:
-#             bot.queues = pickle.load(file)
-#         print('Loaded queue from file')
-#     else:
-#         for i in queue_links:
-#             queue = bot.get_channel(i[0])
-#             bot.queues[i[0]] = []
-#             for m in queue.members:
-#                 bot.queues[i[0]].append(m.id)
-#     for i in queue_links:
-#         queue = bot.get_channel(i[0])
-#         category = bot.get_channel(i[1])
-#
-#         bot.queue_links[queue.id] = (queue, category)
-#         bot.queue_links[category.id] = (queue, category)
-#
-#
-# @bot.command(usage="resetqueues")
-# @commands.is_owner()
-# async def resetqueues(ctx):
-#     init_queues()
+# Link queue to raiding category (queue_channel, category)
+# 1. Dungeoneer (oryx raiding `Queue`)
+queue_links = [(660347818061332481, 660347478620766227), (736226011733033041, 736220007356432426)]
+def init_queues():
+    bot.queue_links = {}
+    bot.queues = {}
+    for i in queue_links:
+        queue = bot.get_channel(i[0])
+        bot.queues[i[0]] = []
+        for m in queue.members:
+            bot.queues[i[0]].append(m.id)
+
+        category = bot.get_channel(i[1])
+
+        bot.queue_links[queue.id] = (queue, category)
+        bot.queue_links[category.id] = (queue, category)
+
+
+@bot.command(usage="resetqueues")
+@commands.is_owner()
+async def resetqueues(ctx):
+    init_queues()
 
 
 @bot.command(usage="load <cog>")

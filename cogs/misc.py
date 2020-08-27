@@ -18,6 +18,11 @@ def is_lorlie():
         return ctx.message.author.id == 482120766893064192
     return commands.check(predicate)
 
+def is_caped():
+    def predicate(ctx):
+        return ctx.message.author.id == 163394008603820032
+    return commands.check(predicate)
+
 class Misc(commands.Cog):
     """Miscellaneous Commands"""
 
@@ -245,6 +250,7 @@ class Misc(commands.Cog):
 
     @commands.command(usage='exalted <member>', description="Make a member exalted!")
     @commands.guild_only()
+    @commands.check_any(is_caped(), is_bot_owner())
     async def exalted(self, ctx, member: utils.MemberLookupConverter):
         b = bool(random.getrandbits(1))
         title = f"{member.display_name} was killed by O3!" if b else f"{member.display_name} slaughtered O3"

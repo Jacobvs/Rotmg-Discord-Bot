@@ -45,7 +45,6 @@ class Raiding(commands.Cog):
 
         is_us = True if 'us' in location.lower() else False
 
-
         setup = VCSelect(self.client, ctx, qafk=True)
         data = await setup.q_start()
         if isinstance(data, tuple):
@@ -55,7 +54,6 @@ class Raiding(commands.Cog):
 
         qafk = QAfk(self.client, ctx, location, hcchannel, raiderrole, rlrole, is_us)
         await qafk.start()
-
 
     # @commands.command(usage='position', description="Check your position within the raiding queue!", aliases=['queue'])
     # @commands.guild_only()
@@ -119,17 +117,17 @@ class Raiding(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(usage="findrc", description="Find a good location to start a Realm Clearing run in.")
+    @commands.command(usage="findrc [max_in_realm]", description="Find a good location to start a Realm Clearing run in.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
-    async def findrc(self, ctx):
+    async def findrc(self, ctx, max=20):
         if not await checks.is_bot_commands_channel(ctx):
             try:
                 await ctx.message.delete()
             except discord.Forbidden or discord.NotFound:
                 pass
             return await ctx.send("This command must be used in a bot-commands channel only.")
-        servers = await utils.get_good_realms(self.client, 20, 100)
+        servers = await utils.get_good_realms(self.client, max, 100)
         server_opts = {}
         if servers:
             desc = ""
@@ -142,7 +140,8 @@ class Raiding(commands.Cog):
                 num += 1
             if not desc:
                 desc = "No suitable US servers found."
-            embed = discord.Embed(title="Locations", description="Possible locations in which to start realm clearing.", color=discord.Color.gold())
+            embed = discord.Embed(title="Locations", description=f"Possible locations in which to start realm clearing with a server population < **{max}**",
+                                  color=discord.Color.gold())
             embed.add_field(name="Top US Servers", value=desc, inline=True)
             embed.add_field(name='\u200B', value='\u200B', inline=True)
             num = 4
@@ -159,6 +158,37 @@ class Raiding(commands.Cog):
         else:
             embed = discord.Embed(title="Error!", description="No suitable locations found. Please scout a location yourself.", color=discord.Color.red())
 
+        await ctx.send(embed=embed)
+
+    @commands.command(usage='event <type>', description="Find all realms with a specified event.")
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def event(self, ctx, event_alias):
+        if not await checks.is_bot_commands_channel(ctx):
+            try:
+                await ctx.message.delete()
+            except discord.Forbidden or discord.NotFound:
+                pass
+            return await ctx.send("This command must be used in a bot-commands channel only.")
+
+        event = event_type(event_alias)
+        if not event:
+            return await ctx.send(f"The specified event type: `{event_alias}` is not valid. Please enter a valid event.")
+
+        data = await utils.get_event_servers(self.client, event)
+        if not data:
+            embed = discord.Embed(title="Error!", description=f"No servers were found with the current event of `{event}`.", color=discord.Color.red())
+        else:
+            desc = ""
+            num = 0
+            for l in data:
+                event = l[3] if l[3] else "N/A"
+                desc += f"{self.letters[num]} - __**{l[0]}**__\n**{l[1]}** People | **{l[2]}** Heroes\n`{event}`\n**{l[4]}** ago\n\n"
+                num += 1
+            if not desc:
+                desc = "No suitable US servers found."
+            embed = discord.Embed(title="Locations", description=f"Possible locations that contain the event: `{event}`.", color=discord.Color.gold())
+            embed.add_field(name="Top Servers", value=desc, inline=True)
         await ctx.send(embed=embed)
 
     @commands.command(usage="afk <location>", description="Starts an AFK check for the location specified.", aliases=['afkcheck', 'startafk'])
@@ -180,7 +210,6 @@ class Raiding(commands.Cog):
             return
         afk = AfkCheck(self.client, ctx, location, raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg)
         await afk.start()
-
 
     @commands.command(usage="headcount", aliases=["hc"], description="Starts a headcount.")
     @commands.guild_only()
@@ -248,7 +277,6 @@ class Raiding(commands.Cog):
         except discord.Forbidden:
             pass
 
-
     @commands.command(usage="lock", description="Locks the raiding voice channel")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
@@ -267,7 +295,6 @@ class Raiding(commands.Cog):
         await vcchannel.set_permissions(raiderrole, connect=False, view_channel=True, speak=False)
         embed = discord.Embed(description=f"{vcchannel.name} Has been Locked!", color=discord.Color.red())
         await ctx.send(embed=embed)
-
 
     @commands.command(usage="unlock", description="Unlocks the raiding voice channel.")
     @commands.guild_only()
@@ -344,7 +371,7 @@ class Raiding(commands.Cog):
             (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
         else:
             return
-        rc = RealmClear(self.client, ctx, location, raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel,setup_msg)
+        rc = RealmClear(self.client, ctx, location, raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg)
         await rc.start()
         # self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
@@ -362,7 +389,6 @@ class Raiding(commands.Cog):
         else:
             await ctx.send("You aren't marking for any realm clearing sessions!")
 
-
     @commands.command(usage="unmarkmap <number(s)>", aliases=["umm"], description="Unmark the map with specified numbers.")
     @commands.guild_only()
     @checks.is_mm_or_higher_check()
@@ -377,7 +403,6 @@ class Raiding(commands.Cog):
         else:
             await ctx.send("You aren't marking for any realm clearing sessions!")
 
-
     @commands.command(usage="eventspawn <event>", aliases=['es'], description="Mark when an event spawns.")
     @commands.guild_only()
     @checks.is_mm_or_higher_check()
@@ -391,7 +416,6 @@ class Raiding(commands.Cog):
                 await ctx.send("This realm clearing has ended!")
         else:
             await ctx.send("You aren't marking for any realm clearing sessions!")
-
 
     @commands.command(usage="uneventspawn <event>", aliases=['ues'], description="Unmark an event spawn.")
     @commands.guild_only()
@@ -410,6 +434,12 @@ class Raiding(commands.Cog):
 
 def setup(client):
     client.add_cog(Raiding(client))
+
+
+defaultnames = ["darq", "deyst", "drac", "drol", "eango", "eashy", "eati", "eendi", "ehoni", "gharr", "iatho", "iawa", "idrae", "iri", "issz", "itani", "laen", "lauk", "lorz",
+                "oalei", "odaru", "oeti", "orothi", "oshyu", "queq", "radph", "rayr", "ril", "rilr", "risrr", "saylt", "scheev", "sek", "serl", "seus", "tal", "tiar", "uoro",
+                "urake", "utanu", "vorck", "vorv", "yangu", "yimi", "zhiar"]
+
 
 def parse_image(author, image, vc):
     file_bytes = np.asarray(bytearray(image.read()), dtype=np.uint8)
@@ -443,11 +473,12 @@ def parse_image(author, image, vc):
         print("INFO - Split String: ")
         print(split_str)
         embed = discord.Embed(title="Error!", description="Could not find the who command in the image you provided.\nPlease re-run the "
-                            "command with an image that shows the results of `/who`.", color=discord.Color.red())
+                                                          "command with an image that shows the results of `/who`.", color=discord.Color.red())
         return embed
     names = split_str[3].split(", ")
     cleaned_members = []
     alts = []
+
     def clean_member(m):
         if " | " in m:
             names = m.split(" | ")
@@ -458,6 +489,7 @@ def parse_image(author, image, vc):
                     alts.append(clean_name(name))
         else:
             cleaned_members.append(clean_name(m))
+
     def clean_name(n):
         return "".join(c for c in n if c.isalpha())
 
@@ -473,18 +505,19 @@ def parse_image(author, image, vc):
         if " " in name:
             names = name.split(" ")
             name = names[0]
-        if name.strip() not in cleaned_members:
-            matches = get_close_matches(name.strip(), cleaned_members, n=1, cutoff=0.6)
-            if len(matches) == 0:
-                if name.strip() not in alts:
-                    crashing.append(name.strip())
-            else:
-                if matches[0] not in cleaned_members:
-                    fixed_names.append((name.strip(), matches[0]))
+        if name.lower() not in defaultnames:
+            if name.strip() not in cleaned_members:
+                matches = get_close_matches(name.strip(), cleaned_members, n=1, cutoff=0.6)
+                if len(matches) == 0:
+                    if name.strip() not in alts:
+                        crashing.append(name.strip())
                 else:
-                    cleaned_members.remove(matches[0])
-        else:
-            cleaned_members.remove(name.strip())
+                    if matches[0] not in cleaned_members:
+                        fixed_names.append((name.strip(), matches[0]))
+                    else:
+                        cleaned_members.remove(matches[0])
+            else:
+                cleaned_members.remove(name.strip())
 
     for m in cleaned_members:
         if m != author:
@@ -508,3 +541,17 @@ def parse_image(author, image, vc):
     return embed
 
 
+def event_type(type):
+    event_types = {'ava': 'Avatar of the Forgotten King', 'avatar': 'Avatar of the Forgotten King', 'cube': 'Cube God',
+                   'cubegod': 'Cube God', 'gship': 'Ghost Ship', 'sphinx': 'Grand Sphinx', 'hermit': 'Hermit God', 'herm': 'Hermit God',
+                   'lotll': 'Lord of the Lost Lands', 'lord': 'Lord of the Lost Lands', 'pent': 'Pentaract', 'penta': 'Pentaract',
+                   'drag': 'Rock Dragon', 'rock': 'Rock Dragon', 'skull': 'Skull Shrine', 'shrine': 'Skull Shrine',
+                   'skullshrine': 'Skull Shrine', 'miner': 'Dwarf Miner', 'dwarf': 'Dwarf Miner', 'sentry': 'Lost Sentry',
+                   'nest': 'Killer Bee Hive', 'statues': 'Jade Statue'}
+    result = event_types.get(type, None)
+    if result is None:
+        matches = get_close_matches(type, event_types.keys(), n=1, cutoff=0.8)
+        if len(matches) == 0:
+            return None
+        return event_types.get(matches[0])
+    return result

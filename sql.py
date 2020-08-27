@@ -516,7 +516,7 @@ async def set_unactive(pool, gid, uid, ptype):
 async def mass_update_missed(pool, data):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
-            sql = "REPLACE INTO rotmg.missed_runs (uid, num_missed) VALUES (%s, %s)"
+            sql = "REPLACE INTO rotmg.missed_runs (uid, has_priority) VALUES (%s, %s)"
             await cursor.executemany(sql, data)
             await conn.commit()
 

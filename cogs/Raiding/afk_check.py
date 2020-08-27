@@ -116,8 +116,11 @@ class AfkCheck:
                                                     afk_check_base(self.dungeontitle, self.ctx.author, True, self.emojis, self.confirmreactions, self.rusher_emojis,
                                                                    self.afk_img, self.afk_color))
         else:
-            await self.hcmsg.clear_reactions()
-            await self.hcmsg.edit(content=f"@here `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} "
+            try:
+                await self.hcmsg.delete()
+            except discord.Forbidden or discord.NotFound:
+                pass
+            self.afkmsg = await self.hcchannel.send(content=f"@here `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} "
                                           f"in {self.vcchannel.name} (Converted from headcount)",
                                   embed=embeds.afk_check_base(self.dungeontitle, self.ctx.author, True, self.emojis, self.confirmreactions, self.rusher_emojis,
                                                               self.afk_img, self.afk_color))
@@ -126,7 +129,6 @@ class AfkCheck:
                 await pingmsg.delete()
             except discord.NotFound:
                 pass
-            self.afkmsg = self.hcmsg
         await self.afkmsg.pin()
 
         asyncio.get_event_loop().create_task(self.add_emojis())
@@ -298,6 +300,7 @@ class AfkCheck:
             await self.cpmsg.edit(embed=cp)
 
         elif str(payload.emoji) == "🛑":
+            self.autoendtask.cancel()
             await self.abort_afk(payload.member)
         elif str(payload.emoji) == "🗺️":
             embed = self.afkmsg.embeds[0]
