@@ -629,8 +629,6 @@ async def get_good_realms(client, max_pop, max_server_pop=70):
                                 total += data[r][s]['Population']
                                 if data[r][s]['Population'] > max_pop:
                                     del data[r][s]
-                                elif data[r][s]['Events'] < 4:
-                                    del data[r][s]
 
                             if total > max_server_pop:
                                 del data[r]
@@ -702,12 +700,12 @@ async def get_event_servers(client, type):
         return None
 
 
-servers = {"US" : ("USWest3", "USWest2", "USWest", "USSouthWest", "USSouth3", "USSouth2", "USSouth", "USNorthWest", "USMidWest2", "USMidWest", "USEast3", "USEast2", "USEast"),
-           "EU" : ("EUWest", "EUSouthWest", "EUSouth", "EUNorth2", "EUNorth", "EUEast")}
+servers = {"US" : ("USWest2", "USWest", "USSouthWest", "USSouth3", "USSouth2", "USSouth", "USNorthWest", "USMidWest2", "USMidWest", "USEast3", "USEast2", "USEast"),
+           "EU" : ("EUWest", "EUSouthWest", "EUSouth", "EUNorth2", "EUNorth")}
 
 def get_server(is_us=True):
     res = random.choice(servers["EU"]) if is_us else random.choice(servers["US"])
-    return res + " Nexus"
+    return res + random.choice([" Left", " Right"]) + " Bazzar"
 
 
 oryx_images = [
@@ -750,10 +748,12 @@ q_dungeons = {1: ("Oryx 3",
                    ("<:swordrune:737672554482761739>", 2),
                    ("<:shieldrune:737672554642276423>", 2),
                    ("<:helmrune:737673058722250782>", 2),
-                   ("<:puri:682205769973760001>", 2),
-                   ("<:mseal:682205755754938409>", 1),
-                   ("<:trickster:682214467483861023>", 3),
-                   ("<:Bard:735022210657550367>", 1)),
+                   ("<:puri:682205769973760001>", 4),
+                   ("<:mseal:682205755754938409>", 2),
+                   ("<:trickster:682214467483861023>", 2),
+                   ("<:Bard:735022210657550367>", 1),
+                   ("<:mystic:682205700918607969>", 2),
+                   ("<:wizard:711307534685962281>", 6)),
                   ("<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
                    "<:wizard:711307534685962281>", "<:Samurai:735022210682585098>"),
                  discord.Color.gold(),

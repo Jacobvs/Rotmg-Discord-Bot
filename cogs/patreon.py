@@ -374,28 +374,6 @@ class Patreon(commands.Cog):
             await ctx.send("Audio is already playing!")
 
 
-    @commands.command(usage='booga <encoded_text>', description='Decode booga text.')
-    async def booga(self, ctx, *, text):
-        try:
-            await ctx.message.delete()
-        except discord.Forbidden:
-            pass
-
-        bs = ""
-        for s in text.split(" - "):
-            for c in s.split(" "):
-                if c == "Ooga":
-                    bs += "0"
-                else:
-                    bs += "1"
-            bs += " "
-        try:
-            await ctx.author.send(f"Decoded text:\n{''.join([chr(int(binary, 2)) for binary in bs.split(' ') if binary])}")
-            await ctx.send(embed=discord.Embed(description="The decoded text has been sent to your DM's!"))
-        except discord.Forbidden:
-            await ctx.send("Please enable DM's to use this command!")
-
-
     @commands.command(usage='joke', description='Tell a joke.')
     async def joke(self, ctx):
         async with aiohttp.ClientSession() as cs:

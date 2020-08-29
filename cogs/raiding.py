@@ -17,7 +17,6 @@ from cogs.Raiding.afk_check import AfkCheck
 from cogs.Raiding.fametrain import FameTrain
 from cogs.Raiding.headcount import Headcount
 from cogs.Raiding.queue_afk import QAfk
-from cogs.Raiding.realm_select import RealmSelect
 from cogs.Raiding.realmclear import RealmClear
 from cogs.Raiding.vc_select import VCSelect
 
@@ -31,19 +30,12 @@ class Raiding(commands.Cog):
 
     @commands.command(usage='qafk', description="Start a Queue afk check for the location specified.")
     @commands.guild_only()
-    @commands.is_owner()
+    @checks.is_rl_or_higher_check()
     @commands.max_concurrency(1, per=BucketType.guild, wait=False)
     async def qafk(self, ctx):
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             return await ctx.send("You cannot start another AFK while an AFK check is still up or a run log has not been completed.")
 
-        rs = RealmSelect(self.client, ctx)
-        location = await rs.start()
-
-        if location is None:
-            return
-
-        is_us = True if 'us' in location.lower() else False
 
         setup = VCSelect(self.client, ctx, qafk=True)
         data = await setup.q_start()
@@ -52,28 +44,44 @@ class Raiding(commands.Cog):
         else:
             return
 
-        qafk = QAfk(self.client, ctx, location, hcchannel, raiderrole, rlrole, is_us)
+        qafk = QAfk(self.client, ctx, "Location has not been set yet.", hcchannel, raiderrole, rlrole, True)
         await qafk.start()
 
-    # @commands.command(usage='position', description="Check your position within the raiding queue!", aliases=['queue'])
-    # @commands.guild_only()
-    # async def position(self, ctx):
-    #     try:
-    #         await ctx.message.delete()
-    #     except discord.NotFound:
-    #         pass
-    #
-    #     index = None
-    #     for id in self.client.queues:
-    #         if ctx.author.id in self.client.queues[id]:
-    #             index = self.client.queues[id].index(ctx.author.id)+1
-    #             channel_id = id
-    #             break
-    #     if index:
-    #         d = self.client.queue_links[channel_id]
-    #         await ctx.send(f"{ctx.author.mention} - Your position in the Queue for {d[1].name} is **{index}**")
-    #     else:
-    #         await ctx.send(f"You are not currently in any raiding queues!")
+    @commands.command(usage='position', description="Check your position to join the next raid!", aliases=['queue'])
+    @commands.guild_only()
+    async def position(self, ctx):
+        try:
+            await ctx.message.delete()
+        except discord.NotFound:
+            pass
+
+        if ctx.author.id in self.client.active_raiders:
+            await ctx.send("You are currently in a raid! This command is used to check your position when waiting for a raid to start.")
+        elif ctx.author.id in self.client.morder[ctx.guild.id]:
+            d = self.client.morder[ctx.guild.id][ctx.author.id]
+            s = f"💎 - You are number {d[1]} in the **priority** queue." if d[0] else f"✅ - You are number {d[1]} in the **normal** queue."
+            s += f" {ctx.author.mention}"
+            await ctx.send(s)
+        else:
+            d = await sql.get_missed(self.client.pool, ctx.author.id)
+            if d[1]:
+                await ctx.send("💎 - You are not in a raid, but have priority queuing for the next run you want to join.")
+            else:
+                await ctx.send(f"You are not currently in a raid!")
+
+    @commands.command(usage='leaverun', description="Leave a run if you nexus")
+    @commands.guild_only()
+    async def leaverun(self, ctx):
+        try:
+            await ctx.message.delete()
+        except discord.NotFound:
+            pass
+
+        if ctx.author.id in self.client.active_raiders:
+            self.client.active_raiders.pop(ctx.author.id, None)
+            await ctx.send(f"{ctx.author.mention} - You have been removed from the raid.")
+        else:
+            await ctx.send(f"You are not currently in a raid or waiting for one!")
 
     @commands.command(usage="findloc", description="Find a good location to start an O3 run in.")
     @commands.guild_only()

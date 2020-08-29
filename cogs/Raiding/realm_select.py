@@ -14,7 +14,7 @@ class RealmSelect:
 
 
     async def start(self):
-        servers = await utils.get_good_realms(self.client)
+        servers = await utils.get_good_realms(self.client, max_pop=15)
         server_opts = {}
         if servers:
             desc = ""
@@ -57,6 +57,10 @@ class RealmSelect:
                     await msg.delete()
                     return await self.manual_location()
                 else:
+                    try:
+                        await msg.delete()
+                    except discord.Forbidden or discord.NotFound:
+                        pass
                     return server_opts[str(reaction.emoji)]
 
         else:

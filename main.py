@@ -114,9 +114,11 @@ queue_links = [(660347818061332481, 660347478620766227), (736226011733033041, 73
 def init_queues():
     bot.queue_links = {}
     bot.queues = {}
+    bot.morder = {}
     for i in queue_links:
         queue = bot.get_channel(i[0])
         bot.queues[i[0]] = []
+
         for m in queue.members:
             bot.queues[i[0]].append(m.id)
 
@@ -124,6 +126,8 @@ def init_queues():
 
         bot.queue_links[queue.id] = (queue, category)
         bot.queue_links[category.id] = (queue, category)
+    for g in bot.guilds:
+        bot.morder[g.id] = {}
 
 
 @bot.command(usage="resetqueues")

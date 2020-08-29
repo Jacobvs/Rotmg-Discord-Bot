@@ -528,7 +528,7 @@ async def get_all_missed(pool):
             data = await cursor.fetchall()
             return data
 
-async def get_n_missed(pool, uid):
+async def get_missed(pool, uid):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             sql = "SELECT * from rotmg.missed_runs WHERE uid = %s"
