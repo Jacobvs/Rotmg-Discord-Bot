@@ -2,6 +2,8 @@ import enum
 import json
 from datetime import datetime, timedelta
 
+import aiomysql
+
 
 async def get_user(pool, uid):
     """Return user data from rotmg.users table"""
@@ -74,6 +76,17 @@ async def get_all_patreons(pool):
             await cursor.execute(sql)
             data = await cursor.fetchall()
             return data
+
+async def change_username(pool, uid, newname):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "INSERT INTO rotmg.users (id, ign) VALUES (%s, %s) ON DUPLICATE KEY UPDATE ign = %s"
+            try:
+                await cursor.execute(sql, (uid, newname, newname))
+                await conn.commit()
+            except aiomysql.Error:
+                return False
+            return True
 
 async def add_alt_name(pool, uid, altname):
     async with pool.acquire() as conn:
@@ -424,7 +437,7 @@ async def get_log(pool, guild_id, member_id):
                 data = await cursor.fetchone()
             return data
 
-async def get_top_10_logs(pool, guild_id, column, only_10=True):
+async def get_top_10_logs(pool, guild_id, column, only_10=True, limit=None):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             name = "pkey" if column == 2 else "vials" if column == 3 else "helmrunes" if column == 4 else "shieldrunes" if column == 5 \
@@ -434,6 +447,8 @@ async def get_top_10_logs(pool, guild_id, column, only_10=True):
                 else 'ocompletes' if column == 17 else 'oattempts'
             if only_10:
                 await cursor.execute(f"SELECT * from rotmg.logging WHERE gid = {guild_id} ORDER BY {name} DESC LIMIT 10")
+            elif limit:
+                await cursor.execute(f"SELECT * from rotmg.logging WHERE gid = {guild_id} ORDER BY {name} DESC LIMIT {limit}")
             else:
                 await cursor.execute(f"SELECT * from rotmg.logging WHERE gid = {guild_id} ORDER BY {name} DESC")
             data = await cursor.fetchall()
@@ -501,16 +516,24 @@ async def set_unactive(pool, gid, uid, ptype):
 async def mass_update_missed(pool, data):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
-            sql = "REPLACE INTO rotmg.missed_runs (uid, gid, num_missed) VALUES (%s, %s, %s)"
+            sql = "REPLACE INTO rotmg.missed_runs (uid, has_priority) VALUES (%s, %s)"
             await cursor.executemany(sql, data)
             await conn.commit()
 
-async def get_all_missed(pool, gid):
+async def get_all_missed(pool):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
-            sql = "SELECT * FROM rotmg.missed_runs WHERE gid = %s"
-            await cursor.execute(sql, (gid,))
+            sql = "SELECT * FROM rotmg.missed_runs"
+            await cursor.execute(sql)
             data = await cursor.fetchall()
+            return data
+
+async def get_missed(pool, uid):
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cursor:
+            sql = "SELECT * from rotmg.missed_runs WHERE uid = %s"
+            await cursor.execute(sql, (uid,))
+            data = await cursor.fetchone()
             return data
 
 

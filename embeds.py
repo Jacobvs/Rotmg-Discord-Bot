@@ -197,7 +197,7 @@ def headcount_base(run_title, requester, keyed_run, emojis, rusher_emojis, thumb
         if len(rusher_emojis) > 1:
             desc += "\nIf you are able to rush, react to one of these emojis: " + "".join(rusher_emojis)
         else:
-            desc += "\nIf you are rushing, please react to: " + rusher_emojis[0]
+            desc += "\nPlease react to: " + rusher_emojis[0] + " if you are able to bring the class."
     embed = discord.Embed(description=desc, color=color)
     embed.set_author(name=f"Headcount for {run_title} started by {requester.nick}", icon_url=requester.avatar_url)
     embed.set_footer(text="Headcount started ")
@@ -319,10 +319,10 @@ def slots_help_embed():
                         .add_field(name="Winnings", value=":lemon: Lemon - **2x**\n:watermelon: Melon - **3x**\n:banana: Banana - **5x**"
                                                           "\n:cherries: Cherry - **10x**\n:gem: Diamond - **40x**\n"
                                                           "<:slot7:711843601369530458> 7's - **77x**", inline=False)\
-                        .add_field(name="Odds", value=":x: Lose - **74.9%** (Tickets 1-749)\n:lemon: Lemon - **13%** (750-879)"
-                                                      "\n:watermelon: Melon - **7%** (880-949)\n:banana: Banana - **3%** (950-979)"
-                                                          "\n:cherries: Cherry - **1.3%** (980-992)\n:gem: Diamond - **0.5%** (993-997)\n"
-                                                          "<:slot7:711843601369530458> 7's - **0.3%** (998-1000)", inline=False)\
+                        .add_field(name="Odds", value=":x: Lose - **76.9%** (Tickets 1-769)\n:lemon: Lemon - **12%** (770-889)"
+                                                      "\n:watermelon: Melon - **6%** (890-949)\n:banana: Banana - **3%** (950-979)"
+                                                          "\n:cherries: Cherry - **1.5%** (980-994)\n:gem: Diamond - **0.4%** (995-998)\n"
+                                                          "<:slot7:711843601369530458> 7's - **0.2%** (999-1000)", inline=False)\
                         .add_field(name="Usage", value="!slots <bet>", inline=False)
     return embed
 

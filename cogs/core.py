@@ -27,6 +27,13 @@ class Core(commands.Cog):
     def __init__(self, client):
         self.client = client
 
+    @commands.command(usage='setcreds <member> <num>', description="Set someone's casino credits")
+    @checks.is_bot_owner()
+    async def setcreds(self, ctx, member: utils.MemberLookupConverter, amount: int):
+        await sql.change_balance(self.client.pool, ctx.guild.id, member.id, amount)
+        embed = discord.Embed(title='Sucess!', description=f"{member.mention}'s balance was set to: **{amount:,}** credits.", color=discord.Color.green())
+        await ctx.send(embed=embed)
+
     @commands.command(usage='patreon', description='Show patreon info.')
     async def patreon(self, ctx):
         is_patreon = await sql.get_patreon_status(self.client.pool, ctx.author.id)
@@ -198,12 +205,12 @@ class Core(commands.Cog):
                         value=f"**`{len(self.client.guilds)}`** servers with **`{mcount}`** total members.")
         embed.add_field(name="\u200b", value="\u200b")
         embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.")
-        lines = line_count('/home/pi/Rotmg-Bot/') + line_count('/home/pi/Rotmg-Bot/cogs') + line_count(
-            '/home/pi/Rotmg-Bot/cogs/Raiding') + line_count('/home/pi/Rotmg-Bot/cogs/Minigames')
+        lines = line_count('/home/jacobvs/Rotmg-Discord-Bot/') + line_count('/home/jacobvs/Rotmg-Discord-Bot/cogs') + line_count(
+            '/home/jacobvs/Rotmg-Discord-Bot/cogs/Raiding') + line_count('/home/jacobvs/Rotmg-Discord-Bot/cogs/Minigames')
         embed.add_field(name="Lines of Code:", value=(f"**`{lines}`** lines of code."))
         embed.add_field(name="\u200b", value="\u200b")
         embed.add_field(name="Server Status:",
-                        value=(f"```yaml\nServer: 0 GHz Potato\nCPU: {psutil.cpu_percent()}% utilization."
+                        value=(f"```yaml\nServer: AWS Compute (Ubuntu 18.04)\nCPU: {psutil.cpu_percent()}% utilization."
                                f"\nMemory: {psutil.virtual_memory().percent}% utilization."
                                f"\nDisk: {psutil.disk_usage('/').percent}% utilization."
                                f"\nNetwork: {round(psutil.net_io_counters().bytes_recv*0.000001)} MB in "
@@ -428,60 +435,62 @@ class Core(commands.Cog):
     #     for m in role.members:
     #         await ctx.send(m.mention)
 
-    # @commands.Cog.listener()
-    # async def on_voice_state_update(self, member, before, after):
-    #     # joins
-    #     if not before.channel and after.channel:
-    #         if after.channel.id in self.client.queues:
-    #             if member.id not in self.client.queues[after.channel.id]:
-    #                 await self.join_queue(member, before.channel, after.channel)
-    #                 # print(f"++++ {member} was added to the queue at position {len(self.client.queues[after.channel.id])} ++++")
-    #     #leaves
-    #     elif before.channel and not after.channel:
-    #         if before.channel.id in self.client.queues:
-    #             if member.id in self.client.queues[before.channel.id]:
-    #                 await self.leave_queue(member, before.channel, dc=True)
-    #                 # print(f"---- {member} was removed from the queue -----")
-    #     # moves
-    #     elif before.channel.id != after.channel.id:
-    #         if before.channel.id in self.client.queues and after.channel.id in self.client.queues:
-    #             if member.id in self.client.queues[before.channel.id]:
-    #                 await self.leave_queue(member, before.channel)
-    #             if member.id not in self.client.queues[after.channel.id]:
-    #                 await self.join_queue(member, before.channel, after.channel)
-    #             # print(f"???? {member} switched queues & was added to queue at position {len(self.client.queues[after.channel.id])} ????")
-    #         elif after.channel.id in self.client.queues:
-    #             if before.channel.id not in self.client.queues and member.id not in self.client.queues[after.channel.id]:
-    #                 await self.join_queue(member, before.channel, after.channel)
-    #                 # print(f"++++ {member} was added to the queue at position {len(self.client.queues[after.channel.id])} ++++")
-    #         elif before.channel.id in self.client.queues:
-    #             if after.channel.id not in self.client.queues and member.id in self.client.queues[before.channel.id]:
-    #                 await self.leave_queue(member, before.channel)
-    #                 # print(f"---- {member} was removed from the queue -----")
-    #
-    # # TODO: Check for member in active raid, if so -> move them back to raid channel
-    # async def join_queue(self, member, before_channel, after_channel):
-    #     if member.id in self.client.active_raiders:
-    #         raidid = self.client.active_raiders[member.id]
-    #         await member.move_to(self.client.qraid_vcs[raidid])
-    #         await member.send("You are currently still in a raid! Please wait until the raid ends to re-join the queue!")
-    #     else:
-    #         if member.id not in self.client.queues[after_channel.id]:
-    #             self.client.queues[after_channel.id].append(member.id)
-    #
-    # async def leave_queue(self, member, bchannel, dc=False):
-    #     # if dc:
-    #     #     await member.send("You have left the raiding queue! If this was a mistake, you have 30s to re-join queue or your position will be lost!")
-    #     #     def vc_check(mem, before, after):
-    #     #         return mem == member and after is not None and after.channel == bchannel
-    #     #     try:
-    #     #         m, b, a = await self.client.wait_for('voice_state_update', timeout=30, check=vc_check)
-    #     #     except asyncio.TimeoutError:
-    #     #         self.client.queues[bchannel.id].remove(member.id)
-    #     #         return await member.send(f"You didn't join the `{bchannel.name}` VC in time! Your position has been lost.")
-    #     #     else:
-    #     #         return
-    #     self.client.queues[bchannel.id].remove(member.id)
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        # joins
+        if not before.channel and after.channel:
+            if after.channel.id in self.client.queues:
+                if member.id not in self.client.queues[after.channel.id]:
+                    await self.join_queue(member, before.channel, after.channel)
+                    # print(f"++++ {member} was added to the queue at position {len(self.client.queues[after.channel.id])} ++++")
+        #leaves
+        elif before.channel and not after.channel:
+            if before.channel.id in self.client.queues:
+                if member.id in self.client.queues[before.channel.id]:
+                    await self.leave_queue(member, before.channel, dc=True)
+                    # print(f"---- {member} was removed from the queue -----")
+        # moves
+        elif before.channel.id != after.channel.id:
+            if before.channel.id in self.client.queues and after.channel.id in self.client.queues:
+                if member.id in self.client.queues[before.channel.id]:
+                    await self.leave_queue(member, before.channel)
+                if member.id not in self.client.queues[after.channel.id]:
+                    await self.join_queue(member, before.channel, after.channel)
+                # print(f"???? {member} switched queues & was added to queue at position {len(self.client.queues[after.channel.id])} ????")
+            elif after.channel.id in self.client.queues:
+                if before.channel.id not in self.client.queues and member.id not in self.client.queues[after.channel.id]:
+                    await self.join_queue(member, before.channel, after.channel)
+                    # print(f"++++ {member} was added to the queue at position {len(self.client.queues[after.channel.id])} ++++")
+            elif before.channel.id in self.client.queues:
+                if after.channel.id not in self.client.queues and member.id in self.client.queues[before.channel.id]:
+                    await self.leave_queue(member, before.channel)
+                    # print(f"---- {member} was removed from the queue -----")
+
+    # TODO: Check for member in active raid, if so -> move them back to raid channel
+    async def join_queue(self, member, before_channel, after_channel):
+        if member.id in self.client.active_raiders:
+            raidid = self.client.active_raiders[member.id]
+            channel = self.client.get_channel(raidid)
+            if channel:
+                await member.move_to(channel)
+            await member.send("You have been moved back to the raiding VC as the raid is still ongoing.")
+        else:
+            if member.id not in self.client.queues[after_channel.id]:
+                self.client.queues[after_channel.id].append(member.id)
+
+    async def leave_queue(self, member, bchannel, dc=False):
+        # if dc:
+        #     await member.send("You have left the raiding queue! If this was a mistake, you have 30s to re-join queue or your position will be lost!")
+        #     def vc_check(mem, before, after):
+        #         return mem == member and after is not None and after.channel == bchannel
+        #     try:
+        #         m, b, a = await self.client.wait_for('voice_state_update', timeout=30, check=vc_check)
+        #     except asyncio.TimeoutError:
+        #         self.client.queues[bchannel.id].remove(member.id)
+        #         return await member.send(f"You didn't join the `{bchannel.name}` VC in time! Your position has been lost.")
+        #     else:
+        #         return
+        self.client.queues[bchannel.id].remove(member.id)
 
 
 

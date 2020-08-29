@@ -153,6 +153,16 @@ class ParseLog:
                     await self.channel.send(embed=embed, delete_after=15)
                     await msg.delete()
                     continue
+                converter = utils.MemberLookupConverter()
+                _mems = []
+                ctx = commands.Context(bot=self.client, prefix="!", guild=self.guild, message=msg)
+                for n in members:
+                    try:
+                        m = await converter.convert(ctx, n)
+                        _mems.append(m)
+                    except discord.ext.commands.BadArgument:
+                        pass
+                members = _mems
                 break
 
         await msg.delete()
@@ -373,6 +383,7 @@ def parse_image(image, member_list):
                     completed.append(cleaned_members[matches[0]])
         else:
             completed.append(cleaned_members[name.strip().lower()])
+
 
 
     return completed

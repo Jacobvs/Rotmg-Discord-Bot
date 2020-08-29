@@ -101,7 +101,14 @@ FYI - Code & the command writeup may be a bit outdated, I'll do my best to updat
 ⇒ Permissions Needed: Administrator permission  
 ⇒ Examples  
     - `!change_prefix +`  
-  
+
+***Change Name***: `!changename <user> <newname>`  
+⇒ Description: Changes the name of a user for all guilds
+⇒ Aliases: `None`  
+⇒ Permissions Needed: @Raid Leader + @Security or higher  
+⇒ Examples  
+    - `!changename seems arceye`
+
 ***Find***: `!find <user>`  
 ⇒ Description: Find someone in the discord  
 ⇒ Aliases: `None`  

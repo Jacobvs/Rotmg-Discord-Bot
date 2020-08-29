@@ -71,6 +71,7 @@ class Headcount:
             self.emojis = ["<:defaultdungeon:682212333182910503>", "<:trickster:682214467483861023>", "<:Warrior_1:585616162407186433>",
                            "<:ninja_3:585616162151202817>"]
             self.rusher_emojis = ["<:planewalker:682212363889279091>"]
+            self.confirmreactions = []
             self.hc_color = discord.Color.from_rgb(20, 125, 236)
             self.thumbnail = "https://www.realmeye.com/forum/uploads/default/original/1X/842ee5c4e569c7b7c1b0bf688e465a7435235fc8.png"
         elif num == 62:
@@ -78,6 +79,7 @@ class Headcount:
             self.emojis = ["<:fame:682209281722024044>", "<:sorcerer:682214487490560010>", "<:necromancer:682214503106215966>",
                            "<:sseal:683815374403141651>", "<:puri:682205769973760001>"]
             self.rusher_emojis = []
+            self.confirmreactions = []
             self.hc_color = discord.Color.from_rgb(233, 127, 33)
             self.thumbnail = "https://cdn.discordapp.com/attachments/679309966128971797/696452960825376788/fame2.png"
         else:

@@ -4,10 +4,12 @@ import difflib
 import logging
 import random
 import re
+import time
 from enum import Enum
 
 import aiohttp
 import discord
+import humanfriendly as humanfriendly
 import numpy as np
 from discord.embeds import _EmptyEmbed
 from discord.ext.commands import BadArgument, Converter
@@ -128,7 +130,8 @@ class EmbedPaginator:
                 except asyncio.TimeoutError:
                     return await self.end_pagination(msg)
 
-                await msg.remove_reaction(reaction.emoji, self.ctx.author)
+                if msg.guild:
+                    await msg.remove_reaction(reaction.emoji, self.ctx.author)
                 timeleft = 300 - (datetime.datetime.utcnow() - starttime).seconds
                 if str(reaction.emoji) == "⬅️":
                     if pagenum == 0:
@@ -607,12 +610,102 @@ async def image_upload(binary, sendable, is_rc=True):
     return res
 
 
-servers = {"US" : ("USWest3", "USWest2", "USWest", "USSouthWest", "USSouth3", "USSouth2", "USSouth", "USNorthWest", "USMidWest2", "USMidWest", "USEast3", "USEast2", "USEast"),
-           "EU" : ("EUWest", "EUSouthWest", "EUSouth", "EUNorth2", "EUNorth", "EUEast")}
+blacklisted_servers = ['uswest3', 'uswest', 'euwest', 'eueast', 'ussouth3', 'australia', 'asiaeast', 'asiasoutheast']
+semi_blacklisted = ['uswest3', 'australia', 'asiasoutheast', 'asiaeast']
+async def get_good_realms(client, max_pop, max_server_pop=70):
+    blacklist = semi_blacklisted if max_pop > 10 else blacklisted_servers
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
+            async with cs.request("GET", 'http://www.nebulanotifier.com/api/get/all', headers={'Authorization': client.nebula_token}) as r:
+                if r.status == 200:
+                    data = await r.json()
+                    if data:
+                        for r in list(data.keys()):
+                            if r.lower() in blacklist:
+                                del data[r]
+                                continue
+                            total = 0
+                            for s in list(data[r].keys()):
+                                total += data[r][s]['Population']
+                                if data[r][s]['Population'] > max_pop:
+                                    del data[r][s]
+
+                            if total > max_server_pop:
+                                del data[r]
+                                continue
+
+                        usdata = {}
+                        eudata = {}
+                        for r in data:
+                            for s in data[r]:
+                                stime = humanfriendly.format_timespan(int(time.time() - (data[r][s]['Timestamp']/1000)))
+                                if 'US' == r[:2]:
+                                    usdata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
+                                                          'Time': stime}
+                                else:
+                                    eudata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
+                                                          'Time': stime}
+
+                        import json
+                        d = sorted(usdata, key=lambda x: usdata[x]['Events'])
+                        d = d[:4]
+                        d2 = []
+                        for s in d:
+                            d2.append((s, usdata[s]['Population'], usdata[s]['Events'], usdata[s]['Curr_Event'], usdata[s]['Time']))
+                        usdata = d2
+                        d = sorted(eudata, key=lambda x: eudata[x]['Events'])
+                        d = d[:4]
+                        d2 = []
+                        for s in d:
+                            d2.append((s, eudata[s]['Population'], eudata[s]['Events'], eudata[s]['Curr_Event'], eudata[s]['Time']))
+                        eudata = d2
+                        return usdata, eudata
+
+                return None
+    except asyncio.TimeoutError:
+        return None
+
+
+async def get_event_servers(client, type):
+    type = type.strip().lower()
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
+            async with cs.request("GET", 'http://www.nebulanotifier.com/api/get/all', headers={'Authorization': client.nebula_token}) as r:
+                if r.status == 200:
+                    data = await r.json()
+                    if data:
+                        for r in list(data.keys()):
+                            for s in list(data[r].keys()):
+                                if data[r][s]['Event'].strip().lower() != type:
+                                    del data[r][s]
+
+                        datad = {}
+                        for r in data:
+                            for s in data[r]:
+                                datad[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
+                                                          'Timestamp': data[r][s]['Timestamp']/1000}
+
+                        import json
+                        d = sorted(datad, key=lambda x: datad[x]['Timestamp'], reverse=True)
+                        d = d[:8]
+                        d2 = []
+                        for s in d:
+                            d2.append((s, datad[s]['Population'], datad[s]['Events'], datad[s]['Curr_Event'],
+                                       humanfriendly.format_timespan(int(time.time() - (datad[s]['Timestamp'])))))
+                        data = d2
+                        return data
+
+                return None
+    except asyncio.TimeoutError:
+        return None
+
+
+servers = {"US" : ("USWest2", "USWest", "USSouthWest", "USSouth3", "USSouth2", "USSouth", "USNorthWest", "USMidWest2", "USMidWest", "USEast3", "USEast2", "USEast"),
+           "EU" : ("EUWest", "EUSouthWest", "EUSouth", "EUNorth2", "EUNorth")}
 
 def get_server(is_us=True):
     res = random.choice(servers["EU"]) if is_us else random.choice(servers["US"])
-    return res + " Nexus"
+    return res + random.choice([" Left", " Right"]) + " Bazzar"
 
 
 oryx_images = [
@@ -655,10 +748,12 @@ q_dungeons = {1: ("Oryx 3",
                    ("<:swordrune:737672554482761739>", 2),
                    ("<:shieldrune:737672554642276423>", 2),
                    ("<:helmrune:737673058722250782>", 2),
-                   ("<:puri:682205769973760001>", 2),
-                   ("<:mseal:682205755754938409>", 1),
-                   ("<:trickster:682214467483861023>", 3),
-                   ("<:Bard:735022210657550367>", 1)),
+                   ("<:puri:682205769973760001>", 4),
+                   ("<:mseal:682205755754938409>", 2),
+                   ("<:trickster:682214467483861023>", 2),
+                   ("<:Bard:735022210657550367>", 1),
+                   ("<:mystic:682205700918607969>", 2),
+                   ("<:wizard:711307534685962281>", 6)),
                   ("<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
                    "<:wizard:711307534685962281>", "<:Samurai:735022210682585098>"),
                  discord.Color.gold(),
@@ -679,7 +774,7 @@ dungeons = {1: ("Oryx 3", ["<:oryx3:711426860051071067>", "<:WineCellarInc:70819
                            "<:shieldrune:737672554642276423>", "<:helmrune:737673058722250782>", "<:warrior:682204616997208084>",
                            "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
                            "<:Bard:735022210657550367>"],
-                ["<:puri:682205769973760001>", "<:mseal:682205755754938409>", "<:slow_icon:678792068965072906>", "<:SnakeOil:733724221137616920>"],
+                ["<:puri:682205769973760001>", "<:mseal:682205755754938409>", "<:slow_icon:678792068965072906>", "<:mystic:682205700918607969>"],
                 ["<:trickster:682214467483861023>"],
                 discord.Color.gold(),
                 "https://cdn.discordapp.com/attachments/561246036870430770/708192230468485150/oryx_3_w.png"),

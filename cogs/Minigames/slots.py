@@ -24,17 +24,17 @@ class Slots:
 
     async def play(self):
         self.gamemsg = await self.ctx.send(embed=self.gameembed)
-        self.ticket = random.randint(1, 1001)
+        self.ticket = random.randint(1, 1000)
         self.board = self.rand_board()
         self.mult = 0
-        if self.ticket > 749:
+        if self.ticket > 769:
             self.winner = True
-            num = 0 if self.ticket < 880 else 1 if self.ticket < 950 else 2 if self.ticket < 979 else 3 if self.ticket < 994 \
-                else 4 if self.ticket < 998 else 5
+            num = 0 if self.ticket < 890 else 1 if self.ticket < 950 else 2 if self.ticket < 979 else 3 if self.ticket < 994 \
+                else 4 if self.ticket < 999 else 5
             self.winnerE = self.emojis[num]
             self.row = [self.winnerE, self.winnerE, self.winnerE]
-            self.mult = 1 if self.ticket < 880 else 2 if self.ticket < 950 else 4 if self.ticket < 979 else 9 if self.ticket < 993 else \
-                39 if self.ticket < 998 else 76
+            self.mult = 1 if self.ticket < 890 else 2 if self.ticket < 950 else 4 if self.ticket < 979 else 9 if self.ticket < 995 else \
+                39 if self.ticket < 999 else 76
             self.winA = int(self.bet*self.mult)
         else:
             self.row = [self.rand_emoji(), self.rand_emoji(), self.rand_emoji()]
@@ -57,7 +57,7 @@ class Slots:
         if self.winner is True:
             await sql.change_balance(self.client.pool, self.ctx.guild.id, self.user.id, self.balance+self.winA)
             self.gameembed.color = discord.Color.gold() if self.mult >= 38 else discord.Color.green()
-            self.gameembed.description = "Slots - **JACKPOT!**" if self.mult >= 60 else "Slots - **You Won!**"
+            self.gameembed.description = "Slots - **JACKPOT!**" if self.mult >= 30 else "Slots - **You Won!**"
             self.gameembed.set_field_at(1, name="Bet", value=f"**+{self.winA+self.bet:,}** credits (x{self.mult+1})", inline=False)
             self.gameembed.add_field(name="Balance", value=f"**{self.balance+self.winA:,}** credits.", inline=False)
         else:
@@ -67,7 +67,7 @@ class Slots:
             self.gameembed.set_field_at(1, name="Bet", value=f"**-{self.bet:,}** credits", inline=False)
             self.gameembed.add_field(name="Balance", value=f"**{self.balance-self.bet:,}** credits.", inline=False)
         self.gameembed.set_footer(text=f"Your Ticket was {self.ticket}")
-        if self.mult >= 60:
+        if self.mult >= 30:
             self.gameembed.set_thumbnail(url="https://media3.giphy.com/media/NsAXBSpx0MJ6IBDCPY/source.gif")
             await self.gamemsg.edit(content=f"{self.ctx.author.mention}", embed=self.gameembed)
         else:

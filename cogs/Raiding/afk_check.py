@@ -107,7 +107,8 @@ class AfkCheck:
             await self.setup_msg.delete()
         except discord.NotFound:
             pass
-        await self.vcchannel.set_permissions(self.raiderrole, connect=True, view_channel=True, speak=False)
+        if self.raiderrole:
+            await self.vcchannel.set_permissions(self.raiderrole, connect=True, view_channel=True, speak=False)
 
         if not convert_from_hc:
             self.afkmsg = await self.hcchannel.send(f"@here `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} "
@@ -115,8 +116,11 @@ class AfkCheck:
                                                     afk_check_base(self.dungeontitle, self.ctx.author, True, self.emojis, self.confirmreactions, self.rusher_emojis,
                                                                    self.afk_img, self.afk_color))
         else:
-            await self.hcmsg.clear_reactions()
-            await self.hcmsg.edit(content=f"@here `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} "
+            try:
+                await self.hcmsg.delete()
+            except discord.Forbidden or discord.NotFound:
+                pass
+            self.afkmsg = await self.hcchannel.send(content=f"@here `{self.dungeontitle}` {self.emojis[0]} started by {self.ctx.author.mention} "
                                           f"in {self.vcchannel.name} (Converted from headcount)",
                                   embed=embeds.afk_check_base(self.dungeontitle, self.ctx.author, True, self.emojis, self.confirmreactions, self.rusher_emojis,
                                                               self.afk_img, self.afk_color))
@@ -125,7 +129,6 @@ class AfkCheck:
                 await pingmsg.delete()
             except discord.NotFound:
                 pass
-            self.afkmsg = self.hcmsg
         await self.afkmsg.pin()
 
         asyncio.get_event_loop().create_task(self.add_emojis())
@@ -165,88 +168,102 @@ class AfkCheck:
                         await payload.member.edit(voice_channel=self.vcchannel)
                     except discord.Forbidden:
                         pass
-
-            elif emote == '<:shard:682365548465487965>':
-                if payload.member.premium_since is not None or payload.member.top_role >= self.rlrole or \
-                        (True if (self.firstpopperrole in payload.member.roles and self.firstpopperrole and self.firstpopperearlyloc)
-                         or (self.secondpopperrole in payload.member.roles and self.secondpopperrole and self.secondpopperearlyloc)
-                         or (self.thirdpopperrole in payload.member.roles and self.thirdpopperrole and self.thirdpopperearlyloc)
-                         or (self.firstrunerole in payload.member.roles and self.firstrunerole and self.firstruneearlyloc)
-                         or (self.secondrunerole in payload.member.roles and self.secondrunerole and self.secondruneearlyloc)
-                         else False) and payload.member not in self.nitroboosters:
-                    if len(self.nitroboosters) > 5:
-                        return await payload.member.send("We already have 6 Nitro Boosters for this run. Wait for the RL to call location.")
-                    if payload.member not in self.patreons:
-                        await payload.member.send(f"Confirmed {payload.emoji}. The location for this run is:\n***{self.location}***\nPlease get to the location soon.")
-                        if payload.member not in self.userswloc:
-                            self.userswloc.append(payload.member)
-                        if payload.member not in self.nitroboosters:
-                            self.nitroboosters.append(payload.member)
-                        cp = self.cpmsg.embeds[0]
-                        cp.set_field_at(1, name="Nitro Boosters:", value=" | ".join([m.mention for m in self.nitroboosters]), inline=False)
-                        await self.cpmsg.edit(embed=cp)
-            elif emote == '<:patreon:736944176469508118>':
-                if payload.member not in self.patreons:
-                    is_patreon = payload.member.id in self.client.patreon_ids
-                    if is_patreon and payload.member not in self.nitroboosters:
+            else:
+                if emote == '<:shard:682365548465487965>':
+                    if self.ctx.guild.id == 660344559074541579:
+                        await self.afkmsg.remove_reaction(payload.emoji, payload.member)
+                    if payload.member.premium_since is not None or payload.member.top_role >= self.rlrole or \
+                            (True if (self.firstpopperrole in payload.member.roles and self.firstpopperrole and self.firstpopperearlyloc)
+                             or (self.secondpopperrole in payload.member.roles and self.secondpopperrole and self.secondpopperearlyloc)
+                             or (self.thirdpopperrole in payload.member.roles and self.thirdpopperrole and self.thirdpopperearlyloc)
+                             or (self.firstrunerole in payload.member.roles and self.firstrunerole and self.firstruneearlyloc)
+                             or (self.secondrunerole in payload.member.roles and self.secondrunerole and self.secondruneearlyloc)
+                             else False) and payload.member not in self.nitroboosters:
+                        if len(self.nitroboosters) > 5:
+                            return await payload.member.send("We already have 6 Nitro Boosters for this run. Wait for the RL to call location.")
                         if payload.member not in self.patreons:
-                            self.patreons.append(payload.member)
-                        if payload.member not in self.userswloc:
-                            self.userswloc.append(payload.member)
-                        await payload.member.send(f"Confirmed {payload.emoji}. The location for this run is:\n***{self.location}***\nPlease get to the location soon.")
-                        cp = self.cpmsg.embeds[0]
-                        cp.set_field_at(2, name="Patreons:", value=" | ".join([m.mention for m in self.patreons]), inline=False)
-                        await self.cpmsg.edit(embed=cp)
-            elif emote == "❌" and payload.member.top_role >= self.rlrole:
-                self.autoendtask.cancel()
-                return await self.post_afk(False, payload.member)
-            elif emote == self.emojis[1]:
-                if payload.member not in self.keyreacts:
-                    await self.dm_handler(emote, payload.member,
-                                          f"Do you have a key you are willing to pop for this run? If so react to the {self.emojis[1]}"
-                                          " emoji.", confirm_list=self.keyreacts, key=True)
-            elif self.dungeontitle == "Void" or self.dungeontitle == "Full-Skip Void":
-                if emote == '<:vial:682205784524062730>':
-                    if payload.member not in self.vials:
-                        await self.dm_handler("<:vial:682205784524062730>", payload.member,
-                                              "Do you have a vial you are willing to pop for this run? If so react to the "
-                                              "<:vial:682205784524062730> emoji.", confirm_list=self.vials, vial=True)
-            elif self.dungeontitle == "Oryx 3":
-                if emote == "<:swordrune:737672554482761739>":
-                    if payload.member not in self.swordrunes:
-                        await self.dm_handler("<:swordrune:737672554482761739>", payload.member,
-                                              "Do you have a Sword Rune you are willing to pop for this run? If so react to the "
-                                              "<:swordrune:737672554482761739> emoji.",
-                                              confirm_list=self.swordrunes, sword=True)
-                elif emote == "<:shieldrune:737672554642276423>":
-                    if payload.member not in self.shieldrunes:
-                        await self.dm_handler("<:shieldrune:737672554642276423>", payload.member,
-                                              "Do you have a Shield Rune you are willing to pop for this run? "
-                                              "If so react to the <:shieldrune:737672554642276423> emoji.",
-                                              confirm_list=self.shieldrunes, shield=True)
-                elif emote == "<:helmrune:737673058722250782>":
-                    if payload.member not in self.helmrunes:
-                        await self.dm_handler("<:helmrune:737673058722250782>", payload.member,
-                                              "Do you have a Helm Rune you are willing to pop for this run? If so react to the "
-                                              "<:helmrune:737673058722250782> emoji.", confirm_list=self.helmrunes, helm=True)
-            if emote in self.confirmreactions:
-                await self.dm_handler(emote, payload.member, f"Please confirm your reaction by pressing: {payload.emoji}.", confirm_list=self.confirmedreactions,
-                                      confirm_emoji=True)
-            if emote in self.rusher_emojis:
-                if self.numrushers < self.maxrushers:
-                    if self.guild_db[sql.gld_cols.rusherrole] and not self.guild_db[sql.gld_cols.rusherrole] in payload.member.roles:
-                        return await payload.member.send("You don't have the required rusher role to get early location. Feel free to rush "
-                                                         "regardless and ask an rl to give you the rusher role after – "
-                                                         "or pm the RL to ask for location.")
-                    if self.dungeontitle == "Oryx 3":
-                        desc = f"Are you able to bring a trickster & know how to use it properly? If so - react to the: {payload.emoji}."
-                    else:
-                        desc = f"Are you willing & able to rush for this run? If so, react to the {payload.emoji} emoji."
+                            await payload.member.send(f"Confirmed {payload.emoji}. The location for this run is:\n***{self.location}***\nPlease get to the location soon.")
+                            if payload.member not in self.userswloc:
+                                self.userswloc.append(payload.member)
+                            if payload.member not in self.nitroboosters:
+                                self.nitroboosters.append(payload.member)
+                            cp = self.cpmsg.embeds[0]
+                            cp.set_field_at(1, name="Nitro Boosters:", value=" | ".join([m.mention for m in self.nitroboosters]), inline=False)
+                            await self.cpmsg.edit(embed=cp)
+                elif emote == '<:patreon:736944176469508118>':
+                    if self.ctx.guild.id == 660344559074541579:
+                        await self.afkmsg.remove_reaction(payload.emoji, payload.member)
+                    if payload.member not in self.patreons:
+                        is_patreon = payload.member.id in self.client.patreon_ids
+                        if is_patreon and payload.member not in self.nitroboosters:
+                            if payload.member not in self.patreons:
+                                self.patreons.append(payload.member)
+                            if payload.member not in self.userswloc:
+                                self.userswloc.append(payload.member)
+                            await payload.member.send(f"Confirmed {payload.emoji}. The location for this run is:\n***{self.location}***\nPlease get to the location soon.")
+                            cp = self.cpmsg.embeds[0]
+                            cp.set_field_at(2, name="Patreons:", value=" | ".join([m.mention for m in self.patreons]), inline=False)
+                            await self.cpmsg.edit(embed=cp)
+                elif emote == "❌" and payload.member.top_role >= self.rlrole:
+                    self.autoendtask.cancel()
+                    return await self.post_afk(False, payload.member)
+                elif emote == self.emojis[1]:
+                    if payload.member not in self.keyreacts:
+                        await self.dm_handler(emote, payload.member,
+                                              f"Do you have a key you are willing to pop for this run? If so react to the {self.emojis[1]}"
+                                              " emoji.", confirm_list=self.keyreacts, key=True)
+                elif self.dungeontitle == "Void" or self.dungeontitle == "Full-Skip Void":
+                    if emote == '<:vial:682205784524062730>':
+                        if payload.member not in self.vials:
+                            await self.dm_handler("<:vial:682205784524062730>", payload.member,
+                                                  "Do you have a vial you are willing to pop for this run? If so react to the "
+                                                  "<:vial:682205784524062730> emoji.", confirm_list=self.vials, vial=True)
+                elif self.dungeontitle == "Oryx 3":
+                    if emote == "<:swordrune:737672554482761739>":
+                        if self.ctx.guild.id == 660344559074541579:
+                            await self.afkmsg.remove_reaction(payload.emoji, payload.member)
+                        if payload.member not in self.swordrunes:
+                            await self.dm_handler("<:swordrune:737672554482761739>", payload.member,
+                                                  "Do you have a Sword Rune you are willing to pop for this run? If so react to the "
+                                                  "<:swordrune:737672554482761739> emoji.",
+                                                  confirm_list=self.swordrunes, sword=True)
+                    elif emote == "<:shieldrune:737672554642276423>":
+                        if self.ctx.guild.id == 660344559074541579:
+                            await self.afkmsg.remove_reaction(payload.emoji, payload.member)
+                        if payload.member not in self.shieldrunes:
+                            await self.dm_handler("<:shieldrune:737672554642276423>", payload.member,
+                                                  "Do you have a Shield Rune you are willing to pop for this run? "
+                                                  "If so react to the <:shieldrune:737672554642276423> emoji.",
+                                                  confirm_list=self.shieldrunes, shield=True)
+                    elif emote == "<:helmrune:737673058722250782>":
+                        if self.ctx.guild.id == 660344559074541579:
+                            await self.afkmsg.remove_reaction(payload.emoji, payload.member)
+                        if payload.member not in self.helmrunes:
+                            await self.dm_handler("<:helmrune:737673058722250782>", payload.member,
+                                                  "Do you have a Helm Rune you are willing to pop for this run? If so react to the "
+                                                  "<:helmrune:737673058722250782> emoji.", confirm_list=self.helmrunes, helm=True)
+                if emote in self.confirmreactions:
+                    if self.ctx.guild.id == 660344559074541579:
+                        await self.afkmsg.remove_reaction(payload.emoji, payload.member)
+                    await self.dm_handler(emote, payload.member, f"Please confirm your reaction by pressing: {payload.emoji}.", confirm_list=self.confirmedreactions,
+                                          confirm_emoji=True)
+                if emote in self.rusher_emojis:
+                    if self.ctx.guild.id == 660344559074541579:
+                        await self.afkmsg.remove_reaction(payload.emoji, payload.member)
+                    if self.numrushers < self.maxrushers:
+                        if self.guild_db[sql.gld_cols.rusherrole] and not self.guild_db[sql.gld_cols.rusherrole] in payload.member.roles:
+                            return await payload.member.send("You don't have the required rusher role to get early location. Feel free to rush "
+                                                             "regardless and ask an rl to give you the rusher role after – "
+                                                             "or pm the RL to ask for location.")
+                        if self.dungeontitle == "Oryx 3":
+                            desc = f"Are you able to bring a trickster & know how to use it properly? If so - react to the: {payload.emoji}."
+                        else:
+                            desc = f"Are you willing & able to rush for this run? If so, react to the {payload.emoji} emoji."
 
-                    await self.dm_handler(emote, payload.member, desc, confirm_list=self.rushers, rush=True)
-                else:
-                    await payload.member.send("We already have enough rushers for this run! You can ask the rl for location if "
-                                              "extra rushers may be needed.")
+                        await self.dm_handler(emote, payload.member, desc, confirm_list=self.rushers, rush=True)
+                    else:
+                        await payload.member.send("We already have enough rushers for this run! You can ask the rl for location if "
+                                                  "extra rushers may be needed.")
         except discord.Forbidden:
             pass
 
@@ -283,6 +300,7 @@ class AfkCheck:
             await self.cpmsg.edit(embed=cp)
 
         elif str(payload.emoji) == "🛑":
+            self.autoendtask.cancel()
             await self.abort_afk(payload.member)
         elif str(payload.emoji) == "🗺️":
             embed = self.afkmsg.embeds[0]

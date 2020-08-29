@@ -20,6 +20,19 @@ class Casino(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+        self._cd = commands.CooldownMapping.from_cooldown(1.0, 5.0, commands.BucketType.user)
+
+    async def cog_check(self, ctx):
+        print(ctx.command)
+        if str(ctx.command) != 'balance' and str(ctx.command) != 'top':
+            bucket = self._cd.get_bucket(ctx.message)
+            retry_after = bucket.update_rate_limit()
+            if retry_after:
+                raise discord.ext.commands.CommandOnCooldown(5, retry_after)
+            else:
+                return True
+        else:
+            return True
 
 
     @commands.command(usage="blackjack [bet]", aliases=["bj"],

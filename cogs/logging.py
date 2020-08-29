@@ -103,6 +103,52 @@ class Logging(commands.Cog):
             await ctx.send(embed=embed)
             return await update_leaderboard(self.client, ctx.guild.id)
         return await ctx.send("This server does not have leaderboards enabled! Contact Darkmattr#7321 to enable them.", delete_after=7)
+
+    @commands.command(usage='leaderboard <type>', description='Display the top 20 members in a selected logging category.\nValid categories: `keys`, `runes`, `runs`, `led`, '
+                                                              '`weeklyled`', aliases=['lb'])
+    @commands.guild_only()
+    async def leaderboard(self, ctx, type):
+        type = type.strip().lower()
+        if type not in ['keys', 'runes', 'runs', 'led', 'weeklyled']:
+            return await ctx.send("Please choose a valid log type:\nValid categories: `keys`, `runes`, `runs`, `led`, `weeklyled`")
+
+        if type == 'runes':
+            helmrunes = await sql.get_top_10_logs(self.client.pool, ctx.guild.id, sql.log_cols.helmrunes, only_10=False)
+            swordrunes = await sql.get_top_10_logs(self.client.pool, ctx.guild.id, sql.log_cols.swordrunes, only_10=False)
+            shieldrunes = await sql.get_top_10_logs(self.client.pool, ctx.guild.id, sql.log_cols.shieldrunes, only_10=False)
+            top_runes = {}
+            for r in helmrunes:
+                top_runes[r[0]] = (r[0], r[sql.log_cols.helmrunes])
+            for r in swordrunes:
+                if r[0] in top_runes:
+                    top_runes[r[0]] = (r[0], top_runes[r[0]][1] + r[sql.log_cols.swordrunes])
+                else:
+                    top_runes[r[0]] = (r[0], r[sql.log_cols.swordrunes])
+            for r in shieldrunes:
+                if r[0] in top_runes:
+                    top_runes[r[0]] = (r[0], top_runes[r[0]][1] + r[sql.log_cols.shieldrunes])
+                else:
+                    top_runes[r[0]] = (r[0], r[sql.log_cols.shieldrunes])
+            runes = list(top_runes.values())
+
+            def get_num(elem):
+                return elem[1]
+
+            runes.sort(key=get_num, reverse=True)
+            top = format_top_data(runes[:20], 1, aslist=True)
+        else:
+            col = sql.log_cols.pkey if type == 'keys' else sql.log_cols.runsdone if type == 'runs' else sql.log_cols.srunled if type == 'led' else sql.log_cols.weeklyruns
+            top = await sql.get_top_10_logs(self.client.pool, ctx.guild.id, column=col, only_10=False, limit=20)
+            top = format_top_data(top, col, aslist=True)
+
+        name = 'Keys' if type == 'keys' else "Runes" if type == 'runes' else "Runs Completed" if type == 'runs' else "Runs Led" if type == 'led' else "Weekly Runs Led"
+        embed = discord.Embed(title=f"Top {name} in {ctx.guild.name}", color=discord.Color.gold()).add_field(name='Top 10', value="".join(top[:10]), inline=False)
+        if len(top) > 10:
+            embed.add_field(name="Top 20", value="".join(top[10:]), inline=False)
+        embed.set_thumbnail(url=ctx.guild.icon_url)
+        embed.timestamp = datetime.datetime.utcnow()
+        await ctx.send(embed=embed)
+
         
 
 def setup(client):
@@ -133,9 +179,9 @@ async def update_leaderboard(client, guild_id):
         if guild_id != 660344559074541579:
             top_keys = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.pkey)
         else:
-            helmrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.helmrunes)
-            swordrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.swordrunes)
-            shieldrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.shieldrunes)
+            helmrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.helmrunes, only_10=False)
+            swordrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.swordrunes, only_10=False)
+            shieldrunes = await sql.get_top_10_logs(client.pool, guild_id, sql.log_cols.shieldrunes, only_10=False)
             top_runes = {}
             for r in helmrunes:
                 top_runes[r[0]] = (r[0], r[sql.log_cols.helmrunes])
@@ -193,9 +239,15 @@ def clean_rl_data(data, guild, rlrole, truncate=True):
     return temp
 
 
-def format_top_data(data, col):
-    top = ""
-    for i, r in enumerate(data):
-        top += f"#{i+1}. <@{r[0]}> - {r[col]}\n"
+def format_top_data(data, col, aslist=False):
+    if not aslist:
+        top = ""
+        for i, r in enumerate(data):
+            top += f"#{i+1}. <@{r[0]}> - {r[col]}\n"
+        return top
+    else:
+        top = []
+        for i, r in enumerate(data):
+            top.append(f"#{i + 1}. <@{r[0]}> - {r[col]}\n")
+        return top
 
-    return top

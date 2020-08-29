@@ -19,8 +19,47 @@ logger = logging.getLogger('discord')
 
 class Moderation(commands.Cog):
     """Commands for user/server management"""
+
+    defaultnames = ["darq", "deyst", "drac", "drol", "eango", "eashy", "eati", "eendi", "ehoni", "gharr", "iatho", "iawa", "idrae", "iri", "issz", "itani", "laen", "lauk", "lorz",
+                    "oalei", "odaru", "oeti", "orothi", "oshyu", "queq", "radph", "rayr", "ril", "rilr", "risrr", "saylt", "scheev", "sek", "serl", "seus", "tal", "tiar", "uoro",
+                    "urake", "utanu", "vorck", "vorv", "yangu", "yimi", "zhiar"]
+
     def __init__(self, client):
         self.client = client
+
+    @commands.command(usage='listall <role>', description="List all members with a role")
+    @commands.guild_only()
+    @checks.is_security_or_higher_check()
+    async def listall(self, ctx, role: discord.Role):
+        # nsections = int(len(role.members)/20)-1
+        # embed = discord.Embed(title=f"Members with the role: {role.name}", color=role.color)
+        # for i in range(nsections):
+        #     embed.add_field(name="Members", value="".join([m.mention for m in role.members[20*i:20*(i+1)]]), inline=False)
+        # await ctx.send(embed=embed)
+        mstrs = []
+        for m in role.members:
+            if " | " in m.display_name:
+                mstrs.extend(m.display_name.split(" | "))
+            else:
+                mstrs.append(m.display_name)
+        str = f"[{', '.join([''.join([c for c in m if c.isalpha()]) for m in mstrs])}]"
+        await ctx.send(str)
+
+    @commands.command(usage="listvc", description="Return a list of people in a VC")
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def listvc(self, ctx):
+        if not ctx.author.voice:
+            return await ctx.send("You must be in a VC to use this command!")
+
+        mstrs = []
+        for m in ctx.author.voice.channel.members:
+            if " | " in m.display_name:
+                mstrs.extend(m.display_name.split(" | "))
+            else:
+                mstrs.append(m.display_name)
+        str = '["' + '", "'.join([''.join([c for c in m if c.isalpha()]) for m in mstrs]) + '"]'
+        await ctx.send(str)
 
     @commands.command(usage="change_prefix <prefix>", description="Change the bot's prefix for all commands.")
     @commands.guild_only()
@@ -39,17 +78,22 @@ class Moderation(commands.Cog):
     @commands.command(usage="find <nickname>", description="Find a user by the specified nickname.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
-    async def find(self, ctx, member: utils.MemberLookupConverter):
+    async def find(self, ctx, member):
+        if member.strip().lower() in self.defaultnames:
+            embed = discord.Embed(title="Error!", description=f"`{member}` is a default name!", color=discord.Color.red())
+            return await ctx.send(embed=embed)
+        else:
+            member = await utils.MemberLookupConverter().convert(ctx, member)
         if member.voice is None:
             vc = '❌'
         else:
             vc = f"`{member.voice.channel.name}`"
 
-        if member.nick and " | " in member.nick: # Check if user has an alt account
+        if member.nick and " | " in member.nick:  # Check if user has an alt account
             names = member.nick.split(" | ")
             names = ["".join([c for c in n if c.isalpha()]) for n in names]
             desc = f"Found {member.mention} with the ign's: "
-            desc += " | ".join(['['+''.join([n for n in name])+'](https://www.realmeye.com/player/'+''.join([n for n in name])+")" for name in names])
+            desc += " | ".join(['[' + ''.join([n for n in name]) + '](https://www.realmeye.com/player/' + ''.join([n for n in name]) + ")" for name in names])
             desc += f"\nVoice Channel: {vc}"
             desc += f"\nRealm Names: `{'`, `'.join(names)}`"
         else:
@@ -74,7 +118,7 @@ class Moderation(commands.Cog):
                 pembed = discord.Embed(title=f"Punishment Log #{i} - {ptype}", color=color)
                 pembed.description = f"Punished member: {member.mention}\n**{ptype}** issued by {requester.mention}\nActive: {active}"
                 pembed.add_field(name="Reason:", value=r[sql.punish_cols.reason], inline=False)
-                pembed.add_field(name="Time:", value=starttime+endtime)
+                pembed.add_field(name="Time:", value=starttime + endtime)
                 pages.append(pembed)
         if bdata:
             for i, r in enumerate(bdata, start=1):
@@ -98,6 +142,58 @@ class Moderation(commands.Cog):
             embed.add_field(name="Punishments:", value="No punishment or blacklist logs found!")
             await ctx.send(embed=embed)
 
+    @commands.command(usage='changename <member> <newname>', description="Change the users name.")
+    @commands.guild_only()
+    @checks.is_security_or_higher_check()
+    async def changename(self, ctx, member: utils.MemberLookupConverter, newname):
+        # async with aiohttp.ClientSession() as cs:
+        #     async with cs.get(f'https://rotmg-discord-bot.wm.r.appspot.com/?player={newname}', ssl=False) as r:
+        #         if r.status == 403:
+        #             print("ERROR: API ACCESS FORBIDDEN")
+        #             await ctx.send(f"<@{self.client.owner_id}> ERROR: API ACCESS REVOKED!.")
+        #         data = await r.json()  # returns dict
+        # if not data:
+        #     return await ctx.send("There was an issue retrieving realmeye data. Please try the command later.")
+        # if 'error' in data:
+        #     embed = discord.Embed(title='Error!', description=f"There were no players found on realmeye with the name `{altname}`.",
+        #                           color=discord.Color.red())
+        #     return await ctx.send(embed=embed)
+        #
+        # cleaned_name = str(data["player"])
+        cleaned_name = newname
+
+        res = await sql.change_username(self.client.pool, member.id, cleaned_name)
+        if not res:
+            embed = discord.Embed(title="Error!", description="Something went wrong, username couldn't be changed in SQL", color=discord.Color.red())
+            return await ctx.send(embed=embed)
+
+        embed = None
+        for g in self.client.guilds:
+            m = g.get_member(member.id)
+            if m:
+                name = m.display_name
+
+                if cleaned_name.lower() in name.lower():
+                    embed = discord.Embed(title="Error!", description="Name specified is the same name as the user's name currently!",
+                                          color=discord.Color.red())
+
+                separator = " | "
+                s_name = name.split(separator)
+                symbols = "".join([c for c in s_name[0] if not c.isalpha()])
+                s_name[0] = symbols + newname
+                s_name = separator.join(s_name)
+
+                try:
+                    await m.edit(nick=s_name)
+                except discord.Forbidden:
+                    embed = discord.Embed(title="Error!", description=f"There was an error changing this person's name in {g.name} (Perms).\n"
+                                                                      f"Please message someone from that guild this and change their nickname to this manually: ` {s_name} `\
+                                                                      {m.mention}",
+                                          color=discord.Color.red())
+        if embed is None:
+            embed = discord.Embed(title="Success!", description=f"`{s_name}` is now the name of {member.mention}.",
+                                  color=discord.Color.green())
+        return await ctx.send(embed=embed)
 
     @commands.command(usage='addalt <member> <altname>', description="Add an alternate account to a user (limit 2).")
     @commands.guild_only()
@@ -130,7 +226,7 @@ class Moderation(commands.Cog):
                                                                     f"{member.mention}'s name, but was added to the database.")
             else:
                 embed = discord.Embed(title="Error!", description="The user specified already has this alt linked to their name!",
-                                  color=discord.Color.red())
+                                      color=discord.Color.red())
             return await ctx.send(embed=embed)
 
         name += f" | {cleaned_name}"
@@ -138,12 +234,11 @@ class Moderation(commands.Cog):
             await member.edit(nick=name)
         except discord.Forbidden:
             return await ctx.send("There was an error adding the alt to this person's name (Perms).\n"
-                           f"Please copy this and add it to their name manually: ` | {cleaned_name}`\n{member.mention}")
+                                  f"Please copy this and add it to their name manually: ` | {cleaned_name}`\n{member.mention}")
 
         embed = discord.Embed(title="Success!", description=f"`{cleaned_name}` was added as an alt to {member.mention}.",
                               color=discord.Color.green())
         await ctx.send(embed=embed)
-
 
     @commands.command(usage='removealt <member> <altname>', description="Remove an alt from a player.")
     @commands.guild_only()
@@ -214,7 +309,7 @@ class Moderation(commands.Cog):
         #     return await ctx.send("You are trying to delete messages that are older than 15 days. Discord API doesn't "
         #                           "allow bots to do this!\nYou can use the nuke command to completely clean a "
         #                           "channel.", delete_after=10)
-        await ctx.send(f"Deleted {len(messages)-1} messages.", delete_after=5)
+        await ctx.send(f"Deleted {len(messages) - 1} messages.", delete_after=5)
 
     @commands.command(usage='nuke', description="Deletes all the messages in a channel.")
     @commands.guild_only()
@@ -247,6 +342,7 @@ class Moderation(commands.Cog):
 def setup(client):
     client.add_cog(Moderation(client))
 
+
 async def manual_verify_ext(pool, guild, uid, requester, ign=None):
     """Manually verifies user with specified uid"""
     guild_data = await get_guild(pool, guild.id)
@@ -254,7 +350,7 @@ async def manual_verify_ext(pool, guild, uid, requester, ign=None):
     member = guild.get_member(int(uid))
     user_data = await get_user(pool, int(uid))
 
-    if user_data is not None: # check if user exists in DB
+    if user_data is not None:  # check if user exists in DB
         name = user_data[usr_cols.ign]
         status = user_data[usr_cols.status]
         if status != 'verified':
@@ -287,6 +383,7 @@ async def manual_verify_ext(pool, guild, uid, requester, ign=None):
         description=f"✅ {member.mention} ***has been manually verified by*** {requester.mention}***.***",
         color=discord.Color.green())
     await channel.send(embed=embed)
+
 
 async def manual_verify_deny_ext(pool, guild, uid, requester):
     """Manually verifies user with specified uid"""

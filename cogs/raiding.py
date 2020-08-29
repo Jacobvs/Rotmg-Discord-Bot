@@ -23,58 +23,181 @@ from cogs.Raiding.vc_select import VCSelect
 
 class Raiding(commands.Cog):
     """Commands to organize ROTMG Raids & More!"""
+    letters = ["🇦", "🇧", "🇨", "🇩", "🇼", "🇽", "🇾", "🇿"]
 
     def __init__(self, client):
         self.client = client
 
-    @commands.command(usage='qafk <location>', description="Start a Queue afk check for the location specified.")
+    @commands.command(usage='qafk', description="Start a Queue afk check for the location specified.")
     @commands.guild_only()
-    @commands.is_owner()
+    @checks.is_rl_or_higher_check()
     @commands.max_concurrency(1, per=BucketType.guild, wait=False)
-    async def qafk(self, ctx, *, location):
+    async def qafk(self, ctx):
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             return await ctx.send("You cannot start another AFK while an AFK check is still up or a run log has not been completed.")
 
-        if not ('us' in location.lower() or 'eu' in location.lower()):
-            return await ctx.send("Please Choose a US or EU Location!")
-
-        is_us = True if 'us' in location.lower() else False
-
-        self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
 
         setup = VCSelect(self.client, ctx, qafk=True)
         data = await setup.q_start()
         if isinstance(data, tuple):
             (raiderrole, rlrole, hcchannel) = data
         else:
-            self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
             return
 
-        qafk = QAfk(self.client, ctx, location, hcchannel, raiderrole, rlrole, is_us)
+        qafk = QAfk(self.client, ctx, "Location has not been set yet.", hcchannel, raiderrole, rlrole, True)
         await qafk.start()
-        self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
+    @commands.command(usage='position', description="Check your position to join the next raid!", aliases=['queue'])
+    @commands.guild_only()
+    async def position(self, ctx):
+        try:
+            await ctx.message.delete()
+        except discord.NotFound:
+            pass
 
-    # @commands.command(usage='position', description="Check your position within the raiding queue!", aliases=['queue'])
-    # @commands.guild_only()
-    # async def position(self, ctx):
-    #     try:
-    #         await ctx.message.delete()
-    #     except discord.NotFound:
-    #         pass
-    #
-    #     index = None
-    #     for id in self.client.queues:
-    #         if ctx.author.id in self.client.queues[id]:
-    #             index = self.client.queues[id].index(ctx.author.id)+1
-    #             channel_id = id
-    #             break
-    #     if index:
-    #         d = self.client.queue_links[channel_id]
-    #         await ctx.send(f"{ctx.author.mention} - Your position in the Queue for {d[1].name} is **{index}**")
-    #     else:
-    #         await ctx.send(f"You are not currently in any raiding queues!")
+        if ctx.author.id in self.client.active_raiders:
+            await ctx.send("You are currently in a raid! This command is used to check your position when waiting for a raid to start.")
+        elif ctx.author.id in self.client.morder[ctx.guild.id]:
+            d = self.client.morder[ctx.guild.id][ctx.author.id]
+            s = f"💎 - You are number {d[1]} in the **priority** queue." if d[0] else f"✅ - You are number {d[1]} in the **normal** queue."
+            s += f" {ctx.author.mention}"
+            await ctx.send(s)
+        else:
+            d = await sql.get_missed(self.client.pool, ctx.author.id)
+            if d[1]:
+                await ctx.send("💎 - You are not in a raid, but have priority queuing for the next run you want to join.")
+            else:
+                await ctx.send(f"You are not currently in a raid!")
 
+    @commands.command(usage='leaverun', description="Leave a run if you nexus")
+    @commands.guild_only()
+    async def leaverun(self, ctx):
+        try:
+            await ctx.message.delete()
+        except discord.NotFound:
+            pass
+
+        if ctx.author.id in self.client.active_raiders:
+            self.client.active_raiders.pop(ctx.author.id, None)
+            await ctx.send(f"{ctx.author.mention} - You have been removed from the raid.")
+        else:
+            await ctx.send(f"You are not currently in a raid or waiting for one!")
+
+    @commands.command(usage="findloc", description="Find a good location to start an O3 run in.")
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def findloc(self, ctx):
+        if not await checks.is_bot_commands_channel(ctx):
+            try:
+                await ctx.message.delete()
+            except discord.Forbidden or discord.NotFound:
+                pass
+            return await ctx.send("This command must be used in a bot-commands channel only.")
+        servers = await utils.get_good_realms(self.client, 8)
+        server_opts = {}
+        if servers:
+            desc = ""
+            num = 0
+
+            for l in servers[0]:
+                event = l[3] if l[3] else "N/A"
+                desc += f"{self.letters[num]} - __**{l[0]}**__\n**{l[1]}** People | **{l[2]}** Heroes\n`{event}`\n**{l[4]}** ago\n\n"
+                server_opts[self.letters[num]] = l[0]
+                num += 1
+            if not desc:
+                desc = "No suitable US servers found."
+            embed = discord.Embed(title="Locations", description="Possible locations in which to start an O3 Raid.", color=discord.Color.gold())
+            embed.add_field(name="Top US Servers", value=desc, inline=True)
+            embed.add_field(name='\u200B', value='\u200B', inline=True)
+            num = 4
+            desc = ""
+            for l in servers[1]:
+                event = l[3] if l[3] else "N/A"
+                desc += f"{self.letters[num]} - __**{l[0]}**__\n**{l[1]}** People | **{l[2]}** Heroes\n`{event}`\n**{l[4]}** ago\n\n"
+                server_opts[self.letters[num]] = l[0]
+                num += 1
+            if not desc:
+                desc = "No suitable EU servers found."
+            embed.add_field(name="Top EU Servers", value=desc, inline=True)
+
+        else:
+            embed = discord.Embed(title="Error!", description="No suitable locations found. Please scout a location yourself.", color=discord.Color.red())
+
+        await ctx.send(embed=embed)
+
+    @commands.command(usage="findrc [max_in_realm]", description="Find a good location to start a Realm Clearing run in.")
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def findrc(self, ctx, max=20):
+        if not await checks.is_bot_commands_channel(ctx):
+            try:
+                await ctx.message.delete()
+            except discord.Forbidden or discord.NotFound:
+                pass
+            return await ctx.send("This command must be used in a bot-commands channel only.")
+        servers = await utils.get_good_realms(self.client, max, 100)
+        server_opts = {}
+        if servers:
+            desc = ""
+            num = 0
+
+            for l in servers[0]:
+                event = l[3] if l[3] else "N/A"
+                desc += f"{self.letters[num]} - __**{l[0]}**__\n**{l[1]}** People | **{l[2]}** Heroes\n`{event}`\n**{l[4]}** ago\n\n"
+                server_opts[self.letters[num]] = l[0]
+                num += 1
+            if not desc:
+                desc = "No suitable US servers found."
+            embed = discord.Embed(title="Locations", description=f"Possible locations in which to start realm clearing with a server population < **{max}**",
+                                  color=discord.Color.gold())
+            embed.add_field(name="Top US Servers", value=desc, inline=True)
+            embed.add_field(name='\u200B', value='\u200B', inline=True)
+            num = 4
+            desc = ""
+            for l in servers[1]:
+                event = l[3] if l[3] else "N/A"
+                desc += f"{self.letters[num]} - __**{l[0]}**__\n**{l[1]}** People | **{l[2]}** Heroes\n`{event}`\n**{l[4]}** ago\n\n"
+                server_opts[self.letters[num]] = l[0]
+                num += 1
+            if not desc:
+                desc = "No suitable EU servers found."
+            embed.add_field(name="Top EU Servers", value=desc, inline=True)
+
+        else:
+            embed = discord.Embed(title="Error!", description="No suitable locations found. Please scout a location yourself.", color=discord.Color.red())
+
+        await ctx.send(embed=embed)
+
+    @commands.command(usage='event <type>', description="Find all realms with a specified event.")
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def event(self, ctx, event_alias):
+        if not await checks.is_bot_commands_channel(ctx):
+            try:
+                await ctx.message.delete()
+            except discord.Forbidden or discord.NotFound:
+                pass
+            return await ctx.send("This command must be used in a bot-commands channel only.")
+
+        event = event_type(event_alias)
+        if not event:
+            return await ctx.send(f"The specified event type: `{event_alias}` is not valid. Please enter a valid event.")
+
+        data = await utils.get_event_servers(self.client, event)
+        if not data:
+            embed = discord.Embed(title="Error!", description=f"No servers were found with the current event of `{event}`.", color=discord.Color.red())
+        else:
+            desc = ""
+            num = 0
+            for l in data:
+                event = l[3] if l[3] else "N/A"
+                desc += f"{self.letters[num]} - __**{l[0]}**__\n**{l[1]}** People | **{l[2]}** Heroes\n`{event}`\n**{l[4]}** ago\n\n"
+                num += 1
+            if not desc:
+                desc = "No suitable US servers found."
+            embed = discord.Embed(title="Locations", description=f"Possible locations that contain the event: `{event}`.", color=discord.Color.gold())
+            embed.add_field(name="Top Servers", value=desc, inline=True)
+        await ctx.send(embed=embed)
 
     @commands.command(usage="afk <location>", description="Starts an AFK check for the location specified.", aliases=['afkcheck', 'startafk'])
     @commands.guild_only()
@@ -84,17 +207,17 @@ class Raiding(commands.Cog):
     async def afk(self, ctx, *, location):
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             return await ctx.send("You cannot start another AFK while an AFK check is still up or a run log has not been completed.")
-        self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
+        # self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
         setup = VCSelect(self.client, ctx)
         data = await setup.start()
         if isinstance(data, tuple):
             (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
         else:
-            self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
+            # if ctx.author.id in self.client.raid_db[ctx.guild.id]:
+            #     self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
             return
         afk = AfkCheck(self.client, ctx, location, raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg)
         await afk.start()
-
 
     @commands.command(usage="headcount", aliases=["hc"], description="Starts a headcount.")
     @commands.guild_only()
@@ -120,7 +243,7 @@ class Raiding(commands.Cog):
         if len(ctx.message.attachments) > 1:
             return await ctx.send("Please only attach 1 image.", delete_after=10)
         attachment = ctx.message.attachments[0]
-        if not ".jpg" in attachment.filename and not ".png" in attachment.filename:
+        if not attachment.height or 'mp4' in attachment.filename.lower() or 'mov' in attachment.filename.lower():
             return await ctx.send("Please only attach an image of type 'png' or 'jpg'.", delete_after=10)
         image = io.BytesIO()
         await attachment.save(image, seek_begin=True)
@@ -162,7 +285,6 @@ class Raiding(commands.Cog):
         except discord.Forbidden:
             pass
 
-
     @commands.command(usage="lock", description="Locks the raiding voice channel")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
@@ -181,7 +303,6 @@ class Raiding(commands.Cog):
         await vcchannel.set_permissions(raiderrole, connect=False, view_channel=True, speak=False)
         embed = discord.Embed(description=f"{vcchannel.name} Has been Locked!", color=discord.Color.red())
         await ctx.send(embed=embed)
-
 
     @commands.command(usage="unlock", description="Unlocks the raiding voice channel.")
     @commands.guild_only()
@@ -234,7 +355,7 @@ class Raiding(commands.Cog):
     async def fametrain(self, ctx, *, location):
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             return await ctx.send("You cannot start another AFK while an AFK check is still up.")
-        self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
+        # self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
         setup = VCSelect(self.client, ctx)
         data = await setup.start()
         if isinstance(data, tuple):
@@ -243,7 +364,7 @@ class Raiding(commands.Cog):
             return
         ft = FameTrain(self.client, ctx, location, raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg)
         await ft.start()
-        self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
+        # self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
     @commands.command(usage="realmclear <location>", aliases=["rc"], description="Start an AFK Check for Realm Clearing.")
     @commands.guild_only()
@@ -251,16 +372,16 @@ class Raiding(commands.Cog):
     async def realmclear(self, ctx, *, location):
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
             return await ctx.send("You cannot start another AFK while an AFK check is still up.")
-        self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
+        # self.client.raid_db[ctx.guild.id]['leaders'].append(ctx.author.id)
         setup = VCSelect(self.client, ctx)
         data = await setup.start()
         if isinstance(data, tuple):
             (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
         else:
             return
-        rc = RealmClear(self.client, ctx, location, raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel,setup_msg)
+        rc = RealmClear(self.client, ctx, location, raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg)
         await rc.start()
-        self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
+        # self.client.raid_db[ctx.guild.id]['leaders'].remove(ctx.author.id)
 
     @commands.command(usage="markmap <number(s)>", aliases=["mm"], description="Mark the current map with specified numbers.")
     @commands.guild_only()
@@ -276,7 +397,6 @@ class Raiding(commands.Cog):
         else:
             await ctx.send("You aren't marking for any realm clearing sessions!")
 
-
     @commands.command(usage="unmarkmap <number(s)>", aliases=["umm"], description="Unmark the map with specified numbers.")
     @commands.guild_only()
     @checks.is_mm_or_higher_check()
@@ -291,7 +411,6 @@ class Raiding(commands.Cog):
         else:
             await ctx.send("You aren't marking for any realm clearing sessions!")
 
-
     @commands.command(usage="eventspawn <event>", aliases=['es'], description="Mark when an event spawns.")
     @commands.guild_only()
     @checks.is_mm_or_higher_check()
@@ -305,7 +424,6 @@ class Raiding(commands.Cog):
                 await ctx.send("This realm clearing has ended!")
         else:
             await ctx.send("You aren't marking for any realm clearing sessions!")
-
 
     @commands.command(usage="uneventspawn <event>", aliases=['ues'], description="Unmark an event spawn.")
     @commands.guild_only()
@@ -324,6 +442,12 @@ class Raiding(commands.Cog):
 
 def setup(client):
     client.add_cog(Raiding(client))
+
+
+defaultnames = ["darq", "deyst", "drac", "drol", "eango", "eashy", "eati", "eendi", "ehoni", "gharr", "iatho", "iawa", "idrae", "iri", "issz", "itani", "laen", "lauk", "lorz",
+                "oalei", "odaru", "oeti", "orothi", "oshyu", "queq", "radph", "rayr", "ril", "rilr", "risrr", "saylt", "scheev", "sek", "serl", "seus", "tal", "tiar", "uoro",
+                "urake", "utanu", "vorck", "vorv", "yangu", "yimi", "zhiar"]
+
 
 def parse_image(author, image, vc):
     file_bytes = np.asarray(bytearray(image.read()), dtype=np.uint8)
@@ -357,11 +481,12 @@ def parse_image(author, image, vc):
         print("INFO - Split String: ")
         print(split_str)
         embed = discord.Embed(title="Error!", description="Could not find the who command in the image you provided.\nPlease re-run the "
-                            "command with an image that shows the results of `/who`.", color=discord.Color.red())
+                                                          "command with an image that shows the results of `/who`.", color=discord.Color.red())
         return embed
     names = split_str[3].split(", ")
     cleaned_members = []
     alts = []
+
     def clean_member(m):
         if " | " in m:
             names = m.split(" | ")
@@ -372,6 +497,7 @@ def parse_image(author, image, vc):
                     alts.append(clean_name(name))
         else:
             cleaned_members.append(clean_name(m))
+
     def clean_name(n):
         return "".join(c for c in n if c.isalpha())
 
@@ -387,18 +513,19 @@ def parse_image(author, image, vc):
         if " " in name:
             names = name.split(" ")
             name = names[0]
-        if name.strip() not in cleaned_members:
-            matches = get_close_matches(name.strip(), cleaned_members, n=1, cutoff=0.6)
-            if len(matches) == 0:
-                if name.strip() not in alts:
-                    crashing.append(name.strip())
-            else:
-                if matches[0] not in cleaned_members:
-                    fixed_names.append((name.strip(), matches[0]))
+        if name.lower() not in defaultnames:
+            if name.strip() not in cleaned_members:
+                matches = get_close_matches(name.strip(), cleaned_members, n=1, cutoff=0.6)
+                if len(matches) == 0:
+                    if name.strip() not in alts:
+                        crashing.append(name.strip())
                 else:
-                    cleaned_members.remove(matches[0])
-        else:
-            cleaned_members.remove(name.strip())
+                    if matches[0] not in cleaned_members:
+                        fixed_names.append((name.strip(), matches[0]))
+                    else:
+                        cleaned_members.remove(matches[0])
+            else:
+                cleaned_members.remove(name.strip())
 
     for m in cleaned_members:
         if m != author:
@@ -422,3 +549,17 @@ def parse_image(author, image, vc):
     return embed
 
 
+def event_type(type):
+    event_types = {'ava': 'Avatar of the Forgotten King', 'avatar': 'Avatar of the Forgotten King', 'cube': 'Cube God',
+                   'cubegod': 'Cube God', 'gship': 'Ghost Ship', 'sphinx': 'Grand Sphinx', 'hermit': 'Hermit God', 'herm': 'Hermit God',
+                   'lotll': 'Lord of the Lost Lands', 'lord': 'Lord of the Lost Lands', 'pent': 'Pentaract', 'penta': 'Pentaract',
+                   'drag': 'Rock Dragon', 'rock': 'Rock Dragon', 'skull': 'Skull Shrine', 'shrine': 'Skull Shrine',
+                   'skullshrine': 'Skull Shrine', 'miner': 'Dwarf Miner', 'dwarf': 'Dwarf Miner', 'sentry': 'Lost Sentry',
+                   'nest': 'Killer Bee Hive', 'statues': 'Jade Statue'}
+    result = event_types.get(type, None)
+    if result is None:
+        matches = get_close_matches(type, event_types.keys(), n=1, cutoff=0.8)
+        if len(matches) == 0:
+            return None
+        return event_types.get(matches[0])
+    return result

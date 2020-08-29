@@ -34,7 +34,8 @@ class ErrorHandler(commands.Cog):
             return await ctx.send("This command cannot be used in a DM.")
 
         if isinstance(error, commands.CheckFailure) or isinstance(error, commands.CheckAnyFailure):
-            await ctx.send(f"You do not have permission to use this command (`{ctx.prefix}{ctx.command.name}`).")  # \nCheck(s) failed: {failed}")
+            if not self.client.maintenance_mode:
+                await ctx.send(f"You do not have permission to use this command (`{ctx.prefix}{ctx.command.name}`).")  # \nCheck(s) failed: {failed}")
             return await ctx.message.delete()
 
         if isinstance(error, commands.CommandOnCooldown):

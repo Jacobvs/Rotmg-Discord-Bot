@@ -18,6 +18,11 @@ def is_lorlie():
         return ctx.message.author.id == 482120766893064192
     return commands.check(predicate)
 
+def is_caped():
+    def predicate(ctx):
+        return ctx.message.author.id == 163394008603820032
+    return commands.check(predicate)
+
 class Misc(commands.Cog):
     """Miscellaneous Commands"""
 
@@ -100,9 +105,12 @@ class Misc(commands.Cog):
         embed.add_field(name="__**Key Stats**__", value="Popped: "
                         f"**{data[sql.log_cols.pkey]}**\nEvent Keys: **{data[sql.log_cols.eventkeys]}**\nVials: "
                         f"**{data[sql.log_cols.vials]}**\nSword Runes: **{data[sql.log_cols.swordrunes]}**\nShield Runes: "
-                        f"**{data[sql.log_cols.shieldrunes]}**\nHelm Runes: **{data[sql.log_cols.helmrunes]}**", inline=False)\
-                        .add_field(name="__**Run Stats**__", value=f"Completed: **{data[sql.log_cols.runsdone]}**\nEvents Completed: "
-                        f"**{data[sql.log_cols.eventsdone]}**", inline=False)
+                        f"**{data[sql.log_cols.shieldrunes]}**\nHelm Runes: **{data[sql.log_cols.helmrunes]}**", inline=False)
+        if ctx.guild.id == 660344559074541579:
+            embed.add_field(name="__**Run Stats**__", value=f"Oryx 3 Completes: **{data[sql.log_cols.ocompletes]}**\nOryx 3 Attempted: **{data[sql.log_cols.oattempts]}**\nEvents "
+                                                            f"Completed: **{data[sql.log_cols.eventsdone]}**", inline=False)
+        else:
+            embed.add_field(name="__**Run Stats**__", value=f"Completed: **{data[sql.log_cols.runsdone]}**\nEvents Completed: **{data[sql.log_cols.eventsdone]}**", inline=False)
         gdb = self.client.guild_db.get(server_id)
         if gdb:
             erl = gdb[sql.gld_cols.eventrlid]
@@ -169,6 +177,58 @@ class Misc(commands.Cog):
         # TODO: Implement counter, add check to only allow reactions to 1 option (remove all but last react from each person)
         # TODO: add option to ping @here or @everyone
 
+    @commands.command(usage="ooga <text>", description="Translate text into booga.")
+    @commands.guild_only()
+    @commands.cooldown(1, 300, type=BucketType.member)
+    async def ooga(self, ctx, *, text):
+        try:
+            await ctx.message.delete()
+        except discord.Forbidden:
+            pass
+
+        if len(text) > 52:
+            return await ctx.send("Please send a message 50 characters or less.")
+
+        if not all(ord(c) < 128 for c in text):
+            return await ctx.send("Please only use alphanumeric characters!")
+
+        str = ' '.join(["{0:b}".format(x) for x in bytes(text, "ascii")])
+        obs = []
+        for c in str.split(" "):
+            cs = []
+            for b in c:
+                if b == '0':
+                    cs.append("Ooga")
+                else:
+                    cs.append("Booga")
+            obs.append(" ".join(cs))
+
+        embed = discord.Embed(title=f"Oogified text | Decode with {ctx.prefix}booga <encoded_text>", description=" - ".join(obs), color=discord.Color.teal())
+        embed.set_footer(text=f"Requested by {ctx.author.display_name}")
+        await ctx.send(embed=embed)
+
+    @commands.command(usage='booga <encoded_text>', description='Decode booga text.')
+    @commands.guild_only()
+    async def booga(self, ctx, *, text):
+        try:
+            await ctx.message.delete()
+        except discord.Forbidden:
+            pass
+
+        bs = ""
+        for s in text.split(" - "):
+            for c in s.split(" "):
+                if c == "Ooga":
+                    bs += "0"
+                else:
+                    bs += "1"
+            bs += " "
+        try:
+            await ctx.author.send(f"Decoded text:\n{''.join([chr(int(binary, 2)) for binary in bs.split(' ') if binary])}")
+            await ctx.send(embed=discord.Embed(description="The decoded text has been sent to your DM's!"))
+        except discord.Forbidden:
+            await ctx.send("Please enable DM's to use this command!")
+
 
     @commands.command(usage='isgay <member>', description="Preed's Custom Patreon Command")
     async def isgay(self, ctx, member: utils.MemberLookupConverter):
@@ -215,6 +275,7 @@ class Misc(commands.Cog):
 
     @commands.command(usage='exalted <member>', description="Make a member exalted!")
     @commands.guild_only()
+    @commands.check_any(is_caped(), is_bot_owner())
     async def exalted(self, ctx, member: utils.MemberLookupConverter):
         b = bool(random.getrandbits(1))
         title = f"{member.display_name} was killed by O3!" if b else f"{member.display_name} slaughtered O3"
