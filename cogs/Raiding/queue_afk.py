@@ -29,6 +29,7 @@ class QAfk:
         self.in_run = False
         self.raid_msg = None
         self.max_patreons = 6
+        self.in_normal = True if self.hcchannel.id == 660347564767313952 else False
 
         self.raiderids = set()
         self.confirmed_raiders = {}
@@ -87,7 +88,7 @@ class QAfk:
             self.missed_runs.update({r[0]: r[1]})
 
         # Grab dungeon info from utils
-        dungeon_info = utils.q_dungeon_info(1)
+        dungeon_info = utils.q_dungeon_info(1) if self.in_normal else utils.q_dungeon_info(2)
         self.dungeontitle = dungeon_info[0]
         self.dungeon_emoji = dungeon_info[1][0]
         self.dungeon_image = dungeon_info[1][1]
@@ -126,7 +127,7 @@ class QAfk:
         emojis.append('<:patreon:736944176469508118>')
         asyncio.get_event_loop().create_task(self.add_emojis(self.raid_msg, emojis))
 
-        class_embed = discord.Embed(description="Please react below to indicate what class you are bringing to the run!")
+        class_embed = discord.Embed(description="Please react below to indicate what class you are bringing to the run! (Only used to check percentages)")
         self.class_message = await self.hcchannel.send(embed=class_embed)
         asyncio.get_event_loop().create_task(self.add_emojis(self.class_message, self.class_emojis))
 
@@ -171,8 +172,8 @@ class QAfk:
 
 
     async def autoend(self):
-        await asyncio.sleep(900)  # wait 15 mins max
-        await self.dequeue()
+        await asyncio.sleep(1800)  # wait 30 mins max
+        await self.abort_afk(self.client.user)
 
     async def dequeue(self):
         print('in dequeue')
@@ -187,6 +188,8 @@ class QAfk:
         #                     self.client.queues[self.queuechannel.id].append(m.id)
         #             self.confirmed_raiders[m.id] = m
         # print(self.confirmed_raiders)
+
+        await self.raid_msg.unpin()
 
         for id in self.confirmed_raiders:
             self.client.morder[self.ctx.guild.id].pop(id, None)
@@ -268,10 +271,11 @@ class QAfk:
         embed = discord.Embed(description=f"This raid is running with **{len(self.raiderids)}** members.\nIf you get disconnected, rejoin {self.queuechannel.name} to be moved "
                                           f"in.\n\n__If you "
                                           f"weren't moved in for this afk, you have been given priority queuing to ensure you make it to the next raid!__\n\nPlease be patient "
-                                          f"and wait for the next raid to be posted.",
+                                          f"and wait for the next raid to be posted.\n\n **To join another run if you nexus, use `!leaverun` so you don't get moved back into "
+                                          f"the raid vc.**",
                               color=self.dungeon_color)
         embed.set_thumbnail(url=self.dungeon_boss_image)
-        embed.set_author(name=f"{self.dungeontitle} Raid is currently runnning!", icon_url=self.dungeon_image)
+        embed.set_author(name=f"{self.dungeontitle} Raid is currently running!", icon_url=self.dungeon_image)
 
         classes = ""
         for c in self.class_emojis[:3]:
@@ -302,22 +306,52 @@ class QAfk:
 
         print('dming members')
         # DM MEMBERS
+        # DM runes first
+        runems = []
+        failed = []
+        for e in self.required_items:
+            if e in ["<:swordrune:737672554482761739>", "<:shieldrune:737672554642276423>", "<:helmrune:737673058722250782>"]:
+                for m in self.required_items[e]['confirmed']:
+                    try:
+                        await m.send(f"The location is: {self.location}.\nYou have 25 seconds before location is called for everyone.")
+                        runems.append(m)
+                    except discord.Forbidden or discord.HTTPException:
+                        failed.append(m)
+        self.cp_embed.description += "\nLocation has been sent to runes... (Waiting 15 seconds)"
+        await self.cp_msg.edit(embed=self.cp_embed)
+
+        await asyncio.sleep(15)
+
+
         for i in self.required_items:
             for m in self.required_items[i]['confirmed']:
-                await m.send(f"The location is: {self.location}.\nYou have 15 seconds before location is called for everyone.")
+                if m not in runems:
+                    try:
+                        await m.send(f"The location is: {self.location}.\nYou have 10 seconds before location is called for everyone.")
+                    except discord.Forbidden or discord.HTTPException:
+                        failed.append(m)
 
         for m in self.patreons:
-            await m.send(f"The location is: {self.location}.\nYou have 15 seconds before location is called for everyone.")
+            try:
+                await m.send(f"The location is: {self.location}.\nYou have 10 seconds before location is called for everyone.")
+            except discord.Forbidden or discord.HTTPException:
+                failed.append(m)
 
         for m in self.nitroboosters:
-            await m.send(f"The location is: {self.location}.\nYou have 15 seconds before location is called for everyone.")
+            try:
+                await m.send(f"The location is: {self.location}.\nYou have 10 seconds before location is called for everyone.")
+            except discord.Forbidden or discord.HTTPException:
+                failed.append(m)
+
+        if failed:
+            await self.ctx.send(f'These members have dms disabled!\n{", ".join([m.mention for m in failed])}')
 
 
         print('print done sending dms')
 
-        self.cp_embed.description += "\nLocation has been sent to all members with required items."
+        self.cp_embed.description += "\nLocation has been sent to all members with required items... (Waiting 10 seconds)"
         await self.cp_msg.edit(embed=self.cp_embed)
-        await asyncio.sleep(15)
+        await asyncio.sleep(10)
 
 
         await self.ctx.author.send(f"CALL NOW: `{self.location}`\n{self.ctx.author.mention}")
@@ -327,11 +361,12 @@ class QAfk:
         await asyncio.sleep(5)
 
         self.cp_embed.description = f"QAFK [**Control Panel**]({self.raid_msg.jump_url}) for **{self.dungeontitle}** | Started by {self.ctx.author.mention}\n\n" \
-                                    "Press the 🔓 emoji to unlock the raid vc.\nPress the 📤 button when you are done with the run."
+                                    "Press the 🔓 emoji to unlock the raid vc.\nPress the 📤 button when you are done with the run\n 📝 to change location (early locations will be " \
+                                    "sent a DM)."
         await self.cp_msg.edit(embed=self.cp_embed)
         await self.cp_msg.add_reaction('🔓')
-        await self.cp_msg.add_reaction('<:gray:736515579103543336>')
         await self.cp_msg.add_reaction('📤')
+        await self.cp_msg.add_reaction('📝')
 
         self.in_run = True
 
@@ -356,9 +391,8 @@ class QAfk:
         await self.cp_msg.clear_reaction('🔓')
 
         self.cp_embed.description = f"QAFK [**Control Panel**]({self.raid_msg.jump_url}) for **{self.dungeontitle}** | Started by {self.ctx.author.mention}\n\n" \
-                                    "\nPress the 📤 button when you are done with the run."
+                                    "\nPress the 📤 button when you are done with the run, 📝 to change location."
         await self.cp_msg.edit(embed=self.cp_embed)
-
 
 
     async def after_raid(self):
@@ -382,6 +416,10 @@ class QAfk:
         self.cp_embed.description = f"QAFK [**Control Panel**]({self.raid_msg.jump_url}) for **{self.dungeontitle}** | Started by {self.ctx.author.mention}\n\n" \
                                     "\nThe run has completed. Thank you for leading."
         await self.cp_msg.edit(embed=self.cp_embed)
+
+        embed: discord.Embed = self.raid_msg.embeds[0]
+        embed.set_author(name=f"{self.dungeontitle} Raid is finished!", icon_url=self.dungeon_image)
+        await self.raid_msg.edit(embed=embed)
 
         voice = discord.utils.get(self.client.voice_clients, guild=self.ctx.guild)
 
@@ -449,7 +487,8 @@ class QAfk:
         emote = str(payload.emoji)
         if emote == self.dungeon_emoji:
             # If member is in the priority order or has a role giving them priority queuing
-            if self.missed_runs.get(payload.member.id) or\
+            status = self.missed_runs.get(payload.member.id, None)
+            if status is not None and status or\
                     (self.firstpopperrole in payload.member.roles and self.firstpopperrole and self.firstpopperearlyloc) or \
                     (self.secondpopperrole in payload.member.roles and self.secondpopperrole and self.secondpopperearlyloc) or \
                     (self.thirdpopperrole in payload.member.roles and self.thirdpopperrole and self.thirdpopperearlyloc) or \
@@ -464,6 +503,8 @@ class QAfk:
                     self.normal_order.append(payload.member.id)
                     self.confirmed_raiders[payload.member.id] = payload.member
                     self.client.morder[self.ctx.guild.id][payload.member.id] = (False, len(self.normal_order))
+                else:
+                    print(f"{payload.member} re-reacted to afk")
         elif emote in self.required_items and payload.member not in self.required_items[emote]['confirmed']:
             if self.ctx.guild.id == 660344559074541579:
                 await self.raid_msg.remove_reaction(payload.emoji, payload.member)
@@ -485,6 +526,51 @@ class QAfk:
 
     # Control panel handler
     async def cp_handler(self, payload):
+        if str(payload.emoji) == '📝' and self.in_run:
+            embed = discord.Embed(title="Location Selection", description="Please type the location you'd like to set for this run.")
+            setup_msg = await self.ctx.send(embed=embed)
+
+            def location_check(mem):
+                return mem.author == payload.member and mem.channel == self.ctx.channel
+
+            try:
+                msg = await self.client.wait_for('message', timeout=60, check=location_check)  # Wait max 1 hour
+            except asyncio.TimeoutError:
+                try:
+                    await setup_msg.delete()
+                    return
+                except discord.NotFound:
+                    return
+
+            self.location = msg.content
+
+            try:
+                await setup_msg.delete()
+                await msg.delete()
+            except discord.NotFound:
+                pass
+
+            failed = []
+            for e in self.required_items:
+                for m in self.required_items[e]['confirmed']:
+                    try:
+                        await m.send(f"The location has changed to **{self.location}**.\nPlease get to the new location as soon as possible.")
+                    except discord.Forbidden or discord.HTTPException:
+                        failed.append(m)
+            for m in self.nitroboosters:
+                try:
+                    await m.send(f"The location has changed to **{self.location}**.\nPlease get to the new location as soon as possible.")
+                except discord.Forbidden or discord.HTTPException:
+                    failed.append(m)
+            for m in self.patreons:
+                try:
+                    await m.send(f"The location has changed to **{self.location}**.\nPlease get to the new location as soon as possible.")
+                except discord.Forbidden or discord.HTTPException:
+                    failed.append(m)
+            await self.ctx.send('Early location members have been sent the new location.')
+            if failed:
+                await self.ctx.send(f'These members have dms disabled!\n{", ".join([m.mention for m in failed])}')
+
         if not self.in_run:
             if str(payload.emoji) == '📥':
                 self.autoend_task.cancel()
@@ -606,11 +692,14 @@ class QAfk:
             nqueue = 0
         nvc = len(self.raid_vc.members) if self.raid_vc else 0
         capacity_bar = utils.textProgressBar(nqueue, self.max_members, prefix="", percent_suffix=" Full", suffix="", decimals=0, length=18)
+        link = 'https://discordapp.com/channels/660344559074541579/706563122944802856/749698837232222328' if self.in_normal else \
+               'https://discordapp.com/channels/660344559074541579/736240706955378788/750171971647569940'
         desc = f"**Join __{self.queuechannel.name}__ to to join the raiding queue!**\nUse `!position` to check your position in the queue.\n\n" \
                f"**{nqueue}** Members are in the queue & have been confirmed to join the raid!\n\n{capacity_bar}\n\nOnce you join the queue, react to {self.dungeon_emoji} to " \
                f"confirm you'd " \
-               f"like to join this raid.\n\nIf you have a required item for this run, **first join __{self.queuechannel.name}__, then** react to the emojis below & confirm with " \
-               f"the bot to skip the queue!\n\nIf you are one of my lovely patreons, react to: <:patreon:736944176469508118>  ⇒  `!patreon`"
+               f"like to join this raid.\n\nIf you have a required item or class for this run, **first join __{self.queuechannel.name}__, then** react to the emojis below & " \
+               f"confirm with the bot to skip the queue! Make sure you meet the [requirements]({link}) when reacting to this message.\n\nIf you are one of my lovely patreons, " \
+               f"react to: <:patreon:736944176469508118>  ⇒  `!patreon`"
         self.raid_start_embed.description = desc
 
         items = []
@@ -671,6 +760,7 @@ class QAfk:
             classes += f"{c} - {bar}\n"
         self.cp_embed.set_field_at(6, name="Class Reactions (2):", value=classes, inline=False)
 
+        self.cp_embed.set_field_at(1, name="Run Location:", value=f"{self.location}", inline=True)
         if update_msg:
             await self.cp_msg.edit(embed=self.cp_embed)
 

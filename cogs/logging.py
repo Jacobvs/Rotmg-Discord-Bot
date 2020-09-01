@@ -105,12 +105,12 @@ class Logging(commands.Cog):
         return await ctx.send("This server does not have leaderboards enabled! Contact Darkmattr#7321 to enable them.", delete_after=7)
 
     @commands.command(usage='leaderboard <type>', description='Display the top 20 members in a selected logging category.\nValid categories: `keys`, `runes`, `runs`, `led`, '
-                                                              '`weeklyled`', aliases=['lb'])
+                                                              '`weeklyled`, `o3completes`, `o3fails`', aliases=['lb'])
     @commands.guild_only()
     async def leaderboard(self, ctx, type):
         type = type.strip().lower()
-        if type not in ['keys', 'runes', 'runs', 'led', 'weeklyled']:
-            return await ctx.send("Please choose a valid log type:\nValid categories: `keys`, `runes`, `runs`, `led`, `weeklyled`")
+        if type not in ['keys', 'runes', 'runs', 'led', 'weeklyled', 'o3completes', 'o3fails']:
+            return await ctx.send("Please choose a valid log type:\nValid categories: `keys`, `runes`, `runs`, `led`, `weeklyled`, `o3completes`, `o3fails`")
 
         if type == 'runes':
             helmrunes = await sql.get_top_10_logs(self.client.pool, ctx.guild.id, sql.log_cols.helmrunes, only_10=False)
@@ -137,11 +137,13 @@ class Logging(commands.Cog):
             runes.sort(key=get_num, reverse=True)
             top = format_top_data(runes[:20], 1, aslist=True)
         else:
-            col = sql.log_cols.pkey if type == 'keys' else sql.log_cols.runsdone if type == 'runs' else sql.log_cols.srunled if type == 'led' else sql.log_cols.weeklyruns
+            col = sql.log_cols.pkey if type == 'keys' else sql.log_cols.runsdone if type == 'runs' else sql.log_cols.srunled if type == 'led' else sql.log_cols.weeklyruns if \
+                type == 'weeklyled' else sql.log_cols.ocompletes if type == 'o3completes' else sql.log_cols.oattempts
             top = await sql.get_top_10_logs(self.client.pool, ctx.guild.id, column=col, only_10=False, limit=20)
             top = format_top_data(top, col, aslist=True)
 
-        name = 'Keys' if type == 'keys' else "Runes" if type == 'runes' else "Runs Completed" if type == 'runs' else "Runs Led" if type == 'led' else "Weekly Runs Led"
+        name = 'Keys' if type == 'keys' else "Runes" if type == 'runes' else "Runs Completed" if type == 'runs' else "Runs Led" if type == 'led' else "Weekly Runs Led" if type \
+               == 'weeklyled' else "Oryx 3 Completes" if type == 'o3completes' else "Oryx 3 Fails"
         embed = discord.Embed(title=f"Top {name} in {ctx.guild.name}", color=discord.Color.gold()).add_field(name='Top 10', value="".join(top[:10]), inline=False)
         if len(top) > 10:
             embed.add_field(name="Top 20", value="".join(top[10:]), inline=False)

@@ -57,14 +57,18 @@ class Raiding(commands.Cog):
 
         if ctx.author.id in self.client.active_raiders:
             await ctx.send("You are currently in a raid! This command is used to check your position when waiting for a raid to start.")
-        elif ctx.author.id in self.client.morder[ctx.guild.id]:
+        elif ctx.author.id in self.client.morder[ctx.guild.id] and self.client.morder[ctx.guild.id][ctx.author.id] is not None:
             d = self.client.morder[ctx.guild.id][ctx.author.id]
-            s = f"💎 - You are number {d[1]} in the **priority** queue." if d[0] else f"✅ - You are number {d[1]} in the **normal** queue."
-            s += f" {ctx.author.mention}"
+            if d is not None:
+                s = f"💎 - You are number {d[1]} in the **priority** queue." if d[0] else f"✅ - You are number {d[1]} in the **normal** queue."
+                s += f" {ctx.author.mention}"
+            else:
+                s = "An issue occured retrieving your position status. Most likely the bot is moving people into the raid VC at the moment - but contact Darkmatter#7321 if " \
+                    "this issue persists."
             await ctx.send(s)
         else:
             d = await sql.get_missed(self.client.pool, ctx.author.id)
-            if d[1]:
+            if d and d[1]:
                 await ctx.send("💎 - You are not in a raid, but have priority queuing for the next run you want to join.")
             else:
                 await ctx.send(f"You are not currently in a raid!")

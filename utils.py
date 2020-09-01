@@ -705,7 +705,7 @@ servers = {"US" : ("USWest2", "USWest", "USSouthWest", "USSouth3", "USSouth2", "
 
 def get_server(is_us=True):
     res = random.choice(servers["EU"]) if is_us else random.choice(servers["US"])
-    return res + random.choice([" Left", " Right"]) + " Bazzar"
+    return res + random.choice([" Left", " Right"]) + " Bazaar"
 
 
 oryx_images = [
@@ -752,6 +752,25 @@ q_dungeons = {1: ("Oryx 3",
                    ("<:mseal:682205755754938409>", 2),
                    ("<:trickster:682214467483861023>", 2),
                    ("<:Bard:735022210657550367>", 1),
+                   ("<:mystic:682205700918607969>", 2),
+                   ("<:wizard:711307534685962281>", 6)),
+                  ("<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
+                   "<:wizard:711307534685962281>", "<:Samurai:735022210682585098>"),
+                 discord.Color.gold(),
+                 "https://i.imgur.com/0qglf0F.gif"),
+              2: ("Vet Oryx 3",
+                  ("<a:O3:737899037973282856>", "https://i.imgur.com/Y37KxOF.gif"),
+                  (40, 6),
+                  (("<:WineCellarInc:708191799750950962>", 1),
+                   ("<:swordrune:737672554482761739>", 2),
+                   ("<:shieldrune:737672554642276423>", 2),
+                   ("<:helmrune:737673058722250782>", 2),
+                   ("<:puri:682205769973760001>", 4),
+                   ('<:warrior:682204616997208084>', 4),
+                   ("<:paladin:682205688033968141>", 3),
+                   ("<:mseal:682205755754938409>", 1),
+                   ("<:trickster:682214467483861023>", 2),
+                   ("<:Bard:735022210657550367>", 2),
                    ("<:mystic:682205700918607969>", 2),
                    ("<:wizard:711307534685962281>", 6)),
                   ("<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",

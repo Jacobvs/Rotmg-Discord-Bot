@@ -88,7 +88,7 @@ class ParseLog:
             descript = ""
             shieldreacts = self.required_items['<:shieldrune:737672554642276423>']['confirmed']
             if shieldreacts:
-                for i, r in enumerate(swordreacts):
+                for i, r in enumerate(shieldreacts):
                     desc += self.numbers[i] + f" - {r.mention}\n"
                 descript = f"Users who confirmed shield rune (<:shieldrune:737672554642276423>) with the bot:\n" + desc + "\n"
             descript += "Click the 🔄 to enter who popped. If you don't know, hit the ❌."
@@ -98,7 +98,7 @@ class ParseLog:
             descript = ""
             helmreacts = self.required_items['<:helmrune:737673058722250782>']['confirmed']
             if helmreacts:
-                for i, r in enumerate(swordreacts):
+                for i, r in enumerate(helmreacts):
                     desc += self.numbers[i] + f" - {r.mention}\n"
                 descript = f"Users who confirmed helm rune (<:helmrune:737673058722250782>) with the bot:\n" + desc + "\n"
             descript += "Click the 🔄 to enter who popped. If you don't know, hit the ❌."
@@ -220,7 +220,7 @@ class ParseLog:
         for r in self.confirmedLogs:
             desc += r[0] + " - " + str(r[1]) + "\n"
         desc += "Run Leader - " + self.author.mention + "\n"
-        desc += f"# Raiders Attempted - {attempted}\n"
+        desc += f"# Raiders Failed - {attempted}\n"
         desc += f"# Raiders Completed - {len(members)}\n"
         # try:
         #     desc += str(self.confirmedLogs[-1][0]) + " - " + str(self.confirmedLogs[-1][1])

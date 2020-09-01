@@ -24,7 +24,7 @@ class Casino(commands.Cog):
 
     async def cog_check(self, ctx):
         print(ctx.command)
-        if str(ctx.command) != 'balance' and str(ctx.command) != 'top':
+        if str(ctx.command) not in ['balance', 'top', 'daily', 'work', 'search', 'steal', 'cooldowns']:
             bucket = self._cd.get_bucket(ctx.message)
             retry_after = bucket.update_rate_limit()
             if retry_after:

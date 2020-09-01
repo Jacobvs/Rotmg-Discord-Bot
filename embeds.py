@@ -248,7 +248,10 @@ def post_afk(seconds_left, num_raiders, emojis, color=discord.Color.teal()):
 
 def aborted_afk(run_title, requester, thumbnail):
     desc = f"This afk check for {run_title} has been aborted!\n Please wait for the next afk check to start."
-    embed = discord.Embed(title=f"AFK Aborted by {requester.display_name}.", description=desc, color=discord.Color.from_rgb(0, 0, 0))
+    if isinstance(requester, discord.ClientUser):
+        embed = discord.Embed(title=f"AFK Aborted automatically.", description=desc, color=discord.Color.from_rgb(0, 0, 0))
+    else:
+        embed = discord.Embed(title=f"AFK Aborted by {requester.display_name}.", description=desc, color=discord.Color.from_rgb(0, 0, 0))
     embed.set_thumbnail(url=thumbnail)
     embed.set_footer(text="AFK Check aborted at ")
     embed.timestamp = datetime.utcnow()

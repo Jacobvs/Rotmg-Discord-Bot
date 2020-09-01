@@ -417,7 +417,7 @@ class Core(commands.Cog):
             if self.client.patreon_role in after.roles and self.client.patreon_role not in before.roles:
                 await sql.set_patreon_status(self.client.pool, after.id, name, True)
                 self.client.patreon_ids.add(after.id)
-                pchannel = self.client.get_channel(737140990158045214)
+                pchannel = self.client.get_channel(707684415437799546)
                 if pchannel:
                     await pchannel.send(f"{after.mention} became a patreon! :tada:\nUse `!help patreon` to see the new commands you have access to\nAlso, feel free to dm me "
                                         f"anytime if you have questions or suggestions! Thanks so much for your support!")
@@ -507,20 +507,21 @@ class Core(commands.Cog):
 
         # check if reaction is in dm's or in guild
         if payload.guild_id is not None:
+
+            if payload.message_id in self.client.raid_db[payload.guild_id]['afk']:
+                afk = self.client.raid_db[payload.guild_id]['afk'][payload.message_id]
+                return await afk.reaction_handler(payload)
+            elif payload.message_id in self.client.raid_db[payload.guild_id]['cp']:
+                afk = self.client.raid_db[payload.guild_id]['cp'][payload.message_id]
+                return await afk.cp_handler(payload)
+
             guild = self.client.get_guild(payload.guild_id)
             guild_data = await get_guild(self.client.pool, guild.id)
             verify_message_id = guild_data[gld_cols.verificationid]
             subverify_1_msg_id = guild_data[gld_cols.subverify1id]
             subverify_2_msg_id = guild_data[gld_cols.subverify2id]
 
-            if payload.message_id in self.client.raid_db[guild.id]['afk']:
-                afk = self.client.raid_db[guild.id]['afk'][payload.message_id]
-                await afk.reaction_handler(payload)
-            elif payload.message_id in self.client.raid_db[guild.id]['cp']:
-                afk = self.client.raid_db[guild.id]['cp'][payload.message_id]
-                await afk.cp_handler(payload)
-
-            elif payload.message_id == verify_message_id and str(payload.emoji) == '✅':  # handles verification reacts
+            if payload.message_id == verify_message_id and str(payload.emoji) == '✅':  # handles verification reacts
                 blacklisted = await sql.get_blacklist(self.client.pool, user.id, payload.guild_id, 'verification')
                 if blacklisted:
                     return await user.send("You have been blacklisted from verifying in this server! Contact a security+ if you believe this to be a mistake!")
