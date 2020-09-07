@@ -1,6 +1,7 @@
 # Rotmg-Discord-Bot
 Discord bot for ROTMG Verification &amp; AFK Checks
 
+Support my patreon to cover hosting costs & buy me a coffee! [patreon.com/darkmattr](https://www.patreon.com/Darkmattr)
 Please contact me on discord (Darkmatter#7321) if you'd like the bot added to your server.
 
 If you want to see what I'm working on with the bot, click on the `Projects` tab up top!
