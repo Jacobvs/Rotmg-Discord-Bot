@@ -205,8 +205,8 @@ class Core(commands.Cog):
                         value=f"**`{len(self.client.guilds)}`** servers with **`{mcount}`** total members.")
         embed.add_field(name="\u200b", value="\u200b")
         embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.")
-        lines = line_count('/home/jacobvs/Rotmg-Discord-Bot/') + line_count('/home/jacobvs/Rotmg-Discord-Bot/cogs') + line_count(
-            '/home/jacobvs/Rotmg-Discord-Bot/cogs/Raiding') + line_count('/home/jacobvs/Rotmg-Discord-Bot/cogs/Minigames')
+        lines = line_count('/home/ubuntu/Rotmg-Bot/') + line_count('/home/ubuntu/Rotmg-Bot/cogs') + line_count(
+            '/home/ubuntu/Rotmg-Bot/cogs/Raiding') + line_count('/home/ubuntu/Rotmg-Bot/cogs/Minigames')
         embed.add_field(name="Lines of Code:", value=(f"**`{lines}`** lines of code."))
         embed.add_field(name="\u200b", value="\u200b")
         embed.add_field(name="Server Status:",
@@ -417,7 +417,7 @@ class Core(commands.Cog):
             if self.client.patreon_role in after.roles and self.client.patreon_role not in before.roles:
                 await sql.set_patreon_status(self.client.pool, after.id, name, True)
                 self.client.patreon_ids.add(after.id)
-                pchannel = self.client.get_channel(707684415437799546)
+                pchannel = self.client.get_channel(703615618112290940)
                 if pchannel:
                     await pchannel.send(f"{after.mention} became a patreon! :tada:\nUse `!help patreon` to see the new commands you have access to\nAlso, feel free to dm me "
                                         f"anytime if you have questions or suggestions! Thanks so much for your support!")

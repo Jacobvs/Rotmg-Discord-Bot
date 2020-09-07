@@ -556,8 +556,12 @@ async def check_pops(client, member, changed_amount, num, type=None, emoji=None,
                 except discord.Forbidden:
                     print(f"ERROR: adding third key popper role to {member.display_name} failed!")
     elif type == 'helm' or type == 'shield' or type == 'sword':
+        d = await sql.get_log(client.pool, guild.id, member.id)
+        nrunes = d[sql.log_cols.helmrunes] + d[sql.log_cols.swordrunes] + d[sql.log_cols.shieldrunes] if d else 0
+        desc = f"{member.mention} has popped {nrunes} runes for the server! " \
+               f"({d[sql.log_cols.helmrunes]} helm, {d[sql.log_cols.swordrunes]} sword, {d[sql.log_cols.shieldrunes]} shield)"
         frpopnum = guild_db[sql.gld_cols.numpopsfirstrune]
-        if num >= frpopnum:
+        if nrunes >= frpopnum:
             role = guild_db[sql.gld_cols.runepopper1role]
             if role and role not in member.roles:
                 send_msg = True
@@ -567,7 +571,7 @@ async def check_pops(client, member, changed_amount, num, type=None, emoji=None,
                 except discord.Forbidden:
                     print(f"ERROR: adding first rune popper role to {member.display_name} failed!")
         srpopnum = guild_db[sql.gld_cols.numpopssecondrune]
-        if num >= srpopnum:
+        if nrunes >= srpopnum:
             role = guild_db[sql.gld_cols.runepopper2role]
             if role and role not in member.roles:
                 send_msg = True
@@ -760,19 +764,20 @@ q_dungeons = {1: ("Oryx 3",
                  "https://i.imgur.com/0qglf0F.gif"),
               2: ("Vet Oryx 3",
                   ("<a:O3:737899037973282856>", "https://i.imgur.com/Y37KxOF.gif"),
-                  (40, 6),
+                  (46, 4),
                   (("<:WineCellarInc:708191799750950962>", 1),
-                   ("<:swordrune:737672554482761739>", 2),
-                   ("<:shieldrune:737672554642276423>", 2),
-                   ("<:helmrune:737673058722250782>", 2),
+                   ("<:swordrune:737672554482761739>", 1),
+                   ("<:shieldrune:737672554642276423>", 1),
+                   ("<:helmrune:737673058722250782>", 1),
                    ("<:puri:682205769973760001>", 4),
-                   ('<:warrior:682204616997208084>', 4),
-                   ("<:paladin:682205688033968141>", 3),
-                   ("<:mseal:682205755754938409>", 1),
+                   ("<:warrior:682204616997208084>", 4),
+                   ("<:mseal:682205755754938409>", 3),
                    ("<:trickster:682214467483861023>", 2),
-                   ("<:Bard:735022210657550367>", 2),
                    ("<:mystic:682205700918607969>", 2),
-                   ("<:wizard:711307534685962281>", 6)),
+                   ("<:Bard:735022210657550367>", 2),
+                   ("<:knight:682205672116584459>", 1),
+                   ("<:Samurai:735022210682585098>", 1),
+                   ('<:dps:751494941980753991>', 15)),
                   ("<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
                    "<:wizard:711307534685962281>", "<:Samurai:735022210682585098>"),
                  discord.Color.gold(),

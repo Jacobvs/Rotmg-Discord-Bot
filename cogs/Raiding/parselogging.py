@@ -163,6 +163,32 @@ class ParseLog:
                     except discord.ext.commands.BadArgument:
                         pass
                 members = _mems
+
+                embed = discord.Embed(title=f"Member Completion: {self.author.display_name}",
+                                      description="Please enter who took this screenshot.")
+                await self.msg.edit(embed=embed)
+
+                def member_check(m):
+                    return m.author == self.author and m.channel == self.channel
+
+                while True:
+                    try:
+                        msg = await self.client.wait_for('message', timeout=7200, check=member_check)
+                    except asyncio.TimeoutError:
+                        if self.author.id in self.client.raid_db[self.guild.id]['leaders']:
+                            self.client.raid_db[self.guild.id]['leaders'].remove(self.author.id)
+                        embed = discord.Embed(title="Timed out!", description="You didn't choose a member in time!", color=discord.Color.red())
+                        await self.msg.clear_reactions()
+                        return await self.msg.edit(embed=embed)
+
+                    try:
+                        ctx = commands.Context(bot=self.client, prefix="!", guild=self.guild, message=msg)
+                        mem = await converter.convert(ctx, msg.content.strip())
+                        members.append(mem)
+                        break
+                    except discord.ext.commands.BadArgument:
+                        await self.channel.send(f"The member you specified (`{msg.content}`) was not found.", delete_after=7)
+                        continue
                 break
 
         await msg.delete()
@@ -383,7 +409,5 @@ def parse_image(image, member_list):
                     completed.append(cleaned_members[matches[0]])
         else:
             completed.append(cleaned_members[name.strip().lower()])
-
-
 
     return completed
