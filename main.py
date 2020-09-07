@@ -58,7 +58,7 @@ with open('data/variables.json', 'r') as file:
 async def on_ready():
     """Wait until bot has connected to discord"""
     bot.pool = await aiomysql.create_pool(host=os.getenv("MYSQL_HOST"), port=3306, user='jacobvs', password=os.getenv("MYSQL_PASSWORD"),
-                                          db='mysql', loop=bot.loop)
+                                          db='mysql', loop=bot.loop, connect_timeout=60)
     bot.start_time = datetime.datetime.now()
     bot.raid_db = {}
     bot.mapmarkers = {}

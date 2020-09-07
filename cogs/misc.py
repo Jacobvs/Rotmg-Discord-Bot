@@ -106,8 +106,8 @@ class Misc(commands.Cog):
                         f"**{data[sql.log_cols.pkey]}**\nEvent Keys: **{data[sql.log_cols.eventkeys]}**\nVials: "
                         f"**{data[sql.log_cols.vials]}**\nSword Runes: **{data[sql.log_cols.swordrunes]}**\nShield Runes: "
                         f"**{data[sql.log_cols.shieldrunes]}**\nHelm Runes: **{data[sql.log_cols.helmrunes]}**", inline=False)
-        if ctx.guild.id == 660344559074541579:
-            embed.add_field(name="__**Run Stats**__", value=f"Oryx 3 Completes: **{data[sql.log_cols.ocompletes]}**\nOryx 3 Attempted: **{data[sql.log_cols.oattempts]}**\nEvents "
+        if server_id == 660344559074541579:
+            embed.add_field(name="__**Run Stats**__", value=f"Oryx 3 Completes: **{data[sql.log_cols.ocompletes]}**\nOryx 3 Fails: **{data[sql.log_cols.oattempts]}**\nEvents "
                                                             f"Completed: **{data[sql.log_cols.eventsdone]}**", inline=False)
         else:
             embed.add_field(name="__**Run Stats**__", value=f"Completed: **{data[sql.log_cols.runsdone]}**\nEvents Completed: **{data[sql.log_cols.eventsdone]}**", inline=False)

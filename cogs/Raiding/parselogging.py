@@ -88,7 +88,7 @@ class ParseLog:
             descript = ""
             shieldreacts = self.required_items['<:shieldrune:737672554642276423>']['confirmed']
             if shieldreacts:
-                for i, r in enumerate(swordreacts):
+                for i, r in enumerate(shieldreacts):
                     desc += self.numbers[i] + f" - {r.mention}\n"
                 descript = f"Users who confirmed shield rune (<:shieldrune:737672554642276423>) with the bot:\n" + desc + "\n"
             descript += "Click the 🔄 to enter who popped. If you don't know, hit the ❌."
@@ -98,7 +98,7 @@ class ParseLog:
             descript = ""
             helmreacts = self.required_items['<:helmrune:737673058722250782>']['confirmed']
             if helmreacts:
-                for i, r in enumerate(swordreacts):
+                for i, r in enumerate(helmreacts):
                     desc += self.numbers[i] + f" - {r.mention}\n"
                 descript = f"Users who confirmed helm rune (<:helmrune:737673058722250782>) with the bot:\n" + desc + "\n"
             descript += "Click the 🔄 to enter who popped. If you don't know, hit the ❌."
@@ -163,6 +163,32 @@ class ParseLog:
                     except discord.ext.commands.BadArgument:
                         pass
                 members = _mems
+
+                embed = discord.Embed(title=f"Member Completion: {self.author.display_name}",
+                                      description="Please enter who took this screenshot.")
+                await self.msg.edit(embed=embed)
+
+                def member_check(m):
+                    return m.author == self.author and m.channel == self.channel
+
+                while True:
+                    try:
+                        msg = await self.client.wait_for('message', timeout=7200, check=member_check)
+                    except asyncio.TimeoutError:
+                        if self.author.id in self.client.raid_db[self.guild.id]['leaders']:
+                            self.client.raid_db[self.guild.id]['leaders'].remove(self.author.id)
+                        embed = discord.Embed(title="Timed out!", description="You didn't choose a member in time!", color=discord.Color.red())
+                        await self.msg.clear_reactions()
+                        return await self.msg.edit(embed=embed)
+
+                    try:
+                        ctx = commands.Context(bot=self.client, prefix="!", guild=self.guild, message=msg)
+                        mem = await converter.convert(ctx, msg.content.strip())
+                        members.append(mem)
+                        break
+                    except discord.ext.commands.BadArgument:
+                        await self.channel.send(f"The member you specified (`{msg.content}`) was not found.", delete_after=7)
+                        continue
                 break
 
         await msg.delete()
@@ -220,7 +246,7 @@ class ParseLog:
         for r in self.confirmedLogs:
             desc += r[0] + " - " + str(r[1]) + "\n"
         desc += "Run Leader - " + self.author.mention + "\n"
-        desc += f"# Raiders Attempted - {attempted}\n"
+        desc += f"# Raiders Failed - {attempted}\n"
         desc += f"# Raiders Completed - {len(members)}\n"
         # try:
         #     desc += str(self.confirmedLogs[-1][0]) + " - " + str(self.confirmedLogs[-1][1])
@@ -383,7 +409,5 @@ def parse_image(image, member_list):
                     completed.append(cleaned_members[matches[0]])
         else:
             completed.append(cleaned_members[name.strip().lower()])
-
-
 
     return completed

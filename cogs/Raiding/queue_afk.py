@@ -28,7 +28,7 @@ class QAfk:
         self.raid_vc = None
         self.in_run = False
         self.raid_msg = None
-        self.max_patreons = 6
+        self.in_normal = True if self.hcchannel.id == 660347564767313952 else False
 
         self.raiderids = set()
         self.confirmed_raiders = {}
@@ -87,12 +87,13 @@ class QAfk:
             self.missed_runs.update({r[0]: r[1]})
 
         # Grab dungeon info from utils
-        dungeon_info = utils.q_dungeon_info(1)
+        dungeon_info = utils.q_dungeon_info(1) if self.in_normal else utils.q_dungeon_info(2)
         self.dungeontitle = dungeon_info[0]
         self.dungeon_emoji = dungeon_info[1][0]
         self.dungeon_image = dungeon_info[1][1]
         self.max_members = dungeon_info[2][0]
         self.max_nitro = dungeon_info[2][1]
+        self.max_patreons = self.max_nitro
         r_emojis = dungeon_info[3]
         self.class_emojis = dungeon_info[4]
         self.dungeon_color = dungeon_info[5]
@@ -126,9 +127,9 @@ class QAfk:
         emojis.append('<:patreon:736944176469508118>')
         asyncio.get_event_loop().create_task(self.add_emojis(self.raid_msg, emojis))
 
-        class_embed = discord.Embed(description="Please react below to indicate what class you are bringing to the run!")
-        self.class_message = await self.hcchannel.send(embed=class_embed)
-        asyncio.get_event_loop().create_task(self.add_emojis(self.class_message, self.class_emojis))
+        # class_embed = discord.Embed(description="Please react below to indicate what class you are bringing to the run! (Only used to check percentages)")
+        # self.class_message = await self.hcchannel.send(embed=class_embed)
+        # asyncio.get_event_loop().create_task(self.add_emojis(self.class_message, self.class_emojis))
 
         # Create Raid VC
         overwrites = self.category.overwrites
@@ -142,11 +143,12 @@ class QAfk:
                                       color=discord.Color.teal())
         self.cp_embed.add_field(name="Meetup Location:", value=self.meetup, inline=True)
         self.cp_embed.add_field(name="Run Location:", value=f"{self.location} *[Hidden]*", inline=True)
-        self.cp_embed.add_field(name="Required Reactions:", value="N/A", inline=False)
+        self.cp_embed.add_field(name="Inc & Runes:", value="N/A", inline=False)
+        self.cp_embed.add_field(name="Item/Class Reactions:", value="N/A", inline=False)
         self.cp_embed.add_field(name="Nitro Boosters / Patreons:", value="N/A", inline=False)
         self.cp_embed.add_field(name="Info:", value="N/A", inline=False)
-        self.cp_embed.add_field(name="Class Reactions (1):", value="N/A", inline=False)
-        self.cp_embed.add_field(name="Class Reactions (2):", value="N/A", inline=False)
+        # self.cp_embed.add_field(name="Class Reactions (1):", value="N/A", inline=False)
+        # self.cp_embed.add_field(name="Class Reactions (2):", value="N/A", inline=False)
         self.cp_embed.set_footer(text="QAFK Started at ")
         self.cp_embed.timestamp = datetime.utcnow()
         await self.update_cp_embed()
@@ -171,8 +173,10 @@ class QAfk:
 
 
     async def autoend(self):
-        await asyncio.sleep(900)  # wait 15 mins max
-        await self.dequeue()
+        await asyncio.sleep(1800)  # wait 30 mins max
+        self.update_task.cancel()
+        await self.cp_msg.clear_reactions()
+        await self.abort_afk(self.client.user)
 
     async def dequeue(self):
         print('in dequeue')
@@ -188,10 +192,12 @@ class QAfk:
         #             self.confirmed_raiders[m.id] = m
         # print(self.confirmed_raiders)
 
+        await self.raid_msg.unpin()
+
         for id in self.confirmed_raiders:
             self.client.morder[self.ctx.guild.id].pop(id, None)
 
-        await self.class_message.delete()
+        # await self.class_message.delete()
         task = asyncio.get_event_loop().create_task(self.move_members())
         await self.raid_msg.clear_reactions()
         while not task.done():
@@ -268,23 +274,24 @@ class QAfk:
         embed = discord.Embed(description=f"This raid is running with **{len(self.raiderids)}** members.\nIf you get disconnected, rejoin {self.queuechannel.name} to be moved "
                                           f"in.\n\n__If you "
                                           f"weren't moved in for this afk, you have been given priority queuing to ensure you make it to the next raid!__\n\nPlease be patient "
-                                          f"and wait for the next raid to be posted.",
+                                          f"and wait for the next raid to be posted.\n\n **To join another run if you nexus, use `!leaverun` so you don't get moved back into "
+                                          f"the raid vc.**",
                               color=self.dungeon_color)
         embed.set_thumbnail(url=self.dungeon_boss_image)
-        embed.set_author(name=f"{self.dungeontitle} Raid is currently runnning!", icon_url=self.dungeon_image)
+        embed.set_author(name=f"{self.dungeontitle} Raid is currently running!", icon_url=self.dungeon_image)
 
-        classes = ""
-        for c in self.class_emojis[:3]:
-            num = next((r.count for r in self.class_message.reactions if str(r.emoji) == c), 0)
-            bar = utils.textProgressBar(num, int(self.max_members/4), prefix="", percent_suffix=" Full", suffix="", decimals=0, length=10, fullisred=True)
-            classes += f"{c} - {bar}\n"
-        embed.add_field(name="Class Reactions (1):", value=classes, inline=False)
-        classes = ""
-        for c in self.class_emojis[3:]:
-            num = next((r.count for r in self.class_message.reactions if str(r.emoji) == c), 0)
-            bar = utils.textProgressBar(num, int(self.max_members/4), prefix="", percent_suffix=" Full", suffix="", decimals=0, length=10, fullisred=True)
-            classes += f"{c} - {bar}\n"
-        embed.add_field(name="Class Reactions (2):", value=classes, inline=False)
+        # classes = ""
+        # for c in self.class_emojis[:3]:
+        #     num = next((r.count for r in self.class_message.reactions if str(r.emoji) == c), 0)
+        #     bar = utils.textProgressBar(num, int(self.max_members/4), prefix="", percent_suffix=" Full", suffix="", decimals=0, length=10, fullisred=True)
+        #     classes += f"{c} - {bar}\n"
+        # embed.add_field(name="Class Reactions (1):", value=classes, inline=False)
+        # classes = ""
+        # for c in self.class_emojis[3:]:
+        #     num = next((r.count for r in self.class_message.reactions if str(r.emoji) == c), 0)
+        #     bar = utils.textProgressBar(num, int(self.max_members/4), prefix="", percent_suffix=" Full", suffix="", decimals=0, length=10, fullisred=True)
+        #     classes += f"{c} - {bar}\n"
+        # embed.add_field(name="Class Reactions (2):", value=classes, inline=False)
         embed.set_footer(text="Raid Started ")
         embed.timestamp = datetime.utcnow()
 
@@ -302,36 +309,69 @@ class QAfk:
 
         print('dming members')
         # DM MEMBERS
+        # DM runes first
+        runems = []
+        failed = []
+        for e in self.required_items:
+            if e in ["<:swordrune:737672554482761739>", "<:shieldrune:737672554642276423>", "<:helmrune:737673058722250782>"]:
+                for m in self.required_items[e]['confirmed']:
+                    try:
+                        await m.send(f"The location is: {self.location}.\nYou have 30 seconds before location is called for everyone.")
+                        runems.append(m)
+                    except discord.Forbidden or discord.HTTPException:
+                        failed.append(m)
+        self.cp_embed.description += "\nLocation has been sent to runes... (Waiting 10 seconds)"
+        await self.cp_msg.edit(embed=self.cp_embed)
+
+        await asyncio.sleep(10)
+
+
         for i in self.required_items:
             for m in self.required_items[i]['confirmed']:
-                await m.send(f"The location is: {self.location}.\nYou have 15 seconds before location is called for everyone.")
+                if m not in runems:
+                    try:
+                        await m.send(f"The location is: {self.location}.\nYou have 20 seconds before location is called for everyone.")
+                    except discord.Forbidden or discord.HTTPException:
+                        failed.append(m)
 
         for m in self.patreons:
-            await m.send(f"The location is: {self.location}.\nYou have 15 seconds before location is called for everyone.")
+            try:
+                await m.send(f"The location is: {self.location}.\nYou have 20 seconds before location is called for everyone.")
+            except discord.Forbidden or discord.HTTPException:
+                failed.append(m)
 
         for m in self.nitroboosters:
-            await m.send(f"The location is: {self.location}.\nYou have 15 seconds before location is called for everyone.")
+            try:
+                await m.send(f"The location is: {self.location}.\nYou have 20 seconds before location is called for everyone.")
+            except discord.Forbidden or discord.HTTPException:
+                failed.append(m)
+
+        if failed:
+            await self.ctx.send(f'These members have dms disabled!\n{", ".join([m.mention for m in failed])}')
 
 
         print('print done sending dms')
 
-        self.cp_embed.description += "\nLocation has been sent to all members with required items."
+        self.cp_embed.description += "\nLocation has been sent to all members with required items... (Waiting 20 seconds)"
         await self.cp_msg.edit(embed=self.cp_embed)
-        await asyncio.sleep(15)
+        await asyncio.sleep(20)
 
-
-        await self.ctx.author.send(f"CALL NOW: `{self.location}`\n{self.ctx.author.mention}")
+        try:
+            await self.ctx.author.send(f"CALL NOW: `{self.location}`\n{self.ctx.author.mention}")
+        except discord.Forbidden or discord.HTTPException:
+            pass
         self.cp_embed.description = f"QAFK [**Control Panel**]({self.raid_msg.jump_url}) for **{self.dungeontitle}** | Started by {self.ctx.author.mention}\n\n" \
                                     "__**CALL LOCATION NOW!**__"
         await self.cp_msg.edit(embed=self.cp_embed)
         await asyncio.sleep(5)
 
         self.cp_embed.description = f"QAFK [**Control Panel**]({self.raid_msg.jump_url}) for **{self.dungeontitle}** | Started by {self.ctx.author.mention}\n\n" \
-                                    "Press the 🔓 emoji to unlock the raid vc.\nPress the 📤 button when you are done with the run."
+                                    "Press the 🔓 emoji to unlock the raid vc.\nPress the 📤 button when you are done with the run\n 📝 to change location (early locations will be " \
+                                    "sent a DM)."
         await self.cp_msg.edit(embed=self.cp_embed)
         await self.cp_msg.add_reaction('🔓')
-        await self.cp_msg.add_reaction('<:gray:736515579103543336>')
         await self.cp_msg.add_reaction('📤')
+        await self.cp_msg.add_reaction('📝')
 
         self.in_run = True
 
@@ -356,9 +396,8 @@ class QAfk:
         await self.cp_msg.clear_reaction('🔓')
 
         self.cp_embed.description = f"QAFK [**Control Panel**]({self.raid_msg.jump_url}) for **{self.dungeontitle}** | Started by {self.ctx.author.mention}\n\n" \
-                                    "\nPress the 📤 button when you are done with the run."
+                                    "\nPress the 📤 button when you are done with the run, 📝 to change location."
         await self.cp_msg.edit(embed=self.cp_embed)
-
 
 
     async def after_raid(self):
@@ -382,6 +421,10 @@ class QAfk:
         self.cp_embed.description = f"QAFK [**Control Panel**]({self.raid_msg.jump_url}) for **{self.dungeontitle}** | Started by {self.ctx.author.mention}\n\n" \
                                     "\nThe run has completed. Thank you for leading."
         await self.cp_msg.edit(embed=self.cp_embed)
+
+        embed: discord.Embed = self.raid_msg.embeds[0]
+        embed.set_author(name=f"{self.dungeontitle} Raid is finished!", icon_url=self.dungeon_image)
+        await self.raid_msg.edit(embed=embed)
 
         voice = discord.utils.get(self.client.voice_clients, guild=self.ctx.guild)
 
@@ -416,7 +459,7 @@ class QAfk:
         for r in self.raiderids:
             self.client.active_raiders.pop(r, None)
 
-        await self.class_message.delete()
+        # await self.class_message.delete()
 
         await self.raid_msg.clear_reactions()
         await self.raid_msg.unpin()
@@ -449,7 +492,8 @@ class QAfk:
         emote = str(payload.emoji)
         if emote == self.dungeon_emoji:
             # If member is in the priority order or has a role giving them priority queuing
-            if self.missed_runs.get(payload.member.id) or\
+            status = self.missed_runs.get(payload.member.id, None)
+            if status is not None and status or\
                     (self.firstpopperrole in payload.member.roles and self.firstpopperrole and self.firstpopperearlyloc) or \
                     (self.secondpopperrole in payload.member.roles and self.secondpopperrole and self.secondpopperearlyloc) or \
                     (self.thirdpopperrole in payload.member.roles and self.thirdpopperrole and self.thirdpopperearlyloc) or \
@@ -464,27 +508,71 @@ class QAfk:
                     self.normal_order.append(payload.member.id)
                     self.confirmed_raiders[payload.member.id] = payload.member
                     self.client.morder[self.ctx.guild.id][payload.member.id] = (False, len(self.normal_order))
-        elif emote in self.required_items and payload.member not in self.required_items[emote]['confirmed']:
-            if self.ctx.guild.id == 660344559074541579:
-                await self.raid_msg.remove_reaction(payload.emoji, payload.member)
-            if payload.user_id not in self.awaiting_confirmations:
-                self.awaiting_confirmations.add(payload.member.id)
-                await self.dm_handler(payload.member, emote)
-        elif emote == "<:nitro:736138528710459473>":
-            if self.ctx.guild.id == 660344559074541579:
-                await self.raid_msg.remove_reaction(payload.emoji, payload.member)
-            if payload.member.premium_since is not None and payload.member not in self.nitroboosters and payload.member not in self.patreons:
-                await self.dm_handler(payload.member, 'Nitro', is_nitro=True)
-        elif emote == "<:patreon:736944176469508118>":
-            if self.ctx.guild.id == 660344559074541579:
-                await self.raid_msg.remove_reaction(payload.emoji, payload.member)
-            is_patreon = payload.member.id in self.client.patreon_ids
-            if is_patreon and payload.member not in self.nitroboosters and payload.member not in self.patreons:
-                await self.dm_handler(payload.member, 'Patreon', is_patreon=True)
+                else:
+                    print(f"{payload.member} re-reacted to afk")
+        else:
+            await self.raid_msg.remove_reaction(payload.emoji, payload.member)
+
+            if emote in self.required_items and payload.member not in self.required_items[emote]['confirmed']:
+                if payload.user_id not in self.awaiting_confirmations:
+                    self.awaiting_confirmations.add(payload.member.id)
+                    await self.dm_handler(payload.member, emote)
+            elif emote == "<:nitro:736138528710459473>":
+                if payload.member.premium_since is not None and payload.member not in self.nitroboosters and payload.member not in self.patreons:
+                    await self.dm_handler(payload.member, 'Nitro', is_nitro=True)
+            elif emote == "<:patreon:736944176469508118>":
+                is_patreon = payload.member.id in self.client.patreon_ids
+                if is_patreon and payload.member not in self.nitroboosters and payload.member not in self.patreons:
+                    await self.dm_handler(payload.member, 'Patreon', is_patreon=True)
 
 
     # Control panel handler
     async def cp_handler(self, payload):
+        if str(payload.emoji) == '📝' and self.in_run:
+            embed = discord.Embed(title="Location Selection", description="Please type the location you'd like to set for this run.")
+            setup_msg = await self.ctx.send(embed=embed)
+
+            def location_check(mem):
+                return mem.author == payload.member and mem.channel == self.ctx.channel
+
+            try:
+                msg = await self.client.wait_for('message', timeout=60, check=location_check)  # Wait max 1 hour
+            except asyncio.TimeoutError:
+                try:
+                    await setup_msg.delete()
+                    return
+                except discord.NotFound:
+                    return
+
+            self.location = msg.content
+
+            try:
+                await setup_msg.delete()
+                await msg.delete()
+            except discord.NotFound:
+                pass
+
+            failed = []
+            for e in self.required_items:
+                for m in self.required_items[e]['confirmed']:
+                    try:
+                        await m.send(f"The location has changed to **{self.location}**.\nPlease get to the new location as soon as possible.")
+                    except discord.Forbidden or discord.HTTPException:
+                        failed.append(m)
+            for m in self.nitroboosters:
+                try:
+                    await m.send(f"The location has changed to **{self.location}**.\nPlease get to the new location as soon as possible.")
+                except discord.Forbidden or discord.HTTPException:
+                    failed.append(m)
+            for m in self.patreons:
+                try:
+                    await m.send(f"The location has changed to **{self.location}**.\nPlease get to the new location as soon as possible.")
+                except discord.Forbidden or discord.HTTPException:
+                    failed.append(m)
+            await self.ctx.send('Early location members have been sent the new location.')
+            if failed:
+                await self.ctx.send(f'These members have dms disabled!\n{", ".join([m.mention for m in failed])}')
+
         if not self.in_run:
             if str(payload.emoji) == '📥':
                 self.autoend_task.cancel()
@@ -606,11 +694,15 @@ class QAfk:
             nqueue = 0
         nvc = len(self.raid_vc.members) if self.raid_vc else 0
         capacity_bar = utils.textProgressBar(nqueue, self.max_members, prefix="", percent_suffix=" Full", suffix="", decimals=0, length=18)
+        link = 'https://discordapp.com/channels/660344559074541579/706563122944802856/749698837232222328' if self.in_normal else \
+               'https://discordapp.com/channels/660344559074541579/736240706955378788/750171971647569940'
         desc = f"**Join __{self.queuechannel.name}__ to to join the raiding queue!**\nUse `!position` to check your position in the queue.\n\n" \
                f"**{nqueue}** Members are in the queue & have been confirmed to join the raid!\n\n{capacity_bar}\n\nOnce you join the queue, react to {self.dungeon_emoji} to " \
                f"confirm you'd " \
-               f"like to join this raid.\n\nIf you have a required item for this run, **first join __{self.queuechannel.name}__, then** react to the emojis below & confirm with " \
-               f"the bot to skip the queue!\n\nIf you are one of my lovely patreons, react to: <:patreon:736944176469508118>  ⇒  `!patreon`"
+               f"like to join this raid.\n\nIf you have a required item or class for this run, **first join __{self.queuechannel.name}__, then** react to the emojis below & " \
+               f"confirm with the bot to skip the queue! Make sure you meet the [requirements]({link}) when reacting to this message.\n\nIf you are one of my lovely patreons, " \
+               f"react to: <:patreon:736944176469508118>  ⇒  `!patreon`"
+        desc += "" if self.in_normal else "\nIf you are bringing a wizard, sorcerer, or ninja - React to <:dps:751494941980753991> if you meet the requirements for those classes."
         self.raid_start_embed.description = desc
 
         items = []
@@ -634,16 +726,25 @@ class QAfk:
     # Update Control Panel Embed
     async def update_cp_embed(self, update_msg=False):
         item_str = ""
+        rune_str = ""
         for i in self.required_items:
-            item_str += f"{i} - {' | '.join(m.mention for m in self.required_items[i]['confirmed'])} |⇒ ({len(self.required_items[i]['confirmed'])}/" \
-                        f"{self.required_items[i]['max']})\n"
-        self.cp_embed.set_field_at(2, name="Required Reactions:", value=item_str, inline=False)
+            if 'rune' in i or 'Inc' in i:
+                rune_str += f"{i} - {' | '.join(m.mention for m in self.required_items[i]['confirmed'])} |⇒ ({len(self.required_items[i]['confirmed'])}/" \
+                            f"{self.required_items[i]['max']})\n"
+            elif i != '<:dps:751494941980753991>':
+                item_str += f"{i} - {' | '.join(m.mention for m in self.required_items[i]['confirmed'])} |⇒ ({len(self.required_items[i]['confirmed'])}/" \
+                            f"{self.required_items[i]['max']})\n"
+            else:
+                item_str += f"{i} ⇒ ({len(self.required_items[i]['confirmed'])}/" \
+                            f"{self.required_items[i]['max']})\n"
+        self.cp_embed.set_field_at(2, name="Inc & Runes:", value=rune_str, inline=False)
+        self.cp_embed.set_field_at(3, name="Item/Class Reactions:", value=item_str, inline=False)
 
         nitro_str = f"<:nitro:736138528710459473> - " \
                     f"{' | '.join([m.mention for m in self.nitroboosters])} |⇒ ({len(self.nitroboosters)}/{self.max_nitro})"
         nitro_str += f"\n<:patreon:736944176469508118> - " \
                      f"{' | '.join([m.mention for m in self.patreons])} |⇒ ({len(self.patreons)}/{self.max_patreons})"
-        self.cp_embed.set_field_at(3, name="Nitro Boosters / Patreons:", value=nitro_str, inline=False)
+        self.cp_embed.set_field_at(4, name="Nitro Boosters / Patreons:", value=nitro_str, inline=False)
 
         if self.raid_msg:
             self.raid_msg = await self.hcchannel.fetch_message(self.raid_msg.id)
@@ -655,22 +756,23 @@ class QAfk:
         n_capacity_bar = utils.textProgressBar(nvc, self.max_members, prefix="", percent_suffix=" Full", suffix="", decimals=0, length=15)
         info_str = f"**{nqueue}** Members are currently in the queue to join the raid!\n{q_capacity_bar}\n\n**{nvc}** Slots Filled in VC\n{n_capacity_bar}\n\n" \
                    "Start the AFK once you have confirmed enough reactions.\nReact to the 📥 emoji to start, 🛑 to abort."
-        self.cp_embed.set_field_at(4, name="Info:", value=info_str, inline=False)
+        self.cp_embed.set_field_at(5, name="Info:", value=info_str, inline=False)
 
-        self.class_message = await self.hcchannel.fetch_message(self.class_message.id)
-        classes = ""
-        for c in self.class_emojis[:3]:
-            num = next((r.count for r in self.class_message.reactions if str(r.emoji) == c), 1)-1
-            bar = utils.textProgressBar(num, int(self.max_members/4), prefix="", percent_suffix=" ", suffix="", decimals=0, length=10, fullisred=False)
-            classes += f"{c} - {bar}\n"
-        self.cp_embed.set_field_at(5, name="Class Reactions (1):", value=classes, inline=False)
-        classes = ""
-        for c in self.class_emojis[3:]:
-            num = next((r.count for r in self.class_message.reactions if str(r.emoji) == c), 1)-1
-            bar = utils.textProgressBar(num, int(self.max_members/4), prefix="", percent_suffix=" ", suffix="", decimals=0, length=10, fullisred=False)
-            classes += f"{c} - {bar}\n"
-        self.cp_embed.set_field_at(6, name="Class Reactions (2):", value=classes, inline=False)
+        # self.class_message = await self.hcchannel.fetch_message(self.class_message.id)
+        # classes = ""
+        # for c in self.class_emojis[:3]:
+        #     num = next((r.count for r in self.class_message.reactions if str(r.emoji) == c), 1)-1
+        #     bar = utils.textProgressBar(num, int(self.max_members/4), prefix="", percent_suffix=" ", suffix="", decimals=0, length=10, fullisred=False)
+        #     classes += f"{c} - {bar}\n"
+        # self.cp_embed.set_field_at(5, name="Class Reactions (1):", value=classes, inline=False)
+        # classes = ""
+        # for c in self.class_emojis[3:]:
+        #     num = next((r.count for r in self.class_message.reactions if str(r.emoji) == c), 1)-1
+        #     bar = utils.textProgressBar(num, int(self.max_members/4), prefix="", percent_suffix=" ", suffix="", decimals=0, length=10, fullisred=False)
+        #     classes += f"{c} - {bar}\n"
+        # self.cp_embed.set_field_at(6, name="Class Reactions (2):", value=classes, inline=False)
 
+        self.cp_embed.set_field_at(1, name="Run Location:", value=f"{self.location}", inline=True)
         if update_msg:
             await self.cp_msg.edit(embed=self.cp_embed)
 
