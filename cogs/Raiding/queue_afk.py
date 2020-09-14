@@ -134,8 +134,9 @@ class QAfk:
         # Create Raid VC
         overwrites = self.category.overwrites
         overwrites[self.raiderrole] = discord.PermissionOverwrite(connect=False, view_channel=True, speak=False)
-        self.raid_vc: discord.VoiceChannel = await self.category.create_voice_channel(name=f"{self.ctx.author.display_name}'s {self.dungeontitle} Raid", overwrites=overwrites,
-                                                                user_limit=self.max_members)
+        self.raid_vc: discord.VoiceChannel = await self.category.create_voice_channel(name=
+                                             f"{''.join([c for c in self.ctx.author.display_name if c.isalpha()])}'s {self.dungeontitle} Raid", overwrites=overwrites,
+                                             user_limit=self.max_members)
         await self.raid_vc.edit(position=self.queuechannel.position+1)
 
         # Setup Control Panel
@@ -208,7 +209,7 @@ class QAfk:
             nvc = len(self.raid_vc.members)
             n_capacity_bar = utils.textProgressBar(nvc, self.max_members, prefix="", percent_suffix=" Full", suffix="", decimals=0, length=13)
             info_str = f"Moving Members...\n\n**{nvc}** Slots Filled in VC\n{n_capacity_bar}"
-            self.cp_embed.set_field_at(4, name="Info:", value=info_str)
+            self.cp_embed.set_field_at(5, name="Info:", value=info_str)
             await self.cp_msg.edit(embed=self.cp_embed)
             await asyncio.sleep(1.5)
 
@@ -259,6 +260,10 @@ class QAfk:
     async def end_afk(self):
         print("in end afk")
 
+        for m in self.raid_vc.members:
+            if m.id not in self.raiderids:
+                self.raiderids.add(m.id)
+
         # Update sql db with member res
         missed_runs = []
         for id in self.raiderids:
@@ -271,7 +276,7 @@ class QAfk:
         await sql.mass_update_missed(self.client.pool, missed_runs)
 
 
-        embed = discord.Embed(description=f"This raid is running with **{len(self.raiderids)}** members.\nIf you get disconnected, rejoin {self.queuechannel.name} to be moved "
+        embed = discord.Embed(description=f"This raid is running with **{len(self.raid_vc.members)}** members.\nIf you get disconnected, rejoin {self.queuechannel.name} to be moved "
                                           f"in.\n\n__If you "
                                           f"weren't moved in for this afk, you have been given priority queuing to ensure you make it to the next raid!__\n\nPlease be patient "
                                           f"and wait for the next raid to be posted.\n\n **To join another run if you nexus, use `!leaverun` so you don't get moved back into "
@@ -503,11 +508,13 @@ class QAfk:
                     self.priority_order.append(payload.member.id)
                     self.confirmed_raiders[payload.member.id] = payload.member
                     self.client.morder[self.ctx.guild.id][payload.member.id] = (True, len(self.priority_order))
+                    self.client.morder[self.ctx.guild.id]['npriority'] = len(self.priority_order)
             else:
                 if payload.member not in self.confirmed_raiders:
                     self.normal_order.append(payload.member.id)
                     self.confirmed_raiders[payload.member.id] = payload.member
                     self.client.morder[self.ctx.guild.id][payload.member.id] = (False, len(self.normal_order))
+                    self.client.morder[self.ctx.guild.id]['nnormal'] = len(self.normal_order)
                 else:
                     print(f"{payload.member} re-reacted to afk")
         else:
@@ -536,7 +543,7 @@ class QAfk:
                 return mem.author == payload.member and mem.channel == self.ctx.channel
 
             try:
-                msg = await self.client.wait_for('message', timeout=60, check=location_check)  # Wait max 1 hour
+                lmsg = await self.client.wait_for('message', timeout=60, check=location_check)  # Wait max 1 hour
             except asyncio.TimeoutError:
                 try:
                     await setup_msg.delete()
@@ -544,11 +551,11 @@ class QAfk:
                 except discord.NotFound:
                     return
 
-            self.location = msg.content
+            self.location = lmsg.content
 
             try:
                 await setup_msg.delete()
-                await msg.delete()
+                await lmsg.delete()
             except discord.NotFound:
                 pass
 
@@ -573,16 +580,57 @@ class QAfk:
             if failed:
                 await self.ctx.send(f'These members have dms disabled!\n{", ".join([m.mention for m in failed])}')
 
+            self.cp_embed.set_field_at(1, name='Run Location:', value=self.location, inline=False)
+            await self.cp_msg.edit(embed=embed)
+
+        # elif str(payload.emoji) == '<:pepeGun:736540068969447445>':
+        #     embed = discord.Embed(title='O3 Run Preparse', description="Please send a screenshot of members in the realm before the run started. If you clicked this button by "
+        #                                                                "mistake, send `SKIP` to exit out of preparsing.")
+        #     msg = await self.ctx.send(embed=embed)
+        #
+        #     def member_check(m):
+        #         return m.author == payload.member and m.channel == self.ctx.channel
+        #
+        #     while True:
+        #         try:
+        #             msg = await self.client.wait_for('message', timeout=7200, check=member_check)
+        #         except asyncio.TimeoutError:
+        #             embed = discord.Embed(title="Timed out!", description="You didn't upload an image time!", color=discord.Color.red())
+        #             return await msg.edit(embed=embed)
+        #
+        #         if 'skip' in msg.content.strip().lower():
+        #             print('skipped')
+        #             try:
+        #                 await msg.delete()
+        #             except discord.Forbidden or discord.HTTPException:
+        #                 pass
+        #             break
+        #         else:
+        #             if not msg.attachments:
+        #                 await self.ctx.send("Please attach an image containing only the result of the /who command!", delete_after=10)
+        #                 continue
+        #             if len(msg.attachments) > 1:
+        #                 await self.ctx.send("Please only attach 1 image.", delete_after=10)
+        #                 continue
+        #             attachment = msg.attachments[0]
+        #             if not ".jpg" in attachment.filename and not ".png" in attachment.filename:
+        #                 await self.ctx.send("Please only attach an image of type 'png' or 'jpg'.", delete_after=10)
+        #                 continue
+        #             image = io.BytesIO()
+        #             await attachment.save(image, seek_begin=True)
+        #             pmsg = await self.ctx.send("Parsing image. This may take a minute...")
+        #
+        #             await preparse(self, image, msg)
+
         if not self.in_run:
             if str(payload.emoji) == '📥':
                 self.autoend_task.cancel()
                 self.update_task.cancel()
                 await self.cp_msg.clear_reactions()
                 rs = RealmSelect(self.client, self.ctx)
-                self.location = await rs.start()
+                loc = await rs.start()
 
-                if self.location is None:
-                    self.location = "No location selected."
+                self.location = "No location selected." if loc is None else loc
 
                 await self.update_cp_embed(update_msg=True)
                 await self.dequeue()
@@ -654,14 +702,22 @@ class QAfk:
 
         if is_nitro:
             if len(self.nitroboosters) < self.max_nitro:
+                await member.send(f'Confirmed {emoji}. Please wait for the run to start.')
                 self.nitroboosters.append(member)
                 if len(self.nitroboosters) >= self.max_nitro:
                     await self.raid_msg.clear_reaction(emoji)
+            else:
+                await member.send('There are already enough nitro boosters in this run! Please wait for the next run to redeem your nitro reaction. You can still be moved in '
+                                  'normally by reacting to the portal on the afk check.')
         elif is_patreon:
             if len(self.patreons) < self.max_patreons:
+                await member.send(f'Confirmed {emoji}. Please wait for the run to start.')
                 self.patreons.append(member)
                 if len(self.patreons) >= self.max_patreons:
                     await self.raid_msg.clear_reaction(emoji)
+            else:
+                await member.send('There are already enough patreons in this run! Please wait for the next run to redeem your patreon reaction. You can still be moved in '
+                                  'normally by reacting to the portal on the afk check.')
         else:
             self.required_items[emoji]['confirmed'].append(member)
             if len(self.required_items[emoji]['confirmed']) >= self.required_items[emoji]['max']:
@@ -672,6 +728,7 @@ class QAfk:
         await self.update_start_embed(update_msg=True)
         await self.update_cp_embed(update_msg=True)
         self.last_edited = datetime.utcnow()
+        self.client.morder[self.ctx.guild.id]['nvc'] = len(self.raid_vc.members)
         reason = f"{member.display_name} skipped the queue for {self.ctx.author.display_name}'s {self.dungeontitle} Raid by bringing {emoji}."
         print(reason)
         if member.id in self.awaiting_confirmations:
@@ -710,7 +767,8 @@ class QAfk:
         for i in self.required_items:
             confirm = len(self.required_items[i]['confirmed'])
             max = self.required_items[i]['max']
-            items.append(f"{i} - **{confirm}**/{max}")
+            if confirm < max:
+                items.append(f"{i} - **{confirm}**/{max}")
         items_str += " | ".join(items)
         items_str = items_str if items_str else "All required items have been confirmed already! Please wait for the run to start!"
         items_str += f"\n\n<:nitro:736138528710459473> Reserved Slots - **{len(self.nitroboosters)}/{self.max_nitro}**"
@@ -727,6 +785,7 @@ class QAfk:
     async def update_cp_embed(self, update_msg=False):
         item_str = ""
         rune_str = ""
+        # Todo: ADD ⭐ to names who are vet raider
         for i in self.required_items:
             if 'rune' in i or 'Inc' in i:
                 rune_str += f"{i} - {' | '.join(m.mention for m in self.required_items[i]['confirmed'])} |⇒ ({len(self.required_items[i]['confirmed'])}/" \
@@ -781,6 +840,89 @@ class QAfk:
     async def add_emojis(self, msg, emojis):
         for e in emojis:
             await msg.add_reaction(e)
+
+
+defaultnames = ["darq", "deyst", "drac", "drol", "eango", "eashy", "eati", "eendi", "ehoni", "gharr", "iatho", "iawa", "idrae", "iri", "issz", "itani", "laen", "lauk", "lorz",
+                "oalei", "odaru", "oeti", "orothi", "oshyu", "queq", "radph", "rayr", "ril", "rilr", "risrr", "saylt", "scheev", "sek", "serl", "seus", "tal", "tiar", "uoro",
+                "urake", "utanu", "vorck", "vorv", "yangu", "yimi", "zhiar"]
+
+
+# async def preparse(self, image, msg):
+#     names = await self.client.loop.run_in_executor(None, functools.partial(parse_image, image))
+#     memlist = []
+#     namelist = []
+#     conveter = utils.MemberLookupConverter()
+#     ctx = commands.Context(bot=self.client, prefix="!", guild=self.ctx.guild, message=msg)
+#     for name in names:
+#         if " " in name:
+#             names = name.split(" ")
+#             name = names[0]
+#
+#         try:
+#             mem = await conveter.convert(ctx, name)
+#             memlist.append(mem)
+#         except discord.ext.commands.BadArgument:
+#             namelist.append(name)
+#
+#     earlylocs = []
+#     for e in self.required_items:
+#         for m in self.required_items[e]['confirmed']:
+#             if m not in earlylocs:
+#                 earlylocs.append(m)
+#     for m in self.nitroboosters:
+#         if m not in earlylocs:
+#             earlylocs.append(m)
+#     for m in self.patreons:
+#         if m not in earlylocs:
+#             earlylocs.append(m)
+#
+#     mcrashers = []
+#     for m in memlist:
+#         if m not in earlylocs:
+#             mcrashers.append(m)
+#
+#     return mcrashers, namelist
+#
+# def parse_image(image):
+#     file_bytes = np.asarray(bytearray(image.read()), dtype=np.uint8)
+#     img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+#     width = img.shape[:2][1]
+#     factor = 700 / width
+#     img = cv2.resize(img, None, fx=factor, fy=factor, interpolation=cv2.INTER_CUBIC)
+#     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+#
+#     # define range of yellow color in HSV
+#     lower = np.array([27, 130, 180])
+#     upper = np.array([31, 255, 255])
+#     # Threshold the HSV image to get only yellow colors
+#     mask = cv2.inRange(hsv, lower, upper)
+#     # cv2.imwrite("mask.jpg", mask)
+#     # invert the mask to get yellow letters on white background
+#     res = cv2.bitwise_not(mask)
+#     # cv2.imwrite("res.jpg", res)
+#     kernel = np.ones((2, 2), np.uint8)
+#     res = cv2.erode(res, kernel, iterations=1)
+#     blur = cv2.GaussianBlur(res, (3, 3), 0)
+#
+#     str = pytesseract.image_to_string(blur, lang='eng')
+#     str = str.replace("\n", " ")
+#     str = str.replace("}", ")")
+#     str = str.replace("{", "(")
+#     str = str.replace(";", ":")
+#     split_str = re.split(r'(.*)(Players online \([0-9]+\): )', str)
+#     if len(split_str) < 4:
+#         print("ERROR - Parsed String: " + str)
+#         print("INFO - Split String: ")
+#         print(split_str)
+#         return []
+#
+#     print("INFO - Split String: ")
+#     print(split_str)
+#
+#     names = split_str[3].split(", ")
+#     print('done cleaning member names')
+#
+#     return names
 
 
 

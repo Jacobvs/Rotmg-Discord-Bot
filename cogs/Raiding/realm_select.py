@@ -26,7 +26,7 @@ class RealmSelect:
                 server_opts[self.letters[num]] = l[0]
                 num += 1
             embed = discord.Embed(title="Location Selection", description="Choose a realm or press 🔄 to manually enter a location.", color=discord.Color.gold())
-            embed.add_field(name="Top US Servers", value=desc, inline=False)
+            embed.add_field(name="Top US Servers", value=desc, inline=True)
             num = 4
             desc = ""
             for l in servers[1]:
@@ -34,7 +34,7 @@ class RealmSelect:
                 desc += f"{self.letters[num]} - __**{l[0]}**__\n**{l[1]}** People | **{l[2]}** Heroes\n`{event}`\n**{l[4]}** ago\n\n"
                 server_opts[self.letters[num]] = l[0]
                 num += 1
-            embed.add_field(name="Top EU Servers", value=desc, inline=False)
+            embed.add_field(name="Top EU Servers", value=desc, inline=True)
             msg = await self.ctx.send(embed=embed)
             for r in server_opts:
                 await msg.add_reaction(r)
@@ -44,7 +44,7 @@ class RealmSelect:
                 return usr == self.ctx.author and react.message.id == msg.id and (str(react.emoji) in server_opts.keys() or str(react.emoji) == "🔄")
 
             try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=120, check=check)
+                reaction, user = await self.client.wait_for('reaction_add', timeout=1800, check=check)
             except asyncio.TimeoutError:
                 try:
                     embed = discord.Embed(title="Timed out!", description="You didn't choose a realm in time!", color=discord.Color.red())
@@ -80,7 +80,7 @@ class RealmSelect:
         # Wait for author to select a location
         while True:
             try:
-                msg = await self.client.wait_for('message', timeout=600, check=check)
+                msg = await self.client.wait_for('message', timeout=1800, check=check)
             except asyncio.TimeoutError:
                 embed = discord.Embed(title="Timed out!", description="You didn't choose a location in time!", color=discord.Color.red())
                 await msg.clear_reactions()

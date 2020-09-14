@@ -73,7 +73,7 @@ class ParseLog:
 
 
         # Log rune pops
-        if self.run_title == "Oryx 3":
+        if self.run_title == "Oryx 3" or self.run_title == 'Vet Oryx 3':
             desc = ""
             descript = ""
             swordreacts = self.required_items['<:swordrune:737672554482761739>']['confirmed']

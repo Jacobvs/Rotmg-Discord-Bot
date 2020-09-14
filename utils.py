@@ -592,7 +592,7 @@ async def check_pops(client, member, changed_amount, num, type=None, emoji=None,
                 await setup_msg.delete()
             except discord.NotFound:
                 pass
-        await hcchannel.send(desc)
+        await hcchannel.send(desc, allowed_mentions=discord.AllowedMentions(everyone=False, users=False, roles=False))
 
 
 async def image_upload(binary, sendable, is_rc=True):
@@ -754,6 +754,7 @@ q_dungeons = {1: ("Oryx 3",
                    ("<:helmrune:737673058722250782>", 2),
                    ("<:puri:682205769973760001>", 4),
                    ("<:mseal:682205755754938409>", 2),
+                   ("<:slow_icon:678792068965072906>", 1),
                    ("<:trickster:682214467483861023>", 2),
                    ("<:Bard:735022210657550367>", 1),
                    ("<:mystic:682205700918607969>", 2),
@@ -764,7 +765,7 @@ q_dungeons = {1: ("Oryx 3",
                  "https://i.imgur.com/0qglf0F.gif"),
               2: ("Vet Oryx 3",
                   ("<a:O3:737899037973282856>", "https://i.imgur.com/Y37KxOF.gif"),
-                  (46, 4),
+                  (46, 0),
                   (("<:WineCellarInc:708191799750950962>", 1),
                    ("<:swordrune:737672554482761739>", 1),
                    ("<:shieldrune:737672554642276423>", 1),
@@ -777,7 +778,7 @@ q_dungeons = {1: ("Oryx 3",
                    ("<:Bard:735022210657550367>", 2),
                    ("<:knight:682205672116584459>", 1),
                    ("<:Samurai:735022210682585098>", 1),
-                   ('<:dps:751494941980753991>', 15)),
+                   ('<:dps:751494941980753991>', 20)),
                   ("<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
                    "<:wizard:711307534685962281>", "<:Samurai:735022210682585098>"),
                  discord.Color.gold(),
@@ -786,7 +787,7 @@ q_dungeons = {1: ("Oryx 3",
 
 def q_dungeon_info(num):
     info = q_dungeons.get(num)
-    if num == 1:
+    if num == 1 or num == 2:
         l = list(info[:6])
         l.append(get_random_oryx())
         return l

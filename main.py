@@ -127,7 +127,7 @@ def init_queues():
         bot.queue_links[queue.id] = (queue, category)
         bot.queue_links[category.id] = (queue, category)
     for g in bot.guilds:
-        bot.morder[g.id] = {}
+        bot.morder[g.id] = {'npriority': 0, 'nnormal': 0, 'nvc': 0}
 
 
 @bot.command(usage="resetqueues")

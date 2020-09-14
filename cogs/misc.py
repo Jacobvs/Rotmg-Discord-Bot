@@ -153,6 +153,11 @@ class Misc(commands.Cog):
         embed = discord.Embed(title=roast)
         await ctx.send(content=member.mention, embed=embed)
 
+    @commands.command(usage='bubblewrap', description="Relieve some stress if that's your thing...")
+    async def bubblewrap(self, ctx):
+        await ctx.send("||💥||||💥||||💥||||💥||||💥||\n||💥||||💥||||💥||||💥||||💥||\n||💥||||💥||||💥||||💥||||💥||\n||💥||||💥||||💥||||💥||||💥||\n"
+                       "||💥||||💥||||💥||||💥||||💥||\n||💥||||💥||||💥||||💥||||💥||")
+
 
     @commands.command(usage='poll <title> [option 1] [option 2] [option 3]...',
                       description="Creates a poll with up to 2-10 options\n"

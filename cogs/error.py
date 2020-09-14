@@ -10,7 +10,7 @@ class ErrorHandler(commands.Cog):
         self.client = client
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
+    async def on_command_error(self, ctx: discord.ext.commands.Context, error):
         """Handles command errors"""
         if hasattr(ctx.command, "on_error"):
             return  # Don't interfere with custom error handlers
@@ -19,6 +19,8 @@ class ErrorHandler(commands.Cog):
 
         if isinstance(error, commands.CommandNotFound):
             await ctx.message.delete()
+            if ctx.channel.id == 738632101523619901:
+                return await ctx.send('That command does not exist. Please use `!position` to check your place in the raid queue.')
             return await ctx.send(f"That command does not exist. Please use `{ctx.prefix}help` for "
                                   f"a list of commands.")
 
