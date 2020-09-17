@@ -12,6 +12,8 @@ from cogs.Raiding.realm_select import RealmSelect
 ffmpeg_options = {'options': '-vn', 'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'}
 
 
+# TODO: add an offset number to morder that denotes people who were in queue but reacted to get moved in early
+
 class QAfk:
 
     def __init__(self, client, ctx, location, hcchannel, raiderrole, rlrole, is_US):
@@ -181,17 +183,8 @@ class QAfk:
 
     async def dequeue(self):
         print('in dequeue')
-        # # TODO: fix this -- should check all reactions & add anyone who was missed
-        # self.raid_msg = await self.hcchannel.fetch_message(self.raid_msg.id)
-        # for r in self.raid_msg.reactions:
-        #     print(r)
-        #     if str(r.emoji) == self.dungeon_emoji:
-        #         async for m in r.users():
-        #             if m.id not in self.client.queues[self.queuechannel.id]:
-        #                 if m.voice and m.voice.channel == self.queuechannel:
-        #                     self.client.queues[self.queuechannel.id].append(m.id)
-        #             self.confirmed_raiders[m.id] = m
-        # print(self.confirmed_raiders)
+
+        qmembers = [m.id for m in self.queuechannel.members]
 
         await self.raid_msg.unpin()
 
@@ -213,7 +206,7 @@ class QAfk:
             await self.cp_msg.edit(embed=self.cp_embed)
             await asyncio.sleep(1.5)
 
-        await self.end_afk()
+        await self.end_afk(qmembers)
 
 
     async def move_members(self):
@@ -257,7 +250,7 @@ class QAfk:
                 return False
         return False
 
-    async def end_afk(self):
+    async def end_afk(self, qmembers):
         print("in end afk")
 
         for m in self.raid_vc.members:
@@ -269,7 +262,8 @@ class QAfk:
         for id in self.raiderids:
             missed_runs.append((id, False))
         for id in self.confirmed_raiders:
-            missed_runs.append((id, True))
+            if id in qmembers:
+                missed_runs.append((id, True))
         print(f"N: reset to normal - {len(self.raiderids)}")
         print(f"N: given priority - {len(self.confirmed_raiders)}")
         print(f"N: total changed - {len(missed_runs)}")
@@ -468,8 +462,6 @@ class QAfk:
 
         await self.raid_msg.clear_reactions()
         await self.raid_msg.unpin()
-        embed = embeds.aborted_afk(self.dungeontitle, ended_by, self.dungeon_boss_image)
-        await self.raid_msg.edit(content="", embed=embed)
 
         self.cp_embed.remove_field(len(self.cp_embed.fields) - 1)
         self.cp_embed.description = f"**AFK Check Aborted by** {ended_by.mention}"
@@ -478,17 +470,21 @@ class QAfk:
         await self.cp_msg.edit(embed=self.cp_embed)
         await self.cp_msg.clear_reactions()
 
+        await asyncio.sleep(0.2)  # Sleep to wait for embed update task to fully cancel
+        embed = embeds.aborted_afk(self.dungeontitle, ended_by, self.dungeon_boss_image)
+        await self.raid_msg.edit(content="", embed=embed)
+
         await self.raid_vc.delete(reason="Afk Check Aborted!")
 
 
 
     async def update_embeds(self):
         while True:
-            if (datetime.utcnow() - self.last_edited).seconds > 1:
+            if (datetime.utcnow() - self.last_edited).seconds > 2:
                 await self.update_start_embed(update_msg=True)
                 await self.update_cp_embed(update_msg=True)
                 self.last_edited = datetime.utcnow()
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
 
 
     # Handlers
@@ -536,28 +532,8 @@ class QAfk:
     # Control panel handler
     async def cp_handler(self, payload):
         if str(payload.emoji) == '📝' and self.in_run:
-            embed = discord.Embed(title="Location Selection", description="Please type the location you'd like to set for this run.")
-            setup_msg = await self.ctx.send(embed=embed)
-
-            def location_check(mem):
-                return mem.author == payload.member and mem.channel == self.ctx.channel
-
-            try:
-                lmsg = await self.client.wait_for('message', timeout=60, check=location_check)  # Wait max 1 hour
-            except asyncio.TimeoutError:
-                try:
-                    await setup_msg.delete()
-                    return
-                except discord.NotFound:
-                    return
-
-            self.location = lmsg.content
-
-            try:
-                await setup_msg.delete()
-                await lmsg.delete()
-            except discord.NotFound:
-                pass
+            rs = RealmSelect(self.client, self.ctx)
+            self.location = await rs.start()
 
             failed = []
             for e in self.required_items:
@@ -581,7 +557,7 @@ class QAfk:
                 await self.ctx.send(f'These members have dms disabled!\n{", ".join([m.mention for m in failed])}')
 
             self.cp_embed.set_field_at(1, name='Run Location:', value=self.location, inline=False)
-            await self.cp_msg.edit(embed=embed)
+            await self.cp_msg.edit(embed=self.cp_embed)
 
         # elif str(payload.emoji) == '<:pepeGun:736540068969447445>':
         #     embed = discord.Embed(title='O3 Run Preparse', description="Please send a screenshot of members in the realm before the run started. If you clicked this button by "
@@ -707,6 +683,7 @@ class QAfk:
                 if len(self.nitroboosters) >= self.max_nitro:
                     await self.raid_msg.clear_reaction(emoji)
             else:
+                await self.raid_msg.clear_reaction(emoji)
                 await member.send('There are already enough nitro boosters in this run! Please wait for the next run to redeem your nitro reaction. You can still be moved in '
                                   'normally by reacting to the portal on the afk check.')
         elif is_patreon:
@@ -716,6 +693,7 @@ class QAfk:
                 if len(self.patreons) >= self.max_patreons:
                     await self.raid_msg.clear_reaction(emoji)
             else:
+                await self.raid_msg.clear_reaction(emoji)
                 await member.send('There are already enough patreons in this run! Please wait for the next run to redeem your patreon reaction. You can still be moved in '
                                   'normally by reacting to the portal on the afk check.')
         else:

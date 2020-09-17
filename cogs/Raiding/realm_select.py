@@ -72,7 +72,7 @@ class RealmSelect:
         desc = "No suitable locations were found automatically.\n" if not_found else ""
         desc += "Please enter the location for this run."
         embed = discord.Embed(title="Manual Location Selection", description=desc, color=discord.Color.gold())
-        msg = await self.ctx.send(embed=embed)
+        mlocmsg = await self.ctx.send(embed=embed)
 
         def check(m):
             return m.author == self.ctx.author and m.channel == self.ctx.channel
@@ -83,7 +83,7 @@ class RealmSelect:
                 msg = await self.client.wait_for('message', timeout=1800, check=check)
             except asyncio.TimeoutError:
                 embed = discord.Embed(title="Timed out!", description="You didn't choose a location in time!", color=discord.Color.red())
-                await msg.clear_reactions()
+                await mlocmsg.clear_reactions()
                 await msg.edit(embed=embed)
                 return None
 
@@ -91,4 +91,8 @@ class RealmSelect:
                 await self.ctx.send("Please choose a US or EU location!", delete_after=7)
                 continue
             else:
+                try:
+                    await mlocmsg.delete()
+                except discord.Forbidden or discord.HTTPException:
+                    pass
                 return str(msg.content)

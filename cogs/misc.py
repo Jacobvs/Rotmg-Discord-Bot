@@ -159,6 +159,17 @@ class Misc(commands.Cog):
                        "||💥||||💥||||💥||||💥||||💥||\n||💥||||💥||||💥||||💥||||💥||")
 
 
+    @commands.command(usage='ghostping <member>', description='shhh')
+    @commands.is_owner()
+    @commands.guild_only()
+    @commands.max_concurrency(1, per=BucketType.guild)
+    async def ghostping(self, ctx, member: utils.MemberLookupConverter):
+        for channel in ctx.guild.text_channels:
+            permissions: discord.Permissions = channel.permissions_for(member)
+            if permissions.send_messages:
+                await channel.send(member.mention, delete_after=1)
+
+
     @commands.command(usage='poll <title> [option 1] [option 2] [option 3]...',
                       description="Creates a poll with up to 2-10 options\n"
                                   "For options/titles with more than one word, surround the text with quotes.")
