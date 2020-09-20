@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import datetime
 import difflib
 import logging
@@ -618,89 +619,81 @@ blacklisted_servers = ['uswest3', 'uswest', 'euwest', 'eueast', 'ussouth3', 'aus
 semi_blacklisted = ['uswest3', 'australia', 'asiasoutheast', 'asiaeast']
 async def get_good_realms(client, max_pop, max_server_pop=70):
     blacklist = semi_blacklisted if max_pop > 10 else blacklisted_servers
-    try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
-            async with cs.request("GET", 'http://www.nebulanotifier.com/api/get/all', headers={'Authorization': client.nebula_token}) as r:
-                if r.status == 200:
-                    data = await r.json()
-                    if data:
-                        for r in list(data.keys()):
-                            if r.lower() in blacklist:
-                                del data[r]
-                                continue
-                            total = 0
-                            for s in list(data[r].keys()):
-                                total += data[r][s]['Population']
-                                if data[r][s]['Population'] > max_pop:
-                                    del data[r][s]
+    data = copy.deepcopy(client.events)
+    if data:
+        for r in list(data.keys()):
+            if r.lower() in blacklist:
+                del data[r]
+                continue
+            total = 0
+            if not data[r]:
+                del data[r]
+            for s in list(data[r].keys()):
+                total += data[r][s]['Population']
+                if data[r][s]['Population'] > max_pop:
+                    del data[r][s]
 
-                            if total > max_server_pop:
-                                del data[r]
-                                continue
+            if total > max_server_pop:
+                del data[r]
+                continue
 
-                        usdata = {}
-                        eudata = {}
-                        for r in data:
-                            for s in data[r]:
-                                stime = humanfriendly.format_timespan(int(time.time() - (data[r][s]['Timestamp']/1000)))
-                                if 'US' == r[:2]:
-                                    usdata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
-                                                          'Time': stime}
-                                else:
-                                    eudata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
-                                                          'Time': stime}
+        if not data:
+            return None
+        usdata = {}
+        eudata = {}
+        for r in data:
+            for s in data[r]:
+                stime = humanfriendly.format_timespan(int(time.time() - (data[r][s]['Timestamp'])))
+                if 'US' == r[:2]:
+                    usdata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
+                                          'Time': stime}
+                else:
+                    eudata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
+                                          'Time': stime}
 
-                        import json
-                        d = sorted(usdata, key=lambda x: usdata[x]['Events'])
-                        d = d[:4]
-                        d2 = []
-                        for s in d:
-                            d2.append((s, usdata[s]['Population'], usdata[s]['Events'], usdata[s]['Curr_Event'], usdata[s]['Time']))
-                        usdata = d2
-                        d = sorted(eudata, key=lambda x: eudata[x]['Events'])
-                        d = d[:4]
-                        d2 = []
-                        for s in d:
-                            d2.append((s, eudata[s]['Population'], eudata[s]['Events'], eudata[s]['Curr_Event'], eudata[s]['Time']))
-                        eudata = d2
-                        return usdata, eudata
-
-                return None
-    except asyncio.TimeoutError:
+        d = sorted(usdata, key=lambda x: usdata[x]['Events'])
+        d = d[:4]
+        d2 = []
+        for s in d:
+            d2.append((s, usdata[s]['Population'], usdata[s]['Events'], usdata[s]['Curr_Event'], usdata[s]['Time']))
+        usdata = d2
+        d = sorted(eudata, key=lambda x: eudata[x]['Events'])
+        d = d[:4]
+        d2 = []
+        for s in d:
+            d2.append((s, eudata[s]['Population'], eudata[s]['Events'], eudata[s]['Curr_Event'], eudata[s]['Time']))
+        eudata = d2
+        return usdata, eudata
+    else:
         return None
-
 
 async def get_event_servers(client, type):
     type = type.strip().lower()
-    try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
-            async with cs.request("GET", 'http://www.nebulanotifier.com/api/get/all', headers={'Authorization': client.nebula_token}) as r:
-                if r.status == 200:
-                    data = await r.json()
-                    if data:
-                        for r in list(data.keys()):
-                            for s in list(data[r].keys()):
-                                if data[r][s]['Event'].strip().lower() != type:
-                                    del data[r][s]
+    data = copy.deepcopy(client.events)
+    if data:
+        for r in list(data.keys()):
+            if not data[r]:
+                del data[r]
+                continue
+            for s in list(data[r].keys()):
+                if data[r][s]['Event'].strip().lower() != type:
+                    del data[r][s]
 
-                        datad = {}
-                        for r in data:
-                            for s in data[r]:
-                                datad[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
-                                                          'Timestamp': data[r][s]['Timestamp']/1000}
+        datad = {}
+        for r in data:
+            for s in data[r]:
+                datad[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
+                                          'Timestamp': data[r][s]['Timestamp']}
 
-                        import json
-                        d = sorted(datad, key=lambda x: datad[x]['Timestamp'], reverse=True)
-                        d = d[:8]
-                        d2 = []
-                        for s in d:
-                            d2.append((s, datad[s]['Population'], datad[s]['Events'], datad[s]['Curr_Event'],
-                                       humanfriendly.format_timespan(int(time.time() - (datad[s]['Timestamp'])))))
-                        data = d2
-                        return data
-
-                return None
-    except asyncio.TimeoutError:
+        d = sorted(datad, key=lambda x: datad[x]['Timestamp'], reverse=True)
+        d = d[:8]
+        d2 = []
+        for s in d:
+            d2.append((s, datad[s]['Population'], datad[s]['Events'], datad[s]['Curr_Event'],
+                       humanfriendly.format_timespan(int(time.time() - (datad[s]['Timestamp'])))))
+        data = d2
+        return data
+    else:
         return None
 
 

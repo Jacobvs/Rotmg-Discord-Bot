@@ -567,9 +567,9 @@ def event_type(type):
                    'lotll': 'Lord of the Lost Lands', 'lord': 'Lord of the Lost Lands', 'pent': 'Pentaract', 'penta': 'Pentaract',
                    'drag': 'Rock Dragon', 'rock': 'Rock Dragon', 'skull': 'Skull Shrine', 'shrine': 'Skull Shrine',
                    'skullshrine': 'Skull Shrine', 'miner': 'Dwarf Miner', 'dwarf': 'Dwarf Miner', 'sentry': 'Lost Sentry',
-                   'nest': 'Killer Bee Hive', 'hive': 'Killer Bee Hive', 'statues': 'Jade Statue', 'keyper': 'Keyper', 'keyper towers': 'Keyper Crystal Spawn',
+                   'nest': 'Killer Bee Hive', 'hive': 'Killer Bee Hive', 'statues': 'Temple Statues', 'keyper': 'Keyper', 'keyper towers': 'Keyper Crystal Spawn',
                    'last ent': 'Last Ent', 'ent': 'Ent Ancient',
-                   'red demon': 'Red Demon', 'demon': 'Red Demon', 'cyclops': 'Cyclops God', 'lich': 'Lich', 'last lich': 'Last Lich'}
+                   'red demon': 'Red Demon', 'demon': 'Red Demon', 'cyclops': 'Cyclops God', 'lich': 'Lich King', 'last lich': 'Last Lich', 'beach': 'Beach Bum'}
     result = event_types.get(type, None)
     if result is None:
         matches = get_close_matches(type, event_types.keys(), n=1, cutoff=0.8)

@@ -108,7 +108,7 @@ class Moderation(commands.Cog):
         pages = []
         if pdata:
             for i, r in enumerate(pdata, start=1):
-                requester = await ctx.guild.fetch_member(r[sql.punish_cols.r_uid])
+                requester = ctx.guild.get_member(r[sql.punish_cols.r_uid])
                 active = "✅" if r[sql.punish_cols.active] else "❌"
                 starttime = f"Issued at: `{r[sql.punish_cols.starttime].strftime('%b %d %Y %H:%M:%S')}`"
                 endtime = f"\nEnded at: `{r[sql.punish_cols.endtime].strftime('%b %d %Y %H:%M:%S')}`" if r[sql.punish_cols.endtime] else ""
@@ -116,19 +116,20 @@ class Moderation(commands.Cog):
                 color = discord.Color.orange() if ptype == "Warn" else discord.Color.red() if ptype == "Suspend" else \
                     discord.Color.from_rgb(0, 0, 0)
                 pembed = discord.Embed(title=f"Punishment Log #{i} - {ptype}", color=color)
-                pembed.description = f"Punished member: {member.mention}\n**{ptype}** issued by {requester.mention}\nActive: {active}"
+                pembed.description = f"Punished member: {member.mention}\n**{ptype}** issued by {requester.mention if requester else '(Issuer left server)'}\nActive: {active}"
                 pembed.add_field(name="Reason:", value=r[sql.punish_cols.reason], inline=False)
                 pembed.add_field(name="Time:", value=starttime + endtime)
                 pages.append(pembed)
         if bdata:
             for i, r in enumerate(bdata, start=1):
-                requester = await ctx.guild.fetch_member(r[sql.blacklist_cols.rid])
+                requester = ctx.guild.get_member(r[sql.blacklist_cols.rid])
                 active = "✅"
                 starttime = f"Issued at: `{r[sql.blacklist_cols.issuetime].strftime('%b %d %Y %H:%M:%S')}`"
                 btype = r[sql.blacklist_cols.type].capitalize()
                 color = discord.Color.from_rgb(0, 0, 0)
                 bembed = discord.Embed(title=f"Blacklist Log #{i} - {btype}", color=color)
-                bembed.description = f"Punished member: {member.mention}\n**{btype}** blacklist issued by {requester.mention}\nActive: {active}"
+                bembed.description = f"Punished member: {member.mention}\n**{btype}** blacklist issued by {requester.mention if requester else '(Issuer left server)'}\nActive:" \
+                                     f" {active}"
                 bembed.add_field(name="Reason:", value=r[sql.blacklist_cols.reason], inline=False)
                 bembed.add_field(name="Time:", value=starttime)
                 pages.append(bembed)
