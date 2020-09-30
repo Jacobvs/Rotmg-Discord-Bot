@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import datetime
 import difflib
 import logging
@@ -592,7 +593,7 @@ async def check_pops(client, member, changed_amount, num, type=None, emoji=None,
                 await setup_msg.delete()
             except discord.NotFound:
                 pass
-        await hcchannel.send(desc)
+        await hcchannel.send(desc, allowed_mentions=discord.AllowedMentions(everyone=False, users=False, roles=False))
 
 
 async def image_upload(binary, sendable, is_rc=True):
@@ -616,96 +617,88 @@ async def image_upload(binary, sendable, is_rc=True):
 
 blacklisted_servers = ['uswest3', 'uswest', 'euwest', 'eueast', 'ussouth3', 'australia', 'asiaeast', 'asiasoutheast']
 semi_blacklisted = ['uswest3', 'australia', 'asiasoutheast', 'asiaeast']
-async def get_good_realms(client, max_pop, max_server_pop=70):
+async def get_good_realms(client, max_pop, max_server_pop=90):
     blacklist = semi_blacklisted if max_pop > 10 else blacklisted_servers
-    try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
-            async with cs.request("GET", 'http://www.nebulanotifier.com/api/get/all', headers={'Authorization': client.nebula_token}) as r:
-                if r.status == 200:
-                    data = await r.json()
-                    if data:
-                        for r in list(data.keys()):
-                            if r.lower() in blacklist:
-                                del data[r]
-                                continue
-                            total = 0
-                            for s in list(data[r].keys()):
-                                total += data[r][s]['Population']
-                                if data[r][s]['Population'] > max_pop:
-                                    del data[r][s]
+    data = copy.deepcopy(client.events)
+    if data:
+        for r in list(data.keys()):
+            if r.lower() in blacklist:
+                del data[r]
+                continue
+            total = 0
+            if not data[r]:
+                del data[r]
+            for s in list(data[r].keys()):
+                total += data[r][s]['Population']
+                if data[r][s]['Population'] > max_pop:
+                    del data[r][s]
 
-                            if total > max_server_pop:
-                                del data[r]
-                                continue
+            if total > max_server_pop:
+                del data[r]
+                continue
 
-                        usdata = {}
-                        eudata = {}
-                        for r in data:
-                            for s in data[r]:
-                                stime = humanfriendly.format_timespan(int(time.time() - (data[r][s]['Timestamp']/1000)))
-                                if 'US' == r[:2]:
-                                    usdata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
-                                                          'Time': stime}
-                                else:
-                                    eudata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
-                                                          'Time': stime}
+        if not data:
+            return None
+        usdata = {}
+        eudata = {}
+        for r in data:
+            for s in data[r]:
+                stime = humanfriendly.format_timespan(int(time.time() - (data[r][s]['Timestamp'])))
+                if 'US' == r[:2]:
+                    usdata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
+                                          'Time': stime}
+                else:
+                    eudata[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
+                                          'Time': stime}
 
-                        import json
-                        d = sorted(usdata, key=lambda x: usdata[x]['Events'])
-                        d = d[:4]
-                        d2 = []
-                        for s in d:
-                            d2.append((s, usdata[s]['Population'], usdata[s]['Events'], usdata[s]['Curr_Event'], usdata[s]['Time']))
-                        usdata = d2
-                        d = sorted(eudata, key=lambda x: eudata[x]['Events'])
-                        d = d[:4]
-                        d2 = []
-                        for s in d:
-                            d2.append((s, eudata[s]['Population'], eudata[s]['Events'], eudata[s]['Curr_Event'], eudata[s]['Time']))
-                        eudata = d2
-                        return usdata, eudata
-
-                return None
-    except asyncio.TimeoutError:
+        d = sorted(usdata, key=lambda x: usdata[x]['Events'])
+        d = d[:4]
+        d2 = []
+        for s in d:
+            d2.append((s, usdata[s]['Population'], usdata[s]['Events'], usdata[s]['Curr_Event'], usdata[s]['Time']))
+        usdata = d2
+        d = sorted(eudata, key=lambda x: eudata[x]['Events'])
+        d = d[:4]
+        d2 = []
+        for s in d:
+            d2.append((s, eudata[s]['Population'], eudata[s]['Events'], eudata[s]['Curr_Event'], eudata[s]['Time']))
+        eudata = d2
+        return usdata, eudata
+    else:
         return None
-
 
 async def get_event_servers(client, type):
     type = type.strip().lower()
-    try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
-            async with cs.request("GET", 'http://www.nebulanotifier.com/api/get/all', headers={'Authorization': client.nebula_token}) as r:
-                if r.status == 200:
-                    data = await r.json()
-                    if data:
-                        for r in list(data.keys()):
-                            for s in list(data[r].keys()):
-                                if data[r][s]['Event'].strip().lower() != type:
-                                    del data[r][s]
+    data = copy.deepcopy(client.events)
+    if data:
+        for r in list(data.keys()):
+            if not data[r]:
+                del data[r]
+                continue
+            for s in list(data[r].keys()):
+                if data[r][s]['Event'].strip().lower() != type:
+                    del data[r][s]
 
-                        datad = {}
-                        for r in data:
-                            for s in data[r]:
-                                datad[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
-                                                          'Timestamp': data[r][s]['Timestamp']/1000}
+        datad = {}
+        for r in data:
+            for s in data[r]:
+                datad[f"{r} {s}"] = {'Population': data[r][s]['Population'], "Events": data[r][s]['Events'], 'Curr_Event': data[r][s]['Event'],
+                                          'Timestamp': data[r][s]['Timestamp']}
 
-                        import json
-                        d = sorted(datad, key=lambda x: datad[x]['Timestamp'], reverse=True)
-                        d = d[:8]
-                        d2 = []
-                        for s in d:
-                            d2.append((s, datad[s]['Population'], datad[s]['Events'], datad[s]['Curr_Event'],
-                                       humanfriendly.format_timespan(int(time.time() - (datad[s]['Timestamp'])))))
-                        data = d2
-                        return data
-
-                return None
-    except asyncio.TimeoutError:
+        d = sorted(datad, key=lambda x: datad[x]['Timestamp'], reverse=True)
+        d = d[:8]
+        d2 = []
+        for s in d:
+            d2.append((s, datad[s]['Population'], datad[s]['Events'], datad[s]['Curr_Event'],
+                       humanfriendly.format_timespan(int(time.time() - (datad[s]['Timestamp'])))))
+        data = d2
+        return data
+    else:
         return None
 
 
 servers = {"US" : ("USWest2", "USWest", "USSouthWest", "USSouth3", "USSouth2", "USSouth", "USNorthWest", "USMidWest2", "USMidWest", "USEast3", "USEast2", "USEast"),
-           "EU" : ("EUWest", "EUSouthWest", "EUSouth", "EUNorth2", "EUNorth")}
+           "EU" : ("EUSouthWest", "EUSouth", "EUNorth2", "EUNorth")}
 
 def get_server(is_us=True):
     res = random.choice(servers["EU"]) if is_us else random.choice(servers["US"])
@@ -751,25 +744,23 @@ q_dungeons = {1: ("Oryx 3",
                   (("<:WineCellarInc:708191799750950962>", 1),
                    ("<:swordrune:737672554482761739>", 2),
                    ("<:shieldrune:737672554642276423>", 2),
-                   ("<:helmrune:737673058722250782>", 2),
-                   ("<:puri:682205769973760001>", 4),
-                   ("<:mseal:682205755754938409>", 2),
+                   # ("<:helmrune:737673058722250782>", 2),
+                   ("<:wizard:711307534685962281>", 10),
+                   ("<:wizardPlus:757981015380852906>", 5),
                    ("<:trickster:682214467483861023>", 2),
-                   ("<:Bard:735022210657550367>", 1),
+                   ("<:mseal:682205755754938409>", 2),
                    ("<:mystic:682205700918607969>", 2),
-                   ("<:wizard:711307534685962281>", 6)),
-                  ("<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
-                   "<:wizard:711307534685962281>", "<:Samurai:735022210682585098>"),
+                   ("<:Bard:735022210657550367>", 1)),
+                  (),
                  discord.Color.gold(),
                  "https://i.imgur.com/0qglf0F.gif"),
               2: ("Vet Oryx 3",
                   ("<a:O3:737899037973282856>", "https://i.imgur.com/Y37KxOF.gif"),
-                  (46, 4),
+                  (40, 0),
                   (("<:WineCellarInc:708191799750950962>", 1),
                    ("<:swordrune:737672554482761739>", 1),
                    ("<:shieldrune:737672554642276423>", 1),
-                   ("<:helmrune:737673058722250782>", 1),
-                   ("<:puri:682205769973760001>", 4),
+                   # ("<:helmrune:737673058722250782>", 1),
                    ("<:warrior:682204616997208084>", 4),
                    ("<:mseal:682205755754938409>", 3),
                    ("<:trickster:682214467483861023>", 2),
@@ -777,16 +768,15 @@ q_dungeons = {1: ("Oryx 3",
                    ("<:Bard:735022210657550367>", 2),
                    ("<:knight:682205672116584459>", 1),
                    ("<:Samurai:735022210682585098>", 1),
-                   ('<:dps:751494941980753991>', 15)),
-                  ("<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
-                   "<:wizard:711307534685962281>", "<:Samurai:735022210682585098>"),
+                   ('<:dps:751494941980753991>', 20)),
+                  (),
                  discord.Color.gold(),
                  "https://i.imgur.com/0qglf0F.gif")
               }
 
 def q_dungeon_info(num):
     info = q_dungeons.get(num)
-    if num == 1:
+    if num == 1 or num == 2:
         l = list(info[:6])
         l.append(get_random_oryx())
         return l
@@ -798,26 +788,25 @@ dungeons = {1: ("Oryx 3", ["<:oryx3:711426860051071067>", "<:WineCellarInc:70819
                            "<:shieldrune:737672554642276423>", "<:helmrune:737673058722250782>", "<:warrior:682204616997208084>",
                            "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
                            "<:Bard:735022210657550367>"],
-                ["<:puri:682205769973760001>", "<:mseal:682205755754938409>", "<:slow_icon:678792068965072906>", "<:mystic:682205700918607969>"],
+                ["<:mseal:682205755754938409>", "<:slow_icon:678792068965072906>", "<:mystic:682205700918607969>"],
                 ["<:trickster:682214467483861023>"],
                 discord.Color.gold(),
                 "https://cdn.discordapp.com/attachments/561246036870430770/708192230468485150/oryx_3_w.png"),
             2: ("Cult", ["<:CultistHideout:585613559254482974>", "<:lhkey:682205801728835656>", "<:warrior:682204616997208084>",
-                         "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
-                         "<:puri:682205769973760001>"],
+                         "<:paladin:682205688033968141>", "<:priest:682206578908069905>"],
                 ["<:T2Orb:735022210728591420>", "<:knight:682205672116584459>"],
                 ["<:planewalker:682212363889279091>"],
                 discord.Color.red(), "https://i.imgur.com/nPkovWR.png"),
             3: ("MBC", ["<:MBC:727607969591853228>", "<:lhkey:682205801728835656>", "<:Samurai:735022210682585098>", "<:Bard:735022210657550367>",
                         "<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>"],
-                ["<:T1Orb:735022210510487583>", "<:brainofthegolem:682205737492938762>", "<:puri:682205769973760001>", "<:Ogmur:735022210460287038>",
+                ["<:T1Orb:735022210510487583>", "<:brainofthegolem:682205737492938762>", "<:Ogmur:735022210460287038>",
                  "<:mseal:682205755754938409>"],
                 [],
                 discord.Color.from_rgb(166, 166, 166), "https://i.imgur.com/G8FArqL.png"),
             4: ("Void", ["<:void:682205817424183346>", "<:lhkey:682205801728835656>", "<:vial:682205784524062730>", "<:Samurai:735022210682585098>",
                          "<:Bard:735022210657550367>", "<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>",
                          "<:priest:682206578908069905>"],
-                ["<:T1Orb:735022210510487583>", "<:brainofthegolem:682205737492938762>", "<:puri:682205769973760001>", "<:Ogmur:735022210460287038>",
+                ["<:T1Orb:735022210510487583>", "<:brainofthegolem:682205737492938762>", "<:Ogmur:735022210460287038>",
                  "<:mseal:682205755754938409>"],
                 [],
                 discord.Color.from_rgb(19, 4, 79), "https://i.imgur.com/7JGSvMq.png"),
@@ -825,7 +814,7 @@ dungeons = {1: ("Oryx 3", ["<:oryx3:711426860051071067>", "<:WineCellarInc:70819
                                    "<:Samurai:735022210682585098>", "<:Bard:735022210657550367>", "<:warrior:682204616997208084>", "<:knight:682205672116584459>",
                                    "<:paladin:682205688033968141>",
                                    "<:priest:682206578908069905>", "<:mseal:682205755754938409>"],
-                ["<:T2Orb:735022210728591420>", "<:brainofthegolem:682205737492938762>", "<:puri:682205769973760001>"],
+                ["<:T2Orb:735022210728591420>", "<:brainofthegolem:682205737492938762>"],
                 [],
                 discord.Color.from_rgb(19, 4, 79), "https://i.imgur.com/7JGSvMq.png"),
             6: ("Shatters", ["<:TheShatters:561744041532719115>", "<:ShattersKey:561744174152548374>", "<:warrior:682204616997208084>",
@@ -836,20 +825,21 @@ dungeons = {1: ("Oryx 3", ["<:oryx3:711426860051071067>", "<:WineCellarInc:70819
                 discord.Color.from_rgb(78, 78, 78), "https://static.drips.pw/rotmg/wiki/Enemies/shtrs%20The%20Forgotten%20King.png"),
             7: ("Fungal Cavern", ["<:FungalCavern:609078085945655296>", "<:CavernKey:609078341529632778>",
                                   "<:warrior:682204616997208084>", "<:knight:682205672116584459>", "<:paladin:682205688033968141>",
-                                  "<:priest:682206578908069905>", "<:trickster:682214467483861023>", "<:mystic:682205700918607969>"],
-                ["<:mseal:682205755754938409>", "<:QuiverofThunder:585616162176630784>", "<:armorbreak:682206598156124212>","<:slow_icon:678792068965072906>"],
+                                  "<:priest:682206578908069905>", "<:trickster:682214467483861023>", "<:Bard:735022210657550367>"],
+                ["<:mseal:682205755754938409>", "<:QuiverofThunder:585616162176630784>", "<:armorbreak:682206598156124212>","<:slow_icon:678792068965072906>",
+                 "<:mystic:682205700918607969>", "<:fg_tome:695211244033933332>"],
                 ["<:planewalker:682212363889279091>"],
                 discord.Color.from_rgb(138, 194, 110), "https://i.imgur.com/K6rOQzR.png"),
             8: ("The Nest", ["<:Nest:585617025909653524>", "<:NestKey:585617056192266240>", "<:warrior:682204616997208084>",
                              "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
                              "<:mystic:682205700918607969>"],
-                ["<:puri:682205769973760001>", "<:QuiverofThunder:585616162176630784>", "<:slow_icon:678792068965072906>"],
+                ["<:QuiverofThunder:585616162176630784>", "<:slow_icon:678792068965072906>"],
                 [],
                 discord.Color.from_rgb(226, 117, 37), "https://i.imgur.com/hUWc3IV.png"),
             9: ("Full-Skip Nest", ["<:fskipNest:727606399621791934>", "<:NestKey:585617056192266240>", "<:warrior:682204616997208084>",
                              "<:knight:682205672116584459>", "<:paladin:682205688033968141>", "<:priest:682206578908069905>",
                              "<:mystic:682205700918607969>"],
-                ["<:puri:682205769973760001>", "<:QuiverofThunder:585616162176630784>", "<:slow_icon:678792068965072906>"],
+                ["<:QuiverofThunder:585616162176630784>", "<:slow_icon:678792068965072906>"],
                 [],
                 discord.Color.from_rgb(226, 117, 37),
                 "https://i.imgur.com/Qmsl0Pq.png"),

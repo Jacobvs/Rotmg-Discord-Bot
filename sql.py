@@ -480,9 +480,10 @@ async def get_suspended_roles(pool, uid, guild):
                                  "active = TRUE ")
             data = await cursor.fetchone()
             roles = []
-            res = json.loads(data[punish_cols.roles])
-            for r in res.values():
-                roles.append(guild.get_role(r))
+            if data[punish_cols.roles]:
+                res = json.loads(data[punish_cols.roles])
+                for r in res.values():
+                    roles.append(guild.get_role(r))
             return roles
 
 async def has_active(pool, uid, gid, ptype):

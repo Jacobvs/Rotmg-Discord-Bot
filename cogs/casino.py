@@ -341,7 +341,8 @@ class Casino(commands.Cog):
         await sql.update_cooldown(self.client.pool, ctx.author.id, sql.casino_cols.dailycooldown)
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
         embed.color = discord.Color.green()
-        embed.add_field(name="You got 7,500 credits!", value=f"Current balance: **{balance:,}** credits.")
+        amt = '20,000' if ctx.author.id in self.client.patreon_ids else '7,500'
+        embed.add_field(name=f"You got {amt} credits!", value=f"Current balance: **{balance:,}** credits.")
         return await ctx.send(embed=embed)
 
     @commands.command(usage="work", description="Do something...?")

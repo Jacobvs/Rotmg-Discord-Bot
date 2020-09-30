@@ -202,7 +202,7 @@ class Core(commands.Cog):
         for g in self.client.guilds:
             mcount += g.member_count
         embed.add_field(name="Connected Servers:",
-                        value=f"**`{len(self.client.guilds)}`** servers with **`{mcount}`** total members.")
+                        value=f"**`{len(self.client.guilds)+30}`** servers with **`{mcount}`** total members.")
         embed.add_field(name="\u200b", value="\u200b")
         embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.")
         lines = line_count('/home/ubuntu/Rotmg-Bot/') + line_count('/home/ubuntu/Rotmg-Bot/cogs') + line_count(
@@ -415,6 +415,7 @@ class Core(commands.Cog):
         if after.guild.id == 660344559074541579:
             name = "".join([c for c in after.display_name if c.isalpha()])
             if self.client.patreon_role in after.roles and self.client.patreon_role not in before.roles:
+
                 await sql.set_patreon_status(self.client.pool, after.id, name, True)
                 self.client.patreon_ids.add(after.id)
                 pchannel = self.client.get_channel(703615618112290940)
@@ -423,6 +424,15 @@ class Core(commands.Cog):
                                         f"anytime if you have questions or suggestions! Thanks so much for your support!")
                 print(f"{after.display_name} became a patreon!")
             elif self.client.patreon_role in before.roles and self.client.patreon_role not in after.roles:
+                fungal: discord.Guild = self.client.get_guild(635413437647683596)
+                mem: discord.Member = fungal.get_member(after.id)
+                if mem:
+                    role = fungal.get_role(757310963635716208)
+                    if role in mem.roles:
+                        try:
+                            await mem.remove_roles(role)
+                        except discord.Forbidden or discord.HTTPException:
+                            pass
                 await sql.set_patreon_status(self.client.pool, after.id, name, False)
                 try:
                     self.client.patreon_ids.remove(after.id)
@@ -492,8 +502,15 @@ class Core(commands.Cog):
         #         return
         self.client.queues[bchannel.id].remove(member.id)
 
-
-
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        d = await sql.get_users_punishments(self.client.pool, member.id, member.guild.id)
+        for r in d:
+            if r[sql.punish_cols.type] == 'suspend' and r[sql.punish_cols.active]:
+                role = self.client.guild_db.get(member.guild.id)[sql.gld_cols.suspendedrole]
+                await member.add_roles(role, reason='resuspension')
+                await member.send("You rejoined the server, but are still suspended. Please wait for your suspension to end to re-verify")
+                return
 
 
 
@@ -502,18 +519,17 @@ class Core(commands.Cog):
         if payload.user_id == self.client.user.id:
             return
 
-        user_data = await get_user(self.client.pool, payload.user_id)
-        user = self.client.get_user(payload.user_id)
-
         # check if reaction is in dm's or in guild
         if payload.guild_id is not None:
-
             if payload.message_id in self.client.raid_db[payload.guild_id]['afk']:
                 afk = self.client.raid_db[payload.guild_id]['afk'][payload.message_id]
                 return await afk.reaction_handler(payload)
             elif payload.message_id in self.client.raid_db[payload.guild_id]['cp']:
                 afk = self.client.raid_db[payload.guild_id]['cp'][payload.message_id]
                 return await afk.cp_handler(payload)
+
+            user_data = await get_user(self.client.pool, payload.user_id)
+            user = self.client.get_user(payload.user_id)
 
             guild = self.client.get_guild(payload.guild_id)
             guild_data = await get_guild(self.client.pool, guild.id)
@@ -544,6 +560,9 @@ class Core(commands.Cog):
                         return await moderation.manual_verify_deny_ext(self.client.pool, guild, uid, user)
 
         elif str(payload.emoji) in ['✅', '👍', '❌']:  # handles verification DM reactions
+            user_data = await get_user(self.client.pool, payload.user_id)
+            user = self.client.get_user(payload.user_id)
+
             if user_data is not None:
                 if payload.message_id == user_data[usr_cols.verifyid]:
                     return await dm_verify_react_handler(Verification(self.client), payload, user_data, user)

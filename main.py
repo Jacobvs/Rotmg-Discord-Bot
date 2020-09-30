@@ -8,7 +8,7 @@ from sys import modules
 import aiomysql
 import discord
 import urllib3
-from discord.ext import commands
+from discord.ext import commands, tasks
 from dotenv import load_dotenv
 
 import sql
@@ -92,7 +92,7 @@ async def on_ready():
                         t = bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs, roles))
                     else:
                         t = bot.loop.create_task(punishments.punishment_handler(bot, guild, member, ptype, tsecs))
-                    bot.active_punishments[str(guild.id)+str(member.id)+ptype] = t
+                    bot.active_punishments[str(guild.id) + str(member.id) + ptype] = t
 
     init_queues()
     bot.in_queue = {0: [], 1: []}
@@ -101,16 +101,22 @@ async def on_ready():
     pdata = await sql.get_all_patreons(bot.pool)
     lst = [r[0] for r in pdata]
     bot.patreon_ids = set(lst)
-
+    bot.events = {}
+    # event_update.start()
+    patreon_role.start()
     bot.beaned_ids = set([])
     print(f'{bot.user.name} has connected to Discord!')
+
 
 async def build_guild_db():
     bot.guild_db = await sql.construct_guild_database(bot.pool, bot)
 
+
 # Link queue to raiding category (queue_channel, category)
 # 1. Dungeoneer (oryx raiding `Queue`)
 queue_links = [(660347818061332481, 660347478620766227), (736226011733033041, 736220007356432426)]
+
+
 def init_queues():
     bot.queue_links = {}
     bot.queues = {}
@@ -127,7 +133,7 @@ def init_queues():
         bot.queue_links[queue.id] = (queue, category)
         bot.queue_links[category.id] = (queue, category)
     for g in bot.guilds:
-        bot.morder[g.id] = {}
+        bot.morder[g.id] = {'npriority': 0, 'nnormal': 0, 'nvc': 0}
 
 
 @bot.command(usage="resetqueues")
@@ -259,7 +265,6 @@ async def reload(ctx, extension):
     await ctx.send('{} has been reloaded.'.format(extension.capitalize()))
 
 
-
 # def rreload(module, paths=None, mdict=None):
 #     """Recursively reload modules."""
 #     if paths is None:
@@ -288,6 +293,7 @@ async def fleave(ctx, id: int):
     await server.leave()
     await ctx.send(f"Ooga-Booga has left {server.name}")
 
+
 @bot.command(usage="maintenance")
 @commands.is_owner()
 async def maintenance(ctx):
@@ -310,9 +316,11 @@ async def maintenance(ctx):
         json.dump(data, f)
         f.truncate()
 
+
 for filename in os.listdir('./cogs/'):
     if filename.endswith('.py'):
         bot.load_extension(f'cogs.{filename[:-3]}')
+
 
 @bot.command(usage='syncm')
 @commands.is_owner()
@@ -320,7 +328,7 @@ for filename in os.listdir('./cogs/'):
 async def syncm(ctx):
     verified_role = bot.guild_db.get(ctx.guild.id)[sql.gld_cols.verifiedroleid]
     m_names = []
-    #(id, ign, 'verified', ctx.guild.name, alt1, alt2)
+    # (id, ign, 'verified', ctx.guild.name, alt1, alt2)
     async for m in ctx.guild.fetch_members():
         if verified_role in m.roles:
             if m.nick:
@@ -351,9 +359,6 @@ async def syncm(ctx):
     await ctx.send(f'Inserted {len(m_names)} members into DB. Success.')
 
 
-
-
-
 # Error Handlers
 @bot.event
 async def on_error(event, *args, **kwargs):
@@ -372,12 +377,13 @@ async def maintenance_mode(ctx):
         if await bot.is_owner(ctx.author):
             return True
         embed = discord.Embed(title="Error!", description="Ooga-booga has been put into maintenance mode by the developer! "
-                                "This means bugs are being fixed or new features are being added.\n"
-                                "Please be patient and if this persists for too long, contact <@196282885601361920>.",
+                                                          "This means bugs are being fixed or new features are being added.\n"
+                                                          "Please be patient and if this persists for too long, contact <@196282885601361920>.",
                               color=discord.Color.orange())
         await ctx.send(embed=embed)
         return False
     return True
+
 
 # @bot.check
 # async def global_perms_check(ctx):
@@ -386,5 +392,82 @@ async def maintenance_mode(ctx):
 #     #     await ctx.invoke(ctx.command)
 #     #     return False
 #     return True
+
+
+# looping events
+eventTable = {
+    -0x2: ("Waiting For Events", "https://i.imgur.com/zQ0Ts1X.gif"),
+    -0x1: ("Realm Closed", "https://i.imgur.com/oR1wqQ3.png"),
+    0x10d8: ("Killer Bee Nest", "https://i.imgur.com/QA1xlFQ.png"),
+    0x4b2d: ("Keyper", "https://i.imgur.com/ldJqTmK.png"),
+    0xb327: ("Aliens", "https://i.imgur.com/fG1jXLw.png"),
+    0x0e55: ("Beach Bum", "https://static.drips.pw/rotmg/wiki/Enemies/Beach%20Bum.png"),
+    0x0d59: ("Cube God", "https://static.drips.pw/rotmg/wiki/Enemies/Cube%20God.png"),
+    0x0e29: ("Cube God", "https://static.drips.pw/rotmg/wiki/Enemies/Cube%20God.png"),
+    0x67d: ("Cyclops God", "https://static.drips.pw/rotmg/wiki/Enemies/Cyclops%20God.png"),
+    0xb1d1: ("Rock Dragon", "https://i.imgur.com/ziFj319.png"),
+    0x091f: ("Ent Ancient", "https://static.drips.pw/rotmg/wiki/Enemies/Ent%20Ancient.png"),
+    0x6500: ("Dwarf Miner", "https://i.imgur.com/8ra9MdF.png"),
+    0xb030: ("Lost Sentry", "https://i.imgur.com/WeGhVJI.png"),
+    0x0e37: ("Ghost Ship", "https://i.imgur.com/5NmRR9I.png"),
+    0x0d54: ("Grand Sphinx", "https://i.imgur.com/YurYXrE.png"),
+    0x0d61: ("Hermit God", "https://i.imgur.com/yN5xWM3.png"),
+    0x091b: ("Lich King", "https://static.drips.pw/rotmg/wiki/Enemies/Lich.png"),
+    0xb1d1: ("Rock Dragon", "https://i.imgur.com/ziFj319.png"),
+    0x0d50: ("Lord of the Lost Lands", "https://static.drips.pw/rotmg/wiki/Enemies/Lord%20of%20the%20Lost%20Lands.png"),
+    0x0d5f: ("Pentaract", "https://static.drips.pw/rotmg/wiki/Enemies/Pentaract%20Tower.png"),
+    0x0d56: ("Skull Shrine", "https://static.drips.pw/rotmg/wiki/Enemies/Skull%20Shrine.png"),
+    0x0e51: ("Skull Shrine", "https://static.drips.pw/rotmg/wiki/Enemies/Skull%20Shrine.png"),
+    0x668: ("Red Demon", "https://static.drips.pw/rotmg/wiki/Enemies/Red%20Demon.png"),
+    0x734d: ("Avatar", "https://static.drips.pw/rotmg/wiki/Enemies/shtrs%20Defense%20System.png"),
+    0x6fca: ("Temple Statues", "https://i.imgur.com/0kDx9CD.png"),
+    0x6fcb: ("Temple Statues", "https://i.imgur.com/URY2vc0.png"),
+}
+
+# @tasks.loop(seconds=20)
+# async def event_update():
+#     print('Updating Events')
+#     try:
+#         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
+#             async with cs.request("GET", 'https://realmstock.network/Public/EventHistory') as r:
+#                 if r.status == 200:
+#                     d = await r.read()
+#                     lines = d.split()
+#                     for t in lines:
+#                         l = t.decode('ASCII')
+#                         info = l.split("|")
+#                         d = eventTable[int(info[0])] if int(info[0]) in eventTable else ("N/A", "https://i.imgur.com/b59f6ff.png")
+#                         name = d[0]
+#                         img = d[1]
+#                         realm = info[1]
+#                         server = info[2]
+#                         population = int(info[3]) if info[3] != '?' else 404
+#                         events_left = int(info[4])
+#                         t = info[5].split(':')
+#                         now = datetime.datetime.utcnow()
+#                         time = datetime.datetime(year=now.year, month=now.month, day=now.day, hour=int(t[0]), minute=int(t[1])).timestamp()
+#                         if server in bot.events:
+#                             bot.events[server][str(realm)] = {'Events': events_left, 'Population': population, 'Event': name, 'Image': img, 'Timestamp': time}
+#                         else:
+#                             bot.events[server] = {str(realm): {'Events': events_left, 'Population': population, 'Event': name, 'Image': img, 'Timestamp': time}}
+#                 else:
+#                     print("ERROR: Event GET status != 200")
+#     except aiohttp.ClientTimeout:
+#         pass
+
+
+@tasks.loop(minutes=40)
+async def patreon_role():
+    fungal: discord.Guild = bot.get_guild(635413437647683596)
+    members = await sql.get_all_patreons(bot.pool)
+    for m in members:
+        mem: discord.Member = fungal.get_member(m[sql.usr_cols.id])
+        if mem:
+            role = fungal.get_role(757310963635716208)
+            if role not in mem.roles:
+                try:
+                    await mem.add_roles(role)
+                except discord.Forbidden or discord.HTTPException:
+                    pass
 
 bot.run(token)

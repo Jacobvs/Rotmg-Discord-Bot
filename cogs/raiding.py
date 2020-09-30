@@ -31,6 +31,7 @@ class Raiding(commands.Cog):
     @commands.command(usage='qafk', description="Start a Queue afk check for the location specified.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
+    @checks.only_dungeoneer()
     @commands.max_concurrency(1, per=BucketType.guild, wait=False)
     async def qafk(self, ctx):
         if ctx.author.id in self.client.raid_db[ctx.guild.id]['leaders']:
@@ -49,19 +50,27 @@ class Raiding(commands.Cog):
 
     @commands.command(usage='position', description="Check your position to join the next raid!", aliases=['queue'])
     @commands.guild_only()
+    @checks.only_dungeoneer()
     async def position(self, ctx):
         try:
             await ctx.message.delete()
-        except discord.NotFound:
+        except discord.NotFound or discord.HTTPException:
             pass
+
+        if ctx.channel.id != 738632101523619901 and ctx.channel.id != 751898060358942841:
+            return await ctx.send(f"{ctx.author.mention} Please use this command in <#738632101523619901>.", delete_after=10)
+
 
         if ctx.author.id in self.client.active_raiders:
             await ctx.send("You are currently in a raid! This command is used to check your position when waiting for a raid to start.")
         elif ctx.author.id in self.client.morder[ctx.guild.id] and self.client.morder[ctx.guild.id][ctx.author.id] is not None:
             d = self.client.morder[ctx.guild.id][ctx.author.id]
+            npriority = self.client.morder[ctx.guild.id]['npriority']
+            nnormal = self.client.morder[ctx.guild.id]['nnormal']
+            nvc = self.client.morder[ctx.guild.id]['nvc']
             if d is not None:
-                s = f"💎 - You are number {d[1]} in the **priority** queue." if d[0] else f"✅ - You are number {d[1]} in the **normal** queue."
-                s += f" {ctx.author.mention}"
+                s = f"💎 - #{d[1]} in the **priority** queue." if d[0] else f"✅ - #{d[1]} in the **normal** queue."
+                s += f" Queue lengths - (**{npriority}** 💎 | **{nnormal}** ✅ | {nvc} in VC). {ctx.author.mention}"
             else:
                 s = "An issue occured retrieving your position status. Most likely the bot is moving people into the raid VC at the moment - but contact Darkmatter#7321 if " \
                     "this issue persists."
@@ -69,12 +78,13 @@ class Raiding(commands.Cog):
         else:
             d = await sql.get_missed(self.client.pool, ctx.author.id)
             if d and d[1]:
-                await ctx.send("💎 - You are not in a raid, but have priority queuing for the next run you want to join.")
+                await ctx.send(f"💎 - You weren't moved in for the last raid so you were given **priority** queuing for the next run. {ctx.author.mention}")
             else:
-                await ctx.send(f"You are not currently in a raid!")
+                await ctx.send(f"You aren't in the queue for an active raid & do not have priority queuing for the next raid. {ctx.author.mention}")
 
-    @commands.command(usage='leaverun', description="Leave a run if you nexus")
+    @commands.command(usage='leaverun', description="Leave a run if you nexus", aliases=['leaveraid'])
     @commands.guild_only()
+    @checks.only_dungeoneer()
     async def leaverun(self, ctx):
         try:
             await ctx.message.delete()
@@ -89,8 +99,9 @@ class Raiding(commands.Cog):
 
     @commands.command(usage="findloc", description="Find a good location to start an O3 run in.")
     @commands.guild_only()
-    @checks.is_rl_or_higher_check()
+    @commands.is_owner()
     async def findloc(self, ctx):
+        print('Findloc')
         if not await checks.is_bot_commands_channel(ctx):
             try:
                 await ctx.message.delete()
@@ -131,7 +142,7 @@ class Raiding(commands.Cog):
 
     @commands.command(usage="findrc [max_in_realm]", description="Find a good location to start a Realm Clearing run in.")
     @commands.guild_only()
-    @checks.is_rl_or_higher_check()
+    @commands.is_owner()
     async def findrc(self, ctx, max=20):
         if not await checks.is_bot_commands_channel(ctx):
             try:
@@ -174,8 +185,8 @@ class Raiding(commands.Cog):
 
     @commands.command(usage='event <type>', description="Find all realms with a specified event.")
     @commands.guild_only()
-    @checks.is_rl_or_higher_check()
-    async def event(self, ctx, event_alias):
+    @commands.is_owner()
+    async def event(self, ctx, *, event_alias):
         if not await checks.is_bot_commands_channel(ctx):
             try:
                 await ctx.message.delete()
@@ -321,6 +332,25 @@ class Raiding(commands.Cog):
         await setup_msg.delete()
         await vcchannel.set_permissions(raiderrole, connect=True, view_channel=True, speak=False)
         embed = discord.Embed(description=f"{vcchannel.name} Has been Unlocked!", color=discord.Color.green())
+        await ctx.send(embed=embed)
+
+    @commands.command(usage='changecap <new_cap>', description="Changes the max cap of raiding VC's. (Choose -1 to make it unlimited).")
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def changecap(self, ctx, new_cap: int):
+        if new_cap < -1 or new_cap == 0 or new_cap > 99:
+            return await ctx.send("Please set the channel cap to a number between 1-99 or -1 for unlimited")
+        if new_cap == -1:
+            new_cap = None
+        setup = VCSelect(self.client, ctx, change_limit=True)
+        data = await setup.start()
+        if isinstance(data, tuple):
+            (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+        else:
+            return
+        await setup_msg.delete()
+        await vcchannel.edit(user_limit=new_cap)
+        embed = discord.Embed(description=f"{vcchannel.name} now has a user limit of **{f'{new_cap}' if new_cap else 'Unlimited'}!**", color=discord.Color.green())
         await ctx.send(embed=embed)
 
     @commands.command(usage="clean", description="Clean out & lock a voice channel.")
@@ -479,6 +509,7 @@ def parse_image(author, image, vc):
     str = str.replace("}", ")")
     str = str.replace("{", "(")
     str = str.replace(";", ":")
+    str = str.replace('.', ',')
     split_str = re.split(r'(.*)(Players online \([0-9]+\): )', str)
     if len(split_str) < 4:
         print("ERROR - Parsed String: " + str)
@@ -559,7 +590,9 @@ def event_type(type):
                    'lotll': 'Lord of the Lost Lands', 'lord': 'Lord of the Lost Lands', 'pent': 'Pentaract', 'penta': 'Pentaract',
                    'drag': 'Rock Dragon', 'rock': 'Rock Dragon', 'skull': 'Skull Shrine', 'shrine': 'Skull Shrine',
                    'skullshrine': 'Skull Shrine', 'miner': 'Dwarf Miner', 'dwarf': 'Dwarf Miner', 'sentry': 'Lost Sentry',
-                   'nest': 'Killer Bee Hive', 'statues': 'Jade Statue'}
+                   'nest': 'Killer Bee Hive', 'hive': 'Killer Bee Hive', 'statues': 'Temple Statues', 'keyper': 'Keyper', 'keyper towers': 'Keyper Crystal Spawn',
+                   'last ent': 'Last Ent', 'ent': 'Ent Ancient',
+                   'red demon': 'Red Demon', 'demon': 'Red Demon', 'cyclops': 'Cyclops God', 'lich': 'Lich King', 'last lich': 'Last Lich', 'beach': 'Beach Bum'}
     result = event_types.get(type, None)
     if result is None:
         matches = get_close_matches(type, event_types.keys(), n=1, cutoff=0.8)

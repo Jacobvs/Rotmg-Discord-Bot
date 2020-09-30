@@ -8,9 +8,10 @@ import utils
 class RealmSelect:
     letters = ["🇦", "🇧", "🇨", "🇩", "🇼", "🇽", "🇾", "🇿"]
 
-    def __init__(self, client, ctx):
+    def __init__(self, client, ctx, author=None):
         self.client = client
         self.ctx = ctx
+        self.author = author if author else ctx.author
 
 
     async def start(self):
@@ -26,7 +27,7 @@ class RealmSelect:
                 server_opts[self.letters[num]] = l[0]
                 num += 1
             embed = discord.Embed(title="Location Selection", description="Choose a realm or press 🔄 to manually enter a location.", color=discord.Color.gold())
-            embed.add_field(name="Top US Servers", value=desc, inline=False)
+            embed.add_field(name="Top US Servers", value=desc, inline=True)
             num = 4
             desc = ""
             for l in servers[1]:
@@ -34,17 +35,17 @@ class RealmSelect:
                 desc += f"{self.letters[num]} - __**{l[0]}**__\n**{l[1]}** People | **{l[2]}** Heroes\n`{event}`\n**{l[4]}** ago\n\n"
                 server_opts[self.letters[num]] = l[0]
                 num += 1
-            embed.add_field(name="Top EU Servers", value=desc, inline=False)
+            embed.add_field(name="Top EU Servers", value=desc, inline=True)
             msg = await self.ctx.send(embed=embed)
             for r in server_opts:
                 await msg.add_reaction(r)
             await msg.add_reaction("🔄")
 
             def check(react, usr):
-                return usr == self.ctx.author and react.message.id == msg.id and (str(react.emoji) in server_opts.keys() or str(react.emoji) == "🔄")
+                return usr == self.author and react.message.id == msg.id and (str(react.emoji) in server_opts.keys() or str(react.emoji) == "🔄")
 
             try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=120, check=check)
+                reaction, user = await self.client.wait_for('reaction_add', timeout=1800, check=check)
             except asyncio.TimeoutError:
                 try:
                     embed = discord.Embed(title="Timed out!", description="You didn't choose a realm in time!", color=discord.Color.red())
@@ -72,18 +73,18 @@ class RealmSelect:
         desc = "No suitable locations were found automatically.\n" if not_found else ""
         desc += "Please enter the location for this run."
         embed = discord.Embed(title="Manual Location Selection", description=desc, color=discord.Color.gold())
-        msg = await self.ctx.send(embed=embed)
+        mlocmsg = await self.ctx.send(embed=embed)
 
         def check(m):
-            return m.author == self.ctx.author and m.channel == self.ctx.channel
+            return m.author == self.author and m.channel == self.ctx.channel
 
         # Wait for author to select a location
         while True:
             try:
-                msg = await self.client.wait_for('message', timeout=600, check=check)
+                msg = await self.client.wait_for('message', timeout=1800, check=check)
             except asyncio.TimeoutError:
                 embed = discord.Embed(title="Timed out!", description="You didn't choose a location in time!", color=discord.Color.red())
-                await msg.clear_reactions()
+                await mlocmsg.clear_reactions()
                 await msg.edit(embed=embed)
                 return None
 
@@ -91,4 +92,8 @@ class RealmSelect:
                 await self.ctx.send("Please choose a US or EU location!", delete_after=7)
                 continue
             else:
+                try:
+                    await mlocmsg.delete()
+                except discord.Forbidden or discord.HTTPException:
+                    pass
                 return str(msg.content)

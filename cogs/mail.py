@@ -366,8 +366,7 @@ class ModmailMessage:
         await msg.delete()
 
         if str(reaction.emoji) == '✅':
-            embed = discord.Embed(title="Please choose a member.", description="To select a member, use one of these formats:\n1. ROTMG IGN\n2.Discord ID\n3. Discord tag & "
-                                                                               "descriminator (ex: Darkmatter#7321).", colour=discord.Color.gold())
+            embed = discord.Embed(title="Please choose a member.", description="To select a member, please type their ROTMG IGN.", colour=discord.Color.gold())
             msg = await self.ctx.author.send(embed=embed)
 
             converter = utils.MemberLookupConverter()

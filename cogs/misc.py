@@ -55,11 +55,11 @@ class Misc(commands.Cog):
             if what.strip().lower() == 'wonderland' or what.strip().lower() == 'woland':
                 server_id = 666063675416641539
                 server_name = "Wonderland ✶"
-            else:
+            elif ctx.guild:
                 converter = utils.MemberLookupConverter()
                 member = await converter.convert(ctx, what)
 
-        author = member if member else ctx.author
+        author = member if member and ctx.guild else ctx.author
         if not server_id:
             if not ctx.guild:
                 servers = []
@@ -70,7 +70,7 @@ class Misc(commands.Cog):
                 for i, s in enumerate(servers[:10]):
                     serverstr += self.numbers[i] + " - " + s.name + "\n"
                 embed = discord.Embed(description="What server would you like to check stats for?\n"+serverstr, color=discord.Color.gold())
-                msg = await author.send(embed=embed)
+                msg = await ctx.author.send(embed=embed)
                 for e in self.numbers[:len(servers)]:
                     await msg.add_reaction(e)
 
@@ -130,7 +130,7 @@ class Misc(commands.Cog):
         embed.timestamp = datetime.utcnow()
         if ctx.guild:
             return await ctx.send(embed=embed)
-        await author.send(embed=embed)
+        await ctx.author.send(embed=embed)
 
 
     @commands.command(usage='djoke', description="This command doesn't exist..... Shh...")
@@ -152,6 +152,22 @@ class Misc(commands.Cog):
         roast = utils.get_roast()
         embed = discord.Embed(title=roast)
         await ctx.send(content=member.mention, embed=embed)
+
+    @commands.command(usage='bubblewrap', description="Relieve some stress if that's your thing...")
+    async def bubblewrap(self, ctx):
+        await ctx.send("||💥||||💥||||💥||||💥||||💥||\n||💥||||💥||||💥||||💥||||💥||\n||💥||||💥||||💥||||💥||||💥||\n||💥||||💥||||💥||||💥||||💥||\n"
+                       "||💥||||💥||||💥||||💥||||💥||\n||💥||||💥||||💥||||💥||||💥||")
+
+
+    @commands.command(usage='ghostping <member>', description='shhh')
+    @commands.is_owner()
+    @commands.guild_only()
+    @commands.max_concurrency(1, per=BucketType.guild)
+    async def ghostping(self, ctx, member: utils.MemberLookupConverter):
+        for channel in ctx.guild.text_channels:
+            permissions: discord.Permissions = channel.permissions_for(member)
+            if permissions.send_messages:
+                await channel.send(member.mention, delete_after=1)
 
 
     @commands.command(usage='poll <title> [option 1] [option 2] [option 3]...',
@@ -249,9 +265,10 @@ class Misc(commands.Cog):
         if member.bot:
             commands.Command.reset_cooldown(ctx.command, ctx)
             return await ctx.send(f'Cannot bean `{member.display_name}` (is a bot).')
-        if member.guild_permissions.manage_guild and ctx.author.id not in self.client.owner_ids:
-            commands.Command.reset_cooldown(ctx.command, ctx)
-            return await ctx.send(f'Cannot bean `{member.display_name}` due to roles.')
+        if ctx.author.id != self.client.owner_id:
+            if member.guild_permissions.manage_guild and ctx.author.id not in self.client.owner_ids:
+                commands.Command.reset_cooldown(ctx.command, ctx)
+                return await ctx.send(f'Cannot bean `{member.display_name}` due to roles.')
         if member.id in self.client.beaned_ids:
             commands.Command.reset_cooldown(ctx.command, ctx)
             return await ctx.send(f"{member.display_name}__ is already Beaned!")
