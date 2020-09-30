@@ -8,7 +8,9 @@ If you want to see what I'm working on with the bot, click on the `Projects` tab
 FYI - Code & the command writeup may be a bit outdated, I'll do my best to update them frequently but no promises.
 
 Last note:
+
 I didn't write this project in a way that supports self-hosting. If you'd like to attempt it, feel free to - but you'll need a decent amount of technical experience to get it up and running. I made this project open source to provide an example of how to do common tasks for ROTMG discord bots (Moderation, Mail, Verification, Raiding, Parsing, etc).
+
 If you'd simply like the bot added to an existing server - contact me through discord (Darkmatter#7321)
 
 -----
