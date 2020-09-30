@@ -81,6 +81,11 @@ def exclude_dungeoneer():
         return ctx.guild.id != 660344559074541579
     return commands.check(predicate)
 
+def only_dungeoneer():
+    def predicate(ctx):
+        return ctx.guild.id == 660344559074541579
+    return commands.check(predicate)
+
 async def is_bot_commands_channel(ctx):
     return ctx.channel == ctx.bot.guild_db.get(ctx.guild.id)[sql.gld_cols.eventcommandschannel] or ctx.channel == ctx.bot.guild_db.get(ctx.guild.id)[
         sql.gld_cols.vetcommandschannel] or ctx.channel == ctx.bot.guild_db.get(ctx.guild.id)[sql.gld_cols.raidcommandschannel]

@@ -6,18 +6,20 @@ import sql
 
 
 class VCSelect:
-    def __init__(self, client, ctx, headcount=False, lock=False, unlock=False, clean=False, parse=False, log=False, manual_log=False, qafk=False):
+    def __init__(self, client, ctx, headcount=False, lock=False, unlock=False, clean=False, parse=False, log=False, manual_log=False, qafk=False, change_limit=False):
         self.client = client
         self.ctx = ctx
         self.headcount = headcount
         self.parse = parse
         title = "Headcount Setup" if headcount else "Lock Selection" if lock else "Unlock Selection" if unlock else "Cleaning Selection" if\
-            clean else "Parsing Setup" if parse else "Key Pop Announcement" if log else "Manual Run Log Setup" if manual_log else "AFK-Check Setup"
+            clean else "Parsing Setup" if parse else "Key Pop Announcement" if log else "Manual Run Log Setup" if manual_log else "User Limit Selection" if change_limit \
+            else "AFK-Check Setup"
         description = "Please choose what channel you'd like to start this headcount in." if headcount else\
             "Please choose which channel you'd like to lock." if lock else "Please choose which channel you'd like to unlock." if unlock\
             else "Please choose which channel you'd like to clean." if clean else "Please choose which channel you'd like to parse for." if\
             parse else "Please choose which channel to announce the key pop in." if log else\
-            "Please choose the channel you did your run in." if manual_log else "Please choose what channel you'd like to start this afk check in."
+            "Please choose the channel you did your run in." if manual_log else "Please choose which channel to change the user-limit for." if change_limit\
+            else "Please choose what channel you'd like to start this afk check in."
         self.locationembed = discord.Embed(title=title,
                                            description=description,
                                            color=discord.Color.green())

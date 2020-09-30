@@ -76,34 +76,37 @@ class ParseLog:
         if self.run_title == "Oryx 3" or self.run_title == 'Vet Oryx 3':
             desc = ""
             descript = ""
-            swordreacts = self.required_items['<:swordrune:737672554482761739>']['confirmed']
-            if swordreacts:
-                for i, r in enumerate(swordreacts):
-                    desc += self.numbers[i] + f" - {r.mention}\n"
-                descript = f"Users who confirmed sword rune (<:swordrune:737672554482761739>) with the bot:\n" + desc + "\n"
-            descript += "Click the 🔄 to enter who popped. If you don't know, hit the ❌."
-            embed = discord.Embed(title="Sword Rune Pop", description=descript, color=discord.Color.gold())
-            await self.memberlog(embed, swordreacts, sql.log_cols.swordrunes, '<:swordrune:737672554482761739>')
-            desc = ""
-            descript = ""
-            shieldreacts = self.required_items['<:shieldrune:737672554642276423>']['confirmed']
-            if shieldreacts:
-                for i, r in enumerate(shieldreacts):
-                    desc += self.numbers[i] + f" - {r.mention}\n"
-                descript = f"Users who confirmed shield rune (<:shieldrune:737672554642276423>) with the bot:\n" + desc + "\n"
-            descript += "Click the 🔄 to enter who popped. If you don't know, hit the ❌."
-            embed = discord.Embed(title="Shield Rune Pop", description=descript, color=discord.Color.gold())
-            await self.memberlog(embed, shieldreacts, sql.log_cols.shieldrunes, '<:shieldrune:737672554642276423>')
-            desc = ""
-            descript = ""
-            helmreacts = self.required_items['<:helmrune:737673058722250782>']['confirmed']
-            if helmreacts:
-                for i, r in enumerate(helmreacts):
-                    desc += self.numbers[i] + f" - {r.mention}\n"
-                descript = f"Users who confirmed helm rune (<:helmrune:737673058722250782>) with the bot:\n" + desc + "\n"
-            descript += "Click the 🔄 to enter who popped. If you don't know, hit the ❌."
-            embed = discord.Embed(title="Helm Rune Pop", description=descript, color=discord.Color.gold())
-            await self.memberlog(embed, helmreacts, sql.log_cols.helmrunes, '<:helmrune:737673058722250782>')
+            if '<:swordrune:737672554482761739>' in self.required_items:
+                swordreacts = self.required_items['<:swordrune:737672554482761739>']['confirmed']
+                if swordreacts:
+                    for i, r in enumerate(swordreacts):
+                        desc += self.numbers[i] + f" - {r.mention}\n"
+                    descript = f"Users who confirmed sword rune (<:swordrune:737672554482761739>) with the bot:\n" + desc + "\n"
+                descript += "Click the 🔄 to enter who popped. If you don't know, hit the ❌."
+                embed = discord.Embed(title="Sword Rune Pop", description=descript, color=discord.Color.gold())
+                await self.memberlog(embed, swordreacts, sql.log_cols.swordrunes, '<:swordrune:737672554482761739>')
+                desc = ""
+                descript = ""
+            if '<:shieldrune:737672554642276423>' in self.required_items:
+                shieldreacts = self.required_items['<:shieldrune:737672554642276423>']['confirmed']
+                if shieldreacts:
+                    for i, r in enumerate(shieldreacts):
+                        desc += self.numbers[i] + f" - {r.mention}\n"
+                    descript = f"Users who confirmed shield rune (<:shieldrune:737672554642276423>) with the bot:\n" + desc + "\n"
+                descript += "Click the 🔄 to enter who popped. If you don't know, hit the ❌."
+                embed = discord.Embed(title="Shield Rune Pop", description=descript, color=discord.Color.gold())
+                await self.memberlog(embed, shieldreacts, sql.log_cols.shieldrunes, '<:shieldrune:737672554642276423>')
+                desc = ""
+                descript = ""
+            if '<:helmrune:737673058722250782>' in self.required_items:
+                helmreacts = self.required_items['<:helmrune:737673058722250782>']['confirmed']
+                if helmreacts:
+                    for i, r in enumerate(helmreacts):
+                        desc += self.numbers[i] + f" - {r.mention}\n"
+                    descript = f"Users who confirmed helm rune (<:helmrune:737673058722250782>) with the bot:\n" + desc + "\n"
+                descript += "Click the 🔄 to enter who popped. If you don't know, hit the ❌."
+                embed = discord.Embed(title="Helm Rune Pop", description=descript, color=discord.Color.gold())
+                await self.memberlog(embed, helmreacts, sql.log_cols.helmrunes, '<:helmrune:737673058722250782>')
 
 
         embed = discord.Embed(title=f"Member Completion: {self.author.display_name}", description="Please send a screenshot containing **only** the /who of members which "

@@ -74,6 +74,10 @@ class AfkCheck:
                 return await self.setup_msg.edit(embed=embed)
 
             if msg.content.isdigit():
+                if int(msg.content) == -1:
+                    embed = discord.Embed(title="Cancelled!", description="You chose to cancel this afk creation.", color=discord.Color.red())
+                    await self.setup_msg.clear_reactions()
+                    return await self.setup_msg.edit(embed=embed)
                 if 0 < int(msg.content) < 56:
                     break
             await self.ctx.send("Please choose a number between 1-55!", delete_after=7)
@@ -324,7 +328,7 @@ class AfkCheck:
         try:
             reaction, usr = await self.client.wait_for('reaction_add', timeout=20, check=check)
         except asyncio.TimeoutError:
-            return await member.send("Timed out! Please re-confirm key on the AFK message.")
+            return await member.send("Timed out! Please re-confirm your reaction on the AFK message.")
 
         if member.id not in self.raiderids:
             self.raiderids.append(member.id)

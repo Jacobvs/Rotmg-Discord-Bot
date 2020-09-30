@@ -64,8 +64,8 @@ class Hangman:
         def check(message):
             valid = (message.author == self.ctx.author and \
                 message.channel == self.ctx.channel) and \
-                (len(message.content) == 1 or \
-                message.content.lower() == 'cancel') or len(message.content.split()) == 1
+                ((len(message.content) == 1 or \
+                message.content.lower() == 'cancel') or len(message.content.split()) == 1)
             return valid
 
         hint_message = 'Guess the word! Enter a letter to begin.'

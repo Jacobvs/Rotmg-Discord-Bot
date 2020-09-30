@@ -205,7 +205,7 @@ class Patreon(commands.Cog):
         await msg.edit(embed=embed)
 
 
-    @commands.command(usage='realmeye [member]', description="Get realmeye info of your account or someone else's!")
+    @commands.command(usage='realmeye [member]', description="Get realmeye info of your account or someone else's!", aliases=['chars', 'characters'])
     @commands.guild_only()
     @commands.cooldown(1, 30, type=BucketType.member)
     async def realmeye(self, ctx, member: utils.MemberLookupConverter = None):
@@ -442,7 +442,7 @@ async def make_equips_img(equip_ids, definition):
     images = []
     async with aiohttp.ClientSession() as cs:
         for id in equip_ids:
-            id = id if id else -1
+            id = id if id and str(id) in definition else -99 if id else -1
             url = definition[str(id)]
             async with cs.request('GET', url=url) as resp:
                 if resp.status == 200:

@@ -8,9 +8,10 @@ import utils
 class RealmSelect:
     letters = ["🇦", "🇧", "🇨", "🇩", "🇼", "🇽", "🇾", "🇿"]
 
-    def __init__(self, client, ctx):
+    def __init__(self, client, ctx, author=None):
         self.client = client
         self.ctx = ctx
+        self.author = author if author else ctx.author
 
 
     async def start(self):
@@ -41,7 +42,7 @@ class RealmSelect:
             await msg.add_reaction("🔄")
 
             def check(react, usr):
-                return usr == self.ctx.author and react.message.id == msg.id and (str(react.emoji) in server_opts.keys() or str(react.emoji) == "🔄")
+                return usr == self.author and react.message.id == msg.id and (str(react.emoji) in server_opts.keys() or str(react.emoji) == "🔄")
 
             try:
                 reaction, user = await self.client.wait_for('reaction_add', timeout=1800, check=check)
@@ -75,7 +76,7 @@ class RealmSelect:
         mlocmsg = await self.ctx.send(embed=embed)
 
         def check(m):
-            return m.author == self.ctx.author and m.channel == self.ctx.channel
+            return m.author == self.author and m.channel == self.ctx.channel
 
         # Wait for author to select a location
         while True:

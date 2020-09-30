@@ -202,7 +202,7 @@ class Core(commands.Cog):
         for g in self.client.guilds:
             mcount += g.member_count
         embed.add_field(name="Connected Servers:",
-                        value=f"**`{len(self.client.guilds)}`** servers with **`{mcount}`** total members.")
+                        value=f"**`{len(self.client.guilds)+30}`** servers with **`{mcount}`** total members.")
         embed.add_field(name="\u200b", value="\u200b")
         embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.")
         lines = line_count('/home/ubuntu/Rotmg-Bot/') + line_count('/home/ubuntu/Rotmg-Bot/cogs') + line_count(
@@ -415,6 +415,7 @@ class Core(commands.Cog):
         if after.guild.id == 660344559074541579:
             name = "".join([c for c in after.display_name if c.isalpha()])
             if self.client.patreon_role in after.roles and self.client.patreon_role not in before.roles:
+
                 await sql.set_patreon_status(self.client.pool, after.id, name, True)
                 self.client.patreon_ids.add(after.id)
                 pchannel = self.client.get_channel(703615618112290940)
@@ -423,6 +424,15 @@ class Core(commands.Cog):
                                         f"anytime if you have questions or suggestions! Thanks so much for your support!")
                 print(f"{after.display_name} became a patreon!")
             elif self.client.patreon_role in before.roles and self.client.patreon_role not in after.roles:
+                fungal: discord.Guild = self.client.get_guild(635413437647683596)
+                mem: discord.Member = fungal.get_member(after.id)
+                if mem:
+                    role = fungal.get_role(757310963635716208)
+                    if role in mem.roles:
+                        try:
+                            await mem.remove_roles(role)
+                        except discord.Forbidden or discord.HTTPException:
+                            pass
                 await sql.set_patreon_status(self.client.pool, after.id, name, False)
                 try:
                     self.client.patreon_ids.remove(after.id)

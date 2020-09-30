@@ -197,7 +197,7 @@ def headcount_base(run_title, requester, keyed_run, emojis, rusher_emojis, thumb
         if len(rusher_emojis) > 1:
             desc += "\nIf you are able to rush, react to one of these emojis: " + "".join(rusher_emojis)
         else:
-            desc += "\nPlease react to: " + rusher_emojis[0] + " if you are able to bring the class."
+            desc += "\nPlease react to: " + rusher_emojis[0] + " if you are able to bring a rushing class."
     embed = discord.Embed(description=desc, color=color)
     embed.set_author(name=f"Headcount for {run_title} started by {requester.nick}", icon_url=requester.avatar_url)
     embed.set_footer(text="Headcount started ")
@@ -334,7 +334,7 @@ def dungeon_select(hc=False, manual_log=False):
     descrip = "Please select a dungeon type by typing the number corresponding to the  dungeon for which you would like to start a raid.\n" \
               "To start a random dungeon headcount type: `(0)` <:defaultdungeon:682212333182910503> Random Dungeons." if hc else \
         "Please select the dungeon type of the raid you did." if manual_log else \
-        "Please select a dungeon type by typing the number corresponding to the  dungeon for which you would like to start a raid."
+        "Please select a dungeon type by typing the number corresponding to the  dungeon for which you would like to start a raid.\nType `-1` to cancel."
 
     embed = discord.Embed(title="Dungeon Selection", description=descrip,
                           color=discord.Color.orange())
