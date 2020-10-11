@@ -50,7 +50,7 @@ class Verification(commands.Cog):
         msg = await member.send(embed=embed)
 
         async with aiohttp.ClientSession() as cs:
-            async with cs.get('https://rotmg-discord-bot.wm.r.appspot.com/?player={}'.format(user_data[usr_cols.ign]), ssl=False) as r:
+            async with cs.get(f"https://darkmattr.uc.r.appspot.com/?player={user_data[usr_cols.ign]}", ssl=False) as r:
                 if r.status == 403:
                     print("ERROR: API ACCESS FORBIDDEN")
                     await channel.send(f"<@{self.client.owner_id}> ERROR: API ACCESS REVOKED!.")
@@ -236,10 +236,7 @@ async def complete_verification(pool, guild, guild_data, member, name, user_data
     tag += alts
     try:
         await member.add_roles(role)
-        if tag.lower() == name.lower():
-            await member.edit(nick=f"{name}.")
-        else:
-            await member.edit(nick=name)
+        await member.edit(nick=name)
     except discord.errors.Forbidden:
         print("Missing permissions for: {} in guild: {}".format(member.name, guild.name))
 
@@ -428,7 +425,7 @@ async def dm_verify_react_handler(self, payload, user_data, user):
             private_loc = guild_data[gld_cols.privateloc]
 
             async with aiohttp.ClientSession() as cs:
-                async with cs.get('https://rotmg-discord-bot.wm.r.appspot.com/?player={}'.format(user_data[usr_cols.ign]), ssl=False) as r:
+                async with cs.get(f"https://darkmattr.uc.r.appspot.com/?player={user_data[usr_cols.ign]}", ssl=False) as r:
                     data = await r.json()  # returns dict
 
             alive_fame = 0

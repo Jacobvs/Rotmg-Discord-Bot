@@ -130,6 +130,7 @@ class ParseLog:
 
             if 'skip' in msg.content.strip().lower():
                 print('skipped')
+                await self.channel.send(f"{self.author.mention} Skipped uploading a screenshot. Please take a screenshot of /who next run so we can track accurate stats.")
                 members = self.members_left
                 break
             else:

@@ -201,7 +201,7 @@ class Moderation(commands.Cog):
     @checks.is_security_or_higher_check()
     async def addalt(self, ctx, member: utils.MemberLookupConverter, altname):
         async with aiohttp.ClientSession() as cs:
-            async with cs.get(f'https://rotmg-discord-bot.wm.r.appspot.com/?player={altname}', ssl=False) as r:
+            async with cs.get(f"https://darkmattr.uc.r.appspot.com/?player={altname}", ssl=False) as r:
                 if r.status == 403:
                     print("ERROR: API ACCESS FORBIDDEN")
                     await ctx.send(f"<@{self.client.owner_id}> ERROR: API ACCESS REVOKED!.")
@@ -214,7 +214,7 @@ class Moderation(commands.Cog):
             return await ctx.send(embed=embed)
 
         cleaned_name = str(data["player"])
-        res = await sql.add_alt_name(self.client.pool, member.id, cleaned_name)
+        res = await sql.add_alt_name(self.client.pool, member.id, cleaned_name, primary_name=member.display_name)
         if not res:
             embed = discord.Embed(title="Error!", description="The user specified already has 2 alts added!", color=discord.Color.red())
             return await ctx.send(embed=embed)

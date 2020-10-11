@@ -534,7 +534,7 @@ def parse_image(author, image, vc):
             cleaned_members.append(clean_name(m))
 
     def clean_name(n):
-        return "".join(c for c in n if c.isalpha())
+        return "".join(c for c in n.lower() if c.isalpha())
 
     for m in vc.members:
         if not m.bot:
@@ -548,11 +548,12 @@ def parse_image(author, image, vc):
         if " " in name:
             names = name.split(" ")
             name = names[0]
+        lname = name.lower().strip()
         if name.lower() not in defaultnames:
-            if name.strip() not in cleaned_members:
-                matches = get_close_matches(name.strip(), cleaned_members, n=1, cutoff=0.6)
+            if lname not in cleaned_members:
+                matches = get_close_matches(lname, cleaned_members, n=1, cutoff=0.6)
                 if len(matches) == 0:
-                    if name.strip() not in alts:
+                    if lname not in alts:
                         crashing.append(name.strip())
                 else:
                     if matches[0] not in cleaned_members:
@@ -560,7 +561,7 @@ def parse_image(author, image, vc):
                     else:
                         cleaned_members.remove(matches[0])
             else:
-                cleaned_members.remove(name.strip())
+                cleaned_members.remove(lname)
 
     for m in cleaned_members:
         if m != author:

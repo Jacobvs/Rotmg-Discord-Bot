@@ -29,7 +29,7 @@ class Slots:
         self.mult = 0
         if self.ticket > 769:
             self.winner = True
-            num = 0 if self.ticket < 890 else 1 if self.ticket < 950 else 2 if self.ticket < 979 else 3 if self.ticket < 994 \
+            num = 0 if self.ticket < 890 else 1 if self.ticket < 950 else 2 if self.ticket < 979 else 3 if self.ticket < 995 \
                 else 4 if self.ticket < 999 else 5
             self.winnerE = self.emojis[num]
             self.row = [self.winnerE, self.winnerE, self.winnerE]

@@ -88,7 +88,7 @@ async def change_username(pool, uid, newname):
                 return False
             return True
 
-async def add_alt_name(pool, uid, altname):
+async def add_alt_name(pool, uid, altname, primary_name):
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             sql = "SELECT * from rotmg.users WHERE id = %s AND status = 'verified'"
@@ -96,7 +96,10 @@ async def add_alt_name(pool, uid, altname):
             await cursor.execute(sql, data)
             data = await cursor.fetchone()
             if not data:
-                return False
+                sql = "INSERT INTO rotmg.users (id, ign, alt1) VALUES  (%s, %s, %s)"
+                await cursor.execute(sql, (uid, primary_name, altname))
+                await conn.commit()
+                return True
             if data[usr_cols.alt1]:
                 if data[usr_cols.alt2]:
                     return False
@@ -607,7 +610,7 @@ class usr_cols(enum.IntEnum):
 
 # Define which DB records are of what type
 # Channels (Text, Voice, Category)
-gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 46, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 46, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 80, 81, 82, 83]
 # Roles
 gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43, 47, 48, 50, 52, 54, 58, 73, 75, 79]
 
@@ -693,3 +696,7 @@ class gld_cols(enum.IntEnum):
     numpopsfirstrune = 77
     numpopssecondrune = 78
     eventraiderroleid = 79
+    raidhc5 = 80
+    raidhc6 = 81
+    raidvc5 = 82
+    raidvc6 = 83
