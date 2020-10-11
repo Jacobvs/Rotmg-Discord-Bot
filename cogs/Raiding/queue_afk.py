@@ -664,8 +664,14 @@ class QAfk:
                     self.awaiting_confirmations.remove(member.id)
                 return await member.send(f"We already have enough confirmed {emoji}'s for this run.")
             link = 'https://discordapp.com/channels/660344559074541579/706563122944802856/749698837232222328' if self.in_normal else \
-                'https://discordapp.com/channels/660344559074541579/736240706955378788/750171971647569940'
-            await member.send(f"Confirmed {emoji}. Please make sure you are meeting the requirements. They can be found here:\n{link}")
+                'https://discordapp.com/channels/660344559074541579/736240706955378788/762415033371328533'
+            if 'rune' in emoji:
+                await member.send(f"Confirmed {emoji}. Thanks for bringing a rune! You do not have to meet requirements.")
+            elif 'dps' in emoji:
+                await member.send(f"Confirmed {emoji}. This means you're bringing Wizard/Sorcerer/Ninja. Please make sure you are meeting the requirements. They can be found here:\
+                n{link}")
+            else:
+                await member.send(f"Confirmed {emoji}. Please make sure you are meeting the requirements. They can be found here:\n{link}")
 
         if not member.voice:
             await member.send(f"Please join the __**{self.queuechannel.name}**__ VC within 30 seconds to confirm your spot in the raid.")
@@ -742,7 +748,7 @@ class QAfk:
             nqueue = nvc
         capacity_bar = utils.textProgressBar(nqueue, self.max_members, prefix="", percent_suffix=" Full", suffix="", decimals=0, length=18)
         link = 'https://discordapp.com/channels/660344559074541579/706563122944802856/749698837232222328' if self.in_normal else \
-               'https://discordapp.com/channels/660344559074541579/736240706955378788/750171971647569940'
+               'https://discordapp.com/channels/660344559074541579/736240706955378788/762415033371328533'
         mentions = '<#738615552594935910> and <#706563122944802856>' if self.in_normal else 'vet section of <#738615552594935910> and <#736240706955378788>'
         desc = f"Read {mentions}.\n" \
                f"**{nqueue}** Members are in the queue & have been confirmed to join the raid!\n{capacity_bar}\n\n" \

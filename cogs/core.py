@@ -202,7 +202,7 @@ class Core(commands.Cog):
         for g in self.client.guilds:
             mcount += g.member_count
         embed.add_field(name="Connected Servers:",
-                        value=f"**`{len(self.client.guilds)+30}`** servers with **`{mcount}`** total members.")
+                        value=f"**`{len(self.client.guilds)}`** servers with **`{mcount}`** total members.")
         embed.add_field(name="\u200b", value="\u200b")
         embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.")
         lines = line_count('/home/ubuntu/Rotmg-Bot/') + line_count('/home/ubuntu/Rotmg-Bot/cogs') + line_count(
@@ -303,8 +303,8 @@ class Core(commands.Cog):
                     elif user_data[usr_cols.status] == 'stp_2' or user_data[usr_cols.status] == 'stp_3':
                         await message.author.send("You are already verifying, react to the check to continue.", delete_after=10)
             else:
-                await message.author.send("You are not verified in any guilds this bot is in yet. Please verify "
-                                          "before attempting to send modmail.")
+                await message.author.send("You are not verified in any guilds this bot is in yet. If you want to verify, use the verification message. To send modmail use "
+                                          "`!modmail`.")
         elif message.author != self.client.user:
             if message.author.id in self.client.beaned_ids:
                 try:
@@ -483,7 +483,7 @@ class Core(commands.Cog):
             channel = self.client.get_channel(raidid)
             if channel:
                 await member.move_to(channel)
-            await member.send("You have been moved back to the raiding VC as the raid is still ongoing.")
+            await member.send("You have been moved back to the raiding VC as the raid is still ongoing. Use `!leaverun` if you don't want to be moved back in.")
         else:
             if member.id not in self.client.queues[after_channel.id]:
                 self.client.queues[after_channel.id].append(member.id)

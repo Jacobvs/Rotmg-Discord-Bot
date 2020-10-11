@@ -223,7 +223,7 @@ class Patreon(commands.Cog):
 
         try:
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
-                async with cs.get(f'https://nightfirec.at/realmeye-api/?player={ign}') as r:
+                async with cs.get(f'https://darkmattr.uc.r.appspot.com/?player={ign}') as r:
                     if r.status == 403:
                         print("ERROR: API ACCESS FORBIDDEN")
                         await ctx.send(f"<@{self.client.owner_id}> ERROR: API ACCESS REVOKED!.")
@@ -287,7 +287,8 @@ class Patreon(commands.Cog):
                         json.dump(created_images, file)
                 embed.set_image(url=i_url)
                 embed.set_thumbnail(url=skin_images[str(c['data_class_id'])][str(c['data_skin_id'])])
-                desc = f"Class Quests: **{c['cqc']}/5** Quests\nEXP: **{c['exp']:,}**xp\nLevel: **{c['level']}**\nStats Maxed: " \
+                desc = f"Class Quests: **{c['cqc']}/5** Quests\nEXP: **{c['exp']:,}**xp\nFame: **{c['fame']:,}** <:fame:682209281722024044>\nLevel: **{c['level']}**\nStats " \
+                       f"Maxed: " \
                        f"**{c['stats_maxed']}/8**\nPlace: **{c['place']:,}**\nBackpack: "
                 desc += "✅" if c['backpack'] else "❌"
                 desc += "\nPet: "

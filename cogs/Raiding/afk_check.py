@@ -297,7 +297,10 @@ class AfkCheck:
                 pass
 
             for m in self.userswloc:
-                await m.send(f"The location has changed to **{self.location}**.\nPlease get to the new location as soon as possible.")
+                try:
+                    await m.send(f"The location has changed to **{self.location}**.\nPlease get to the new location as soon as possible.")
+                except discord.Forbidden:
+                    await self.ctx.channel(f"{m.mention} has DM's from server members disabled so they weren't sent the new location. Please inform them in-game.")
 
             cp = self.cpmsg.embeds[0]
             cp.set_field_at(0, name="Location of run:", value=self.location, inline=False)

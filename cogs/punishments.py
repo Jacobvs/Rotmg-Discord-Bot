@@ -325,8 +325,6 @@ class Punishments(commands.Cog):
             embed.timestamp = duration
         if ptype == 'Blacklist':
             embed.set_thumbnail(url='https://media3.giphy.com/media/H99r2HtnYs492/giphy.gif')
-        if ptype == 'Suspension' and guild.id == 703987028567523468:
-            embed.set_thumbnail(url='https://i.imgur.com/ZDuZLx8.gif')
         await channel.send(embed=embed)
         try:
             await user.send(f"{ptype} in {guild.name} | {user.mention}", embed=embed)

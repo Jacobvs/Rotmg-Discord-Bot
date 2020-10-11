@@ -55,7 +55,15 @@ class VCSelect:
             if four:
                 s += "4️⃣ - " + four.name + "\n"
                 emojis.append("4️⃣")
-            if one or two or three or four:
+            five = self.guild_db.get(sql.gld_cols.raidvc5)
+            if five:
+                s += "5️⃣ - " + five.name + "\n"
+                emojis.append("5️⃣")
+            six = self.guild_db.get(sql.gld_cols.raidvc6)
+            if six:
+                s += "6️⃣ - " + six.name + "\n"
+                emojis.append("6️⃣")
+            if one or two or three or four or five or six:
                 self.inraiding = True
 
             self.locationembed.add_field(name="Available Channels:", value=s)
@@ -117,7 +125,7 @@ class VCSelect:
 
 
         def location_check(react, usr):
-            return usr == self.ctx.author and react.message.id == self.setup_msg.id and react.emoji in ['1️⃣', '2️⃣', '3️⃣', '4️⃣']
+            return usr == self.ctx.author and react.message.id == self.setup_msg.id and react.emoji in ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣']
 
 
         try:
@@ -149,10 +157,18 @@ class VCSelect:
                     self.raidnum = 2
                     self.hcchannel = self.guild_db.get(sql.gld_cols.raidhc3)
                     self.vcchannel = self.guild_db.get(sql.gld_cols.raidvc3)
-                else:
+                elif reaction.emoji == "4️⃣":
                     self.raidnum = 3
                     self.hcchannel = self.guild_db.get(sql.gld_cols.raidhc4)
                     self.vcchannel = self.guild_db.get(sql.gld_cols.raidvc4)
+                elif reaction.emoji == "5️⃣":
+                    self.raidnum = 4
+                    self.hcchannel = self.guild_db.get(sql.gld_cols.raidhc5)
+                    self.vcchannel = self.guild_db.get(sql.gld_cols.raidvc5)
+                else:
+                    self.raidnum = 5
+                    self.hcchannel = self.guild_db.get(sql.gld_cols.raidhc6)
+                    self.vcchannel = self.guild_db.get(sql.gld_cols.raidvc6)
             elif self.invet:
                 self.raiderrole = self.guild_db.get(sql.gld_cols.vetroleid)
                 self.rlrole = self.guild_db.get(sql.gld_cols.vetrlroleid)
