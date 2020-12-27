@@ -89,7 +89,7 @@ class QAfk:
             self.missed_runs.update({r[0]: r[1]})
 
         # Grab dungeon info from utils
-        dungeon_info = utils.q_dungeon_info(1) if self.in_normal else utils.q_dungeon_info(2)
+        dungeon_info = utils.q_dungeon_info(-1) if self.in_normal else utils.q_dungeon_info(-2)
         self.dungeontitle = dungeon_info[0]
         self.dungeon_emoji = dungeon_info[1][0]
         self.dungeon_image = dungeon_info[1][1]
@@ -233,6 +233,14 @@ class QAfk:
             if id in self.confirmed_raiders:
                 member = self.confirmed_raiders[id]
                 res = await self.movem(member)
+                all += 1 if res else 0
+
+        print('moving extra')
+        if len(self.raid_vc.members) < self.max_members and len(self.queuechannel.members) > 0:
+            for m in self.queuechannel.members:
+                if len(self.raid_vc.members) >= self.max_members:
+                    break
+                res = await self.movem(m)
                 all += 1 if res else 0
 
         print('done moving')
@@ -719,8 +727,6 @@ class QAfk:
                 await member.send(f"The Meetup Location for this run is:\n ***{self.meetup}**\nPlease get to the location and trade `{self.ctx.author.display_name}` if you are "
                                   f"bringing an item. If you are bringing a class, don't trade the RL.")
 
-        await self.update_start_embed(update_msg=True)
-        await self.update_cp_embed(update_msg=True)
         self.last_edited = datetime.utcnow()
         self.client.morder[self.ctx.guild.id]['nvc'] = len(self.raid_vc.members)
         reason = f"{member.display_name} skipped the queue for {self.ctx.author.display_name}'s {self.dungeontitle} Raid by bringing {emoji}."

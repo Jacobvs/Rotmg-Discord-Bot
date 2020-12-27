@@ -83,7 +83,8 @@ class Patreon(commands.Cog):
     async def cog_check(self, ctx):
         is_rl = False
         if ctx.guild:
-            is_rl = ctx.author.top_role >= self.client.guild_db[ctx.guild.id][sql.gld_cols.rlroleid]
+            is_rl = ctx.author.top_role >= self.client.guild_db[ctx.guild.id][sql.gld_cols.eventrlid] if self.client.guild_db[ctx.guild.id][sql.gld_cols.eventrlid] \
+                else ctx.author.top_role >= self.client.guild_db[ctx.guild.id][sql.gld_cols.rlroleid]
         res = ctx.author.id in self.client.patreon_ids or is_rl
         if not res:
             await ctx.send("This is a Patreon Only Command! Run `!patreon` if you want more info.")
@@ -256,8 +257,8 @@ class Patreon(commands.Cog):
         d += f"\n\nGuild: [{data['guild']}](https://www.realmeye.com/guild/{data['guild'].replace(' ', '%20')}) ({data['guild_rank']})" if data['guild'] else ""
         base_embed = discord.Embed(title=f"Realmeye Info for {ign}", description=d,
                                    url=f'https://www.realmeye.com/player/{ign}', color=discord.Color.blue())
-        info = f"Characters: **{data['chars']}**\nSkins: **{data['skins']}**\nFame: **{data['fame']:,}**<:fame:682209281722024044>\nEXP: **{data['exp']:,}**\nStars: **" \
-               f"{data['rank']}**⭐\n\nAccount Fame: **{data['account_fame']:,}**<:fame:682209281722024044>\n"
+        info = f"Characters: **{data['chars']}**\nExaltations: **{data['exaltations']}**\nSkins: **{data['skins']}**\nFame: **{data['fame']:,}**<:fame:682209281722024044>\nEXP: " \
+               f"**{data['exp']:,}**\nStars: **{data['rank']}**⭐\n\nAccount Fame: **{data['account_fame']:,}**<:fame:682209281722024044>\n"
         info += f"Created: {data['created']}" if 'created' in data else f"First Seen: {data['player_first_seen']}" if 'player_first_seen' in data else ""
         info += f"\nLast Seen: {data['player_last_seen']}\nCharacters Hidden: {'✅' if data['characters_hidden'] else '❌'}"
 

@@ -339,6 +339,25 @@ class Moderation(commands.Cog):
         await ctx.message.delete()
         return await manual_verify_deny_ext(self.client.pool, ctx.guild, member.id, ctx.author)
 
+    # @commands.command(usage='pban <user> <reason>')
+    # @commands.is_owner()
+    # async def pban(self, ctx, user: discord.User, *, reason):
+    #     # embed = discord.Embed(title="Ban Notice", description=f"You have been permanently banned from all servers this bot is in for the reason:\n{reason}",
+    #     #                       color=discord.Color.red())
+    #     # try:
+    #     #     await user.send(embed=embed)
+    #     # except discord.Forbidden:
+    #     #     pass
+    #
+    #     for server in self.client.guilds:
+    #         try:
+    #             await server.ban(user)
+    #             await ctx.send(f"Successfully banned from {server.name}")
+    #         except discord.Forbidden:
+    #             await ctx.send(f"Failed to ban in {server.name}")
+    #     await ctx.send("Done.")
+
+
 
 def setup(client):
     client.add_cog(Moderation(client))

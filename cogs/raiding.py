@@ -18,6 +18,7 @@ from cogs.Raiding.fametrain import FameTrain
 from cogs.Raiding.headcount import Headcount
 from cogs.Raiding.queue_afk import QAfk
 from cogs.Raiding.realmclear import RealmClear
+from cogs.Raiding.runecount import RuneCount
 from cogs.Raiding.vc_select import VCSelect
 
 
@@ -27,6 +28,20 @@ class Raiding(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+
+    @commands.command(usage='runecount', description="Start a Rune Count for an Oryx 3 run.")
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    @checks.only_dungeoneer()
+    @commands.max_concurrency(1, per=BucketType.category, wait=False)
+    async def runecount(self, ctx):
+        setup = VCSelect(self.client, ctx, qafk=True)
+        data = await setup.q_start()
+        if isinstance(data, tuple):
+            (raiderrole, rlrole, hcchannel) = data
+        else:
+            return
+        runecount = RuneCount(self.client, ctx, hcchannel, raiderrole, rlrole)
 
     @commands.command(usage='qafk', description="Start a Queue afk check for the location specified.")
     @commands.guild_only()
@@ -99,7 +114,7 @@ class Raiding(commands.Cog):
 
     @commands.command(usage="findloc", description="Find a good location to start an O3 run in.")
     @commands.guild_only()
-    @commands.is_owner()
+    @checks.is_rl_or_higher_check()
     async def findloc(self, ctx):
         print('Findloc')
         if not await checks.is_bot_commands_channel(ctx):
@@ -142,7 +157,7 @@ class Raiding(commands.Cog):
 
     @commands.command(usage="findrc [max_in_realm]", description="Find a good location to start a Realm Clearing run in.")
     @commands.guild_only()
-    @commands.is_owner()
+    @checks.is_rl_or_higher_check()
     async def findrc(self, ctx, max=20):
         if not await checks.is_bot_commands_channel(ctx):
             try:
@@ -276,6 +291,145 @@ class Raiding(commands.Cog):
         embed = await self.client.loop.run_in_executor(None, functools.partial(parse_image, ctx.author, image, vcchannel))
         await msg.delete()
         await ctx.send(embed=embed)
+
+    @commands.command(usage='yoink <channel_name>', description='Move all people from specified VC into channel you are in.')
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def yoink(self, ctx, *, channel: discord.VoiceChannel):
+        if not ctx.author.voice:
+            return await ctx.send("Please join a voice channel before using this command.")
+
+        n = len(channel.members)
+        m = 0
+        for member in channel.members:
+            if member.voice:
+                try:
+                    await member.move_to(channel=ctx.author.voice.channel)
+                    m += 1
+                except discord.Forbidden or discord.HTTPException:
+                    continue
+
+        await ctx.send(f"Yoinked {m}/{n} members to {ctx.author.voice.channel.name}!")
+
+
+    @commands.command(usage='parsemembers (Attach an image of /who list with this command)',
+                      description="Parse through members in a realm to find crashers.", aliases=['pm'])
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def parsemembers(self, ctx):
+        if not ctx.message.attachments:
+            return await ctx.send("Please attach an image containing only the result of the /who command!", delete_after=10)
+        if len(ctx.message.attachments) > 1:
+            return await ctx.send("Please only attach 1 image.", delete_after=10)
+        attachment = ctx.message.attachments[0]
+        if not attachment.height or 'mp4' in attachment.filename.lower() or 'mov' in attachment.filename.lower():
+            return await ctx.send("Please only attach an image of type 'png' or 'jpg'.", delete_after=10)
+        image = io.BytesIO()
+        await attachment.save(image, seek_begin=True)
+        if ctx.author.voice:
+            vcchannel = ctx.author.voice.channel
+        else:
+            setup = VCSelect(self.client, ctx, parse=True)
+            data = await setup.start()
+            if isinstance(data, tuple):
+                (raidnum, inraiding, invet, inevents, raiderrole, rlrole, hcchannel, vcchannel, setup_msg) = data
+            else:
+                return
+            await setup_msg.delete()
+        msg: discord.Message = await ctx.send("Parsing image. This may take a minute...")
+        res = await self.client.loop.run_in_executor(None, functools.partial(parse_image, ctx.author, image, vcchannel, True))
+        if not res:
+            embed = discord.Embed(title="Error!", description="Could not find the who command in the image you provided.\nPlease re-run the "
+                                                              "command with an image that shows the results of `/who`.", color=discord.Color.red())
+            await msg.delete()
+            return await ctx.send(embed=embed)
+
+        crashing, possible_alts, fixed_names = res
+        await msg.edit(content="Parsing members. Please wait...")
+        n_crashers = len(crashing)
+        crashing_members = []
+        converter = utils.MemberLookupConverter()
+        pages = []
+        nm_crashing = []
+        crashing_players = []
+        for n in crashing:
+            try:
+                mem = await converter.convert(ctx, n)
+            except discord.ext.commands.BadArgument:
+                crashing_players.append(n)
+        for m in crashing_members:
+            n_suspensions = 0
+            active_suspension = "❌"
+            pdata = await sql.get_users_punishments(self.client.pool, m.id, ctx.guild.id)
+            bdata = await sql.get_blacklist(self.client.pool, m.id, ctx.guild.id)
+            pembed = discord.Embed(description=f"**Punishment Log for {m.mention}** - `{m.display_name}`")
+            if pdata:
+                for i, r in enumerate(pdata, start=1):
+                    requester = ctx.guild.get_member(r[sql.punish_cols.r_uid])
+                    active = "✅" if r[sql.punish_cols.active] else "❌"
+                    starttime = f"Issued at: `{r[sql.punish_cols.starttime].strftime('%b %d %Y %H:%M:%S')}`"
+                    endtime = f"\nEnded at: `{r[sql.punish_cols.endtime].strftime('%b %d %Y %H:%M:%S')}`" if r[sql.punish_cols.endtime] else ""
+                    ptype = r[sql.punish_cols.type].capitalize()
+                    pembed.add_field(name=f"{ptype} #{i} | Active {active}",
+                                     value=f"Issued by: {requester.mention if requester else '(Issuer left server)'}\nReason:\n{r[sql.punish_cols.reason]}\n{starttime}\n"
+                                           f"{endtime}",
+                                     inline=False)
+                    if r[sql.punish_cols.active] and ptype == 'Suspend':
+                        active_suspension = active
+                    if ptype == 'Suspend':
+                        n_suspensions += 1
+            if bdata:
+                for i, r in enumerate(bdata, start=1):
+                    requester = ctx.guild.get_member(r[sql.blacklist_cols.rid])
+                    active = "✅"
+                    starttime = f"Issued at: `{r[sql.blacklist_cols.issuetime].strftime('%b %d %Y %H:%M:%S')}`"
+                    btype = r[sql.blacklist_cols.type].capitalize()
+                    pembed.add_field(name=f"{btype} #{i} issued by {requester.mention if requester else '(Issuer left server)'} | Active {active}",
+                                     value=f"Reason:\n{r[sql.punish_cols.reason]}\n{starttime}")
+            if pdata or bdata:
+                pembed.description += f"\nFound `{len(pdata)}` Punishments in this user's history.\nFound `{len(bdata)}` Blacklists in this users history."
+                pages.append(pembed)
+
+            nm_crashing.append((m, n_suspensions, active_suspension))
+
+        mstring = ""
+        nm_crashing = sorted(nm_crashing, key=lambda x: x[1], reverse=True)
+        for r in nm_crashing:
+            mstring += f"{r[0].mention} **-** `{r[0].display_name}`\nSuspensions: **{r[1]}** | Active: {r[2]}\n"
+        if not mstring:
+            mstring = "No members crashing!"
+
+        embed = discord.Embed(title=f"Parsing Results for {vcchannel.name}", description=f"Possible Crashers: **{n_crashers}**",
+                              color=discord.Color.orange())
+        if len(mstring) > 1024:
+            lines = mstring.splitlines(keepends=True)
+            curr_str = ""
+            n_sections = 1
+            for l in lines:
+                if len(l) + len(curr_str) >= 1024:
+                    embed.add_field(name=f"Members Crashing (in the server) ({n_sections}):", value=curr_str, inline=True)
+                    curr_str = l
+                    n_sections += 1
+                else:
+                    curr_str += l
+            embed.add_field(name=f"Members Crashing (in the server) ({n_sections}):", value=curr_str, inline=True)
+        else:
+            embed.add_field(name="Members Crashing (in the server):", value=mstring, inline=True)
+        pstring = "\n".join(crashing_players) if crashing_players else 'No players who are not in the server crashing.'
+        embed.add_field(name="Players Crashing (not in server):", value=pstring, inline=False)
+
+        if fixed_names:
+            fixedlist = "     Fixed Name | Original Parse".join("`/kick " + fixed + "` | (" + orig + ")\n" for (orig, fixed) in fixed_names)
+            embed.add_field(name="Possible Fixed Names", value=fixedlist, inline=True)
+        if possible_alts:
+            altlist = "".join("`" + name + "`\n" for name in possible_alts)
+            embed.add_field(name="Possible Alts (In VC but not in game)", value=altlist, inline=True)
+
+        pages.insert(0, embed)
+
+        await msg.delete()
+        paginator = utils.EmbedPaginator(self.client, ctx, pages)
+        await paginator.paginate()
 
     @commands.command(usage='addrusher <name>', description="Adds the rusher role to someone.")
     @commands.guild_only()
@@ -483,7 +637,36 @@ defaultnames = ["darq", "deyst", "drac", "drol", "eango", "eashy", "eati", "eend
                 "urake", "utanu", "vorck", "vorv", "yangu", "yimi", "zhiar"]
 
 
-def parse_image(author, image, vc):
+def parse_image(author, image, vc, members=False):
+    res = get_crasher_lists(image, author, vc)
+    if members:
+        return res
+    else:
+        if not res:
+            embed = discord.Embed(title="Error!", description="Could not find the who command in the image you provided.\nPlease re-run the "
+                                                              "command with an image that shows the results of `/who`.", color=discord.Color.red())
+            return embed
+        else:
+            crashing, possible_alts, fixed_names = res
+
+        kicklist = "".join("`/kick " + m + "`\n" for m in crashing)
+        if not kicklist:
+            kicklist = "No members crashing!"
+        if fixed_names:
+            fixedlist = "     Fixed Name | Original Parse".join("`/kick " + fixed + "` | (" + orig + ")\n" for (orig, fixed) in fixed_names)
+        if possible_alts:
+            altlist = "".join("`" + name + "`\n" for name in possible_alts)
+        if len(kicklist) > 2000:
+            kicklist = "Too many characters (>2000)!\nTry again with a smaller list!"
+        embed = discord.Embed(title=f"Parsing Results for {vc.name}", description=f"Possible Crashers: **{len(crashing)}**",
+                              color=discord.Color.orange()).add_field(name="Members in run but not in vc:", value=kicklist, inline=True)
+        if fixed_names:
+            embed.add_field(name="Possible Fixed Names", value=fixedlist)
+        if possible_alts:
+            embed.add_field(name="Possible Alts (In VC but not in game)", value=altlist)
+        return embed
+
+def get_crasher_lists(image, author, vc):
     file_bytes = np.asarray(bytearray(image.read()), dtype=np.uint8)
     img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
     width = img.shape[:2][1]
@@ -515,9 +698,7 @@ def parse_image(author, image, vc):
         print("ERROR - Parsed String: " + str)
         print("INFO - Split String: ")
         print(split_str)
-        embed = discord.Embed(title="Error!", description="Could not find the who command in the image you provided.\nPlease re-run the "
-                                                          "command with an image that shows the results of `/who`.", color=discord.Color.red())
-        return embed
+        return None
     names = split_str[3].split(", ")
     cleaned_members = []
     alts = []
@@ -567,22 +748,8 @@ def parse_image(author, image, vc):
         if m != author:
             possible_alts.append(m)
 
-    kicklist = "".join("`/kick " + m + "`\n" for m in crashing)
-    if not kicklist:
-        kicklist = "No members crashing!"
-    if fixed_names:
-        fixedlist = "     Fixed Name | Original Parse".join("`/kick " + fixed + "` | (" + orig + ")\n" for (orig, fixed) in fixed_names)
-    if possible_alts:
-        altlist = "".join("`" + name + "`\n" for name in possible_alts)
-    if len(kicklist) > 2000:
-        kicklist = "Too many characters (>2000)!\nTry again with a smaller list!"
-    embed = discord.Embed(title=f"Parsing Results for {vc.name}", description=f"Possible Crashers: **{len(crashing)}**",
-                          color=discord.Color.orange()).add_field(name="Members in run but not in vc:", value=kicklist, inline=True)
-    if fixed_names:
-        embed.add_field(name="Possible Fixed Names", value=fixedlist)
-    if possible_alts:
-        embed.add_field(name="Possible Alts (In VC but not in game)", value=altlist)
-    return embed
+    return crashing, possible_alts, fixed_names
+
 
 
 def event_type(type):

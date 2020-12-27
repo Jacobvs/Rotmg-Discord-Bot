@@ -78,9 +78,9 @@ class AfkCheck:
                     embed = discord.Embed(title="Cancelled!", description="You chose to cancel this afk creation.", color=discord.Color.red())
                     await self.setup_msg.clear_reactions()
                     return await self.setup_msg.edit(embed=embed)
-                if 0 < int(msg.content) < 56:
+                if 0 < int(msg.content) < 57:
                     break
-            await self.ctx.send("Please choose a number between 1-55!", delete_after=7)
+            await self.ctx.send("Please choose a number between 1-56!", delete_after=7)
 
         # Grab dungeon info from utils
         self.dungeon_info = utils.dungeon_info(int(msg.content))
@@ -363,8 +363,10 @@ class AfkCheck:
                 self.confirmedreactions[emoji].append(mstring)
             else:
                 self.confirmedreactions[emoji] = [mstring]
-
-            await member.send(f"Confirmed {emoji}. Thanks! Please wait for the run to start.")
+            if self.dungeontitle != "High Tech Terror":
+                await member.send(f"Confirmed {emoji}. Thanks! Please wait for the run to start.")
+            else:
+                await member.send(f"Confirmed {emoji}. Thanks!\nThe location for this run is {self.location}. Please get there ASAP!")
         else:
             name = "keys" if key else "vial" if vial else "sword runes" if sword else "shield runes" if shield else "helm runes"
             if len(confirm_list) >= 2:
