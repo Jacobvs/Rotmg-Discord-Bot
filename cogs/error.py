@@ -21,8 +21,8 @@ class ErrorHandler(commands.Cog):
             await ctx.message.delete()
             if ctx.channel.id == 738632101523619901:
                 return await ctx.send('That command does not exist. Please use `!position` to check your place in the raid queue.')
-            return await ctx.send(f"That command does not exist. Please use `{ctx.prefix}help` for "
-                                  f"a list of commands.")
+            return await ctx.send(f"That command does not exist. Please use `{ctx.prefix}commands` for "
+                                  f"a list of commands, or `{ctx.prefix}help` for more information.")
 
         if isinstance(error, commands.MissingPermissions):
             await ctx.message.delete()

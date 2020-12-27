@@ -75,9 +75,9 @@ class Logging(commands.Cog):
                 return await r_msg.edit(embed=embed)
 
             if msg.content.isdigit():
-                if 0 < int(msg.content) < 56:
+                if 0 < int(msg.content) < 57:
                     break
-            await ctx.send("Please choose a number between 1-55!", delete_after=7)
+            await ctx.send("Please choose a number between 1-56!", delete_after=7)
 
         await r_msg.delete()
         dungeon_info = utils.dungeon_info(int(msg.content))

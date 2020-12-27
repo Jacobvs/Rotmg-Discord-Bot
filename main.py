@@ -44,8 +44,11 @@ def get_prefix(client, message):
 
     return prefixes[str(message.guild.id)]
 
-
-bot = commands.Bot(command_prefix='!')
+intents = discord.Intents.default()
+intents.members = True
+intents.typing = False
+intents.presences = False
+bot = commands.Bot(command_prefix='!', intents=intents)
 bot.remove_command('help')
 bot.owner_id = 196282885601361920
 bot.gh_token = gh_token
@@ -57,14 +60,17 @@ with open('data/variables.json', 'r') as file:
 @bot.event
 async def on_ready():
     """Wait until bot has connected to discord"""
+    print("Connected to discord")
     bot.pool = await aiomysql.create_pool(host=os.getenv("MYSQL_HOST"), port=3306, user='jacobvs', password=os.getenv("MYSQL_PASSWORD"),
                                           db='mysql', loop=bot.loop, connect_timeout=60)
+    print("Connected to DB")
     bot.start_time = datetime.datetime.now()
     bot.raid_db = {}
     bot.mapmarkers = {}
     bot.players_in_game = []
     bot.active_raiders = {}
-    bot.serverwleaderboard = [660344559074541579, 703987028567523468, 739573333242150975, 691607211046076471, 719406991117647893, 713655609760940044]
+    bot.serverwleaderboard = [660344559074541579, 635413437647683596, 703987028567523468, 739573333242150975, 691607211046076471, 719406991117647893, 713655609760940044,
+                              770194181355733002]
     await build_guild_db()
     for g in bot.guild_db:
         bot.raid_db[g] = {"afk": {}, "cp": {}, "leaders": []}
@@ -105,7 +111,7 @@ async def on_ready():
     # event_update.start()
     patreon_role.start()
     bot.beaned_ids = set([])
-    print(f'{bot.user.name} has connected to Discord!')
+    print(f'{bot.user.name} is now online!')
 
 
 async def build_guild_db():
@@ -442,7 +448,7 @@ eventTable = {
 #                         realm = info[1]
 #                         server = info[2]
 #                         population = int(info[3]) if info[3] != '?' else 404
-#                         events_left = int(info[4])
+#                         events_left = int(info[4]) if info[4] != '?' else 404
 #                         t = info[5].split(':')
 #                         now = datetime.datetime.utcnow()
 #                         time = datetime.datetime(year=now.year, month=now.month, day=now.day, hour=int(t[0]), minute=int(t[1])).timestamp()
@@ -470,4 +476,5 @@ async def patreon_role():
                 except discord.Forbidden or discord.HTTPException:
                     pass
 
+print("Attempting to connect to Discord")
 bot.run(token)

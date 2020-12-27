@@ -6,7 +6,10 @@ import aiohttp
 import discord
 from discord.ext import commands
 
+import checks
 import embeds
+import sql
+import utils
 from sql import get_guild, get_user, update_user, ign_exists, update_guild, add_new_user, usr_cols, gld_cols
 
 
@@ -122,7 +125,7 @@ class Verification(commands.Cog):
             return await channel.send(f"{member.mention} has hidden their account creation date.")
 
         fame_passed = alive_fame >= fame_req
-        maxed_passed = n_maxed >= n_maxed_req
+        maxed_passed = True  # TODO: Fix this! n_maxed >= n_maxed_req
         stars_passed = n_stars >= star_req
         months_passed = months >= months_req
         private_passed = not private_loc or location == "hidden"
@@ -192,6 +195,40 @@ class Verification(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def add_second_subverify(self, ctx):
         await subverify_helper(self, ctx, 2)
+
+    @commands.command(usage='vetveri <member>', description='Veteran Verify a member')
+    @commands.guild_only()
+    @checks.is_security_or_higher_check()
+    async def vetveri(self, ctx, member: utils.MemberLookupConverter):
+        vrole = self.client.guild_db[ctx.guild.id][sql.gld_cols.vetroleid]
+        rrole = self.client.guild_db[ctx.guild.id][sql.gld_cols.raiderroleid]
+        if not vrole:
+            return await ctx.send("This server does not have a vet role configured yet!")
+
+        if rrole not in member.roles:
+            return await ctx.send("The specified member has not been verified in the primary section yet!")
+
+        if vrole in member.roles:
+            return await ctx.send("This member has already been veteran verified!")
+
+        try:
+            await member.add_roles(vrole)
+        except discord.Forbidden:
+            return await ctx.send("The bot does not have permission to add roles to the specified member!")
+        except discord.HTTPException:
+            return await ctx.send("An HTTP Error occured! Please try running the command again!")
+
+        embed = discord.Embed(title="Veteran Verified!", description=f"You have been manually verified for the veteran section of:\n**__{ctx.guild.name}__**!\n\n"
+                                                                     f"If this was a mistake, please contact a security+!", color=discord.Color.green())
+        try:
+            await member.send(embed=embed)
+        except discord.Forbidden or discord.HTTPException:
+            pass
+
+        embed = discord.Embed(title="Success!", description=f"{member.display_name} has been manually __vet verified__!", color=discord.Color.green())
+        await ctx.send(embed=embed)
+
+
 
 
 def setup(client):
@@ -470,7 +507,7 @@ async def dm_verify_react_handler(self, payload, user_data, user):
                 months = days / 30
 
             fame_passed = alive_fame >= fame_req
-            maxed_passed = n_maxed >= n_maxed_req
+            maxed_passed = True  # TODO: Fix This!! n_maxed >= n_maxed_req
             stars_passed = n_stars >= star_req
             months_passed = months >= months_req
             private_passed = not private_loc or location == "hidden"
@@ -538,3 +575,4 @@ async def subverify_react_handler(self, payload, num, guild_data, user, guild, s
             await logchannel.send(f"{user.mention} has removed their verification for the category: `{category_name}`")
         except discord.errors.Forbidden:
             await logchannel.send("Missing permissions for: {} in guild: {}".format(user.name, guild.name))
+

@@ -357,7 +357,7 @@ def dungeon_select(hc=False, manual_log=False):
             lowtier += f"`({i})` {d[1][0]} {d[0]}\n"
         elif i < 47:
             other += f"`({i})` {d[1][0]} {d[0]}\n"
-        elif i < 56:
+        elif i < 57:
             mini += f"`({i})` {d[1][0]} {d[0]}\n"
         else:
             events += f"`({i})` {d[1][0]} {d[0]}\n"

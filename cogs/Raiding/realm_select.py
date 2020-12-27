@@ -20,12 +20,13 @@ class RealmSelect:
         if servers:
             desc = ""
             num = 0
-
             for l in servers[0]:
                 event = l[3] if l[3] else "N/A"
                 desc += f"{self.letters[num]} - __**{l[0]}**__\n**{l[1]}** People | **{l[2]}** Heroes\n`{event}`\n**{l[4]}** ago\n\n"
                 server_opts[self.letters[num]] = l[0]
                 num += 1
+            if not desc:
+                desc = "No suitable US servers found."
             embed = discord.Embed(title="Location Selection", description="Choose a realm or press 🔄 to manually enter a location.", color=discord.Color.gold())
             embed.add_field(name="Top US Servers", value=desc, inline=True)
             num = 4
@@ -35,6 +36,8 @@ class RealmSelect:
                 desc += f"{self.letters[num]} - __**{l[0]}**__\n**{l[1]}** People | **{l[2]}** Heroes\n`{event}`\n**{l[4]}** ago\n\n"
                 server_opts[self.letters[num]] = l[0]
                 num += 1
+            if not desc:
+                desc = "No suitable EU servers found."
             embed.add_field(name="Top EU Servers", value=desc, inline=True)
             msg = await self.ctx.send(embed=embed)
             for r in server_opts:

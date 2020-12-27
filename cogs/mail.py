@@ -266,7 +266,8 @@ class Mail(commands.Cog):
         embed.timestamp = datetime.datetime.utcnow()
         await modmail_log_channel.send(embed=embed)
 
-        embed = discord.Embed(title=f"Modmail Thread Closed by: {ctx.author.name}", description=f"Closed for reason:\n\n{reason}.", color=discord.Color.red())
+        embed = discord.Embed(title=f"Modmail Thread Closed.", description=f"Please use {ctx.prefix}modmail if you'd like to start a new ticket.\n\nClosed for reason:\n{reason}",
+                              color=discord.Color.red())
         if member:
             await member.send(embed=embed)
 

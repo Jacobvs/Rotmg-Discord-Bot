@@ -158,7 +158,7 @@ class Punishments(commands.Cog):
             return await ctx.send(f'Cannot un-suspend `{member.display_name}` as they have no active suspensions!')
 
         reason = emoji.demojize(reason)
-        if self.client.active_punishments[str(ctx.guild.id)+str(member.id)+'suspend']:
+        if str(ctx.guild.id)+str(member.id)+'suspend' in self.client.active_punishments and self.client.active_punishments[str(ctx.guild.id)+str(member.id)+'suspend']:
             task = self.client.active_punishments[str(ctx.guild.id)+str(member.id)+'suspend']
             task.cancel()
         suspendrole = self.client.guild_db.get(ctx.guild.id)[sql.gld_cols.suspendedrole]
@@ -376,7 +376,8 @@ async def unsuspend(pool, guild, suspend_role, verifiedrole, member, roles):
     await member.remove_roles(suspend_role)
     roles.append(verifiedrole)
     for r in roles:
-        await member.add_roles(r)
+        if r is not None:
+            await member.add_roles(r)
     await sql.set_unactive(pool, guild.id, member.id, 'suspend')
 
 async def punishment_handler(client, guild, member, ptype, tsecs, roles=None):

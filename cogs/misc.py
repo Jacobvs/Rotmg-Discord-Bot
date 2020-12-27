@@ -170,6 +170,20 @@ class Misc(commands.Cog):
                 await channel.send(member.mention, delete_after=1)
 
 
+    @commands.command(usage='listrole <role>', description='Mentions everyone with a role')
+    @commands.is_owner()
+    @commands.guild_only()
+    async def listrole(self, ctx, *, role: discord.Role):
+        num = 0
+        mlist = [role.members[i:i+80] for i in range(0, len(role.members), 80)]
+        for members in mlist:
+            str = ""
+            for mem in members:
+                str += mem.mention
+            await ctx.send(str)
+            num += 1
+        await ctx.send(f"Done listing members! (in {num} messages)")
+
     @commands.command(usage='poll <title> [option 1] [option 2] [option 3]...',
                       description="Creates a poll with up to 2-10 options\n"
                                   "For options/titles with more than one word, surround the text with quotes.")

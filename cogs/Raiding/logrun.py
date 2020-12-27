@@ -145,7 +145,7 @@ class LogRun:
                                       color=discord.Color.gold())
                 await self.memberlog(embed, self.helmreacts, sql.log_cols.helmrunes, self.emojis[4])
 
-            if self.events:
+            if self.events or self.runtitle == 'Tomb' or self.runtitle == 'Fungal Cavern':
                 await self.msg.clear_reactions()
                 embed = discord.Embed(title="Chain #", description="If you chained, please specify the number of runs chained. "
                                         "If the chain was longer than 5, react to the 🔄 emoji to specify how many you chained.\nIf you didn't chain, press the ❌",
