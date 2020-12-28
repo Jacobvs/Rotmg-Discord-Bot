@@ -44,10 +44,10 @@ class Logging(commands.Cog):
                               color=discord.Color.green())
         await ctx.send(embed=embed)
 
-    @commands.command(usage="logrun [member (leader)] [num_runs]", description="Log a full run (or multiple runs) manually.")
+    @commands.command(usage="logrun [num_runs] [member (leader)]", description="Log a full run (or multiple runs) manually.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
-    async def logrun(self, ctx, member: utils.MemberLookupConverter=None, number=1):
+    async def logrun(self, ctx, number, member: utils.MemberLookupConverter=None):
         if not member:
             member = ctx.author
 
