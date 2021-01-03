@@ -422,7 +422,7 @@ async def log_runs(pool, guild_id, member_id, column=1, number=1):
                 await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number}, weeklyassists = weeklyassists + {number} "
                                      f"WHERE uid = {member_id} AND gid = {guild_id}")
             else:
-                await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + %s WHERE uid = %s AND gid = %s", (number, member_id, guild_id))
+                await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number} WHERE uid = {member_id} AND gid = {guild_id}")
             await conn.commit()
 
             return data + number

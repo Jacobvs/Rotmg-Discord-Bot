@@ -226,7 +226,7 @@ class LogRun:
                             return await self.msg.edit(embed=embed)
 
                         if str(reaction.emoji) == '✅':
-                            await sql.log_runs(self.client.pool, self.guild.id, self.pkeymember.id, sql.log_cols.eventkeys, num)
+                            await sql.log_runs(self.client.pool, self.guild.id, self.pkeymember.id, sql.log_cols.eventkeys, num+1)
                             index = self.confirmedLogs.index((self.emojis[1], f"{self.pkeymember.mention}"))
                             del self.confirmedLogs[index]
                             self.confirmedLogs.insert(index, (self.emojis[1], f"{self.pkeymember.mention} x{num+1}"))
