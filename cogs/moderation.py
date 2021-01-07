@@ -404,6 +404,53 @@ async def manual_verify_ext(pool, guild, uid, requester, ign=None):
         color=discord.Color.green())
     await channel.send(embed=embed)
 
+async def vet_manual_verify_ext(client, guild, uid, requester, msg_id):
+    """Manually vet verifies user with specified uid"""
+    print('in manual verify')
+    guild_data = client.guild_db[guild.id]
+    channel = guild_data[gld_cols.manualverifychannel]
+    member: discord.Member = guild.get_member(int(uid))
+    role = guild_data[sql.gld_cols.vetroleid]
+    try:
+        await member.add_roles(role)
+    except discord.Forbidden:
+        pass
+
+    message = await channel.fetch_message(msg_id)
+    try:
+        await message.delete()
+    except discord.Forbidden or discord.HTTPException or discord.NotFound:
+        pass
+
+    embed = discord.Embed(
+        description=f"✅ {member.mention} ***has been manually __veteran__ verified by*** {requester.mention}***.***",
+        color=discord.Color.green())
+    await channel.send(embed=embed)
+
+    await member.send(member.mention, embed=embeds.vet_verification_success(guild.name, member.mention))
+    await guild_data[gld_cols.verifylogchannel].send(f"{member.mention} has been veteran verified by {requester.mention}")
+
+async def vet_manual_verify_deny_ext(client, guild, uid, requester, msg_id):
+    """Denies user from vet verifying user with specified uid"""
+    guild_data = client.guild_db[guild.id]
+    channel = guild_data[gld_cols.manualverifychannel]
+    member: discord.Member = guild.get_member(int(uid))
+
+    message = await channel.fetch_message(msg_id)
+    try:
+        await message.delete()
+    except discord.Forbidden or discord.HTTPException or discord.NotFound:
+        pass
+
+    embed = embeds.vet_verification_denied(member.mention, requester.mention)
+    await member.send(embed=embed)
+
+    embed = discord.Embed(
+        description=f"❌ {member.mention} ***has been denied __veteran__ verification by*** {requester.mention}***.***",
+        color=discord.Color.red())
+    await channel.send(embed=embed)
+    await guild_data[gld_cols.verifylogchannel].send(f"{member.mention} has been denied veteran verification by {requester.mention}")
+
 
 async def manual_verify_deny_ext(pool, guild, uid, requester):
     """Manually verifies user with specified uid"""

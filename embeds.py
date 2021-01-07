@@ -16,6 +16,16 @@ def verification_check_msg(reqs, support_channel_name):
     embed.add_field(name="Troubleshooting", value=f"If you're having trouble verifying, post in #{support_channel_name}!", inline=False)
     return embed
 
+def vet_verification_check_msg(reqs, support_channel_name):
+    embed = discord.Embed(title='Veteran Verification Steps',
+                          description="__If you meet the requirements of this server, follow these steps to be verified:__\n1. Enable "
+                                      "DM's from server members\n2. Set **everything** on Realmeye to public except last known "
+                                      "location\n3. React to the ✅ below.",
+                          color=discord.Color.green())
+    embed.add_field(name="Veteran Requirements", value=f"```yaml\n{reqs}```")
+    embed.add_field(name="Troubleshooting", value=f"If you're having trouble verifying, post in #{support_channel_name}!", inline=False)
+    return embed
+
 
 def verification_dm_start():
     embed = discord.Embed(title="Verification Status", color=discord.Color.teal())
@@ -49,6 +59,11 @@ def verification_success(guild_name, mention):
                           color=discord.Color.green())
     return embed
 
+def vet_verification_success(guild_name, mention):
+    embed = discord.Embed(title="Success!", description="{} is now a veteran raider of __{}__!".format(mention, guild_name),
+                          color=discord.Color.green())
+    return embed
+
 
 def verification_denied(mention, denier_mention):
     embed = discord.Embed(title="Verification Denied",
@@ -56,6 +71,12 @@ def verification_denied(mention, denier_mention):
                           color=discord.Color.red())
     return embed
 
+def vet_verification_denied(mention, denier_mention):
+    embed = discord.Embed(title="Veteran Verification Denied",
+                          description=f"{mention} - Your vet verification appeal has been denied by: {denier_mention}\n If you truly think this is an error please contact a "
+                                      f"moderator+.",
+                          color=discord.Color.red())
+    return embed
 
 def verification_already_verified():
     embed = discord.Embed(title="Verification Status", color=discord.Color.teal())
@@ -90,6 +111,16 @@ def verification_manual_verify(user, ign, code, fame, nfame, nfamereq, maxed, nm
     embed.add_field(name="Stars", value=bool_to_emoji(stars) + f" ({nstars}/{nstarsreq} stars)", inline=True)
     embed.add_field(name="Account Creation Date", value=bool_to_emoji(months) + f" ({nmonths}/{nmonthsreq} months)", inline=True)
     embed.add_field(name="Private Location", value=bool_to_emoji(private), inline=True)
+    embed.add_field(name="\u200b", value="\u200b", inline=True)
+    embed.add_field(name='Command:', value=f'To manually verify them use the check, to deny them use the X.', inline=False)
+    return embed
+
+def vet_manual_verify(member, ign, runs_completed, runs_req, keys):
+    embed = discord.Embed(title="Veteran Manual Verification",
+                          description=f"{member.mention} with the ign: {ign} - ([Realmeye Link](https://www.realmeye.com/graveyard-summary-of-player/{ign})) failed to meet the requirements and would "
+                                      f"like to be manually verified. Please review their graveyard & other stats!", color=discord.Color.orange())
+    embed.add_field(name="Runs Completed", value=bool_to_emoji(runs_completed>=runs_req) + f" ({runs_completed}/{runs_req} Runs Logged)", inline=True)
+    embed.add_field(name="Keys", value=f"{keys} Keys Popped", inline=True)
     embed.add_field(name="\u200b", value="\u200b", inline=True)
     embed.add_field(name='Command:', value=f'To manually verify them use the check, to deny them use the X.', inline=False)
     return embed

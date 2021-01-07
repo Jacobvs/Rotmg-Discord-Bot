@@ -700,3 +700,5 @@ class gld_cols(enum.IntEnum):
     raidhc6 = 81
     raidvc5 = 82
     raidvc6 = 83
+    vetveriid = 84
+    vetverimsg = 85
