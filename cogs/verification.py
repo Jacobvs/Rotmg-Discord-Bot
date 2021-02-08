@@ -260,7 +260,7 @@ async def vet_veri_helper(client, member, guild, ign, veri_msg):
         except discord.Forbidden:
             return
 
-    with open('data/vetverireqs.json') as file:
+    with open('data/guild_variables.json') as file:
         reqs = json.load(file)
 
     if str(guild.id) in reqs:

@@ -186,6 +186,10 @@ class AfkCheck:
                         if len(self.nitroboosters) > 5:
                             return await payload.member.send("We already have 6 Nitro Boosters for this run. Wait for the RL to call location.")
                         if payload.member not in self.patreons:
+                            try:
+                                await payload.member.move_to(self.vcchannel)
+                            except discord.Forbidden or discord.HTTPException:
+                                pass
                             await payload.member.send(f"Confirmed {payload.emoji}. The location for this run is:\n***{self.location}***\nPlease get to the location soon.")
                             if payload.member not in self.userswloc:
                                 self.userswloc.append(payload.member)
@@ -200,6 +204,10 @@ class AfkCheck:
                     if payload.member not in self.patreons:
                         is_patreon = payload.member.id in self.client.patreon_ids
                         if is_patreon and payload.member not in self.nitroboosters:
+                            try:
+                                await payload.member.move_to(self.vcchannel)
+                            except discord.Forbidden or discord.HTTPException:
+                                pass
                             if payload.member not in self.patreons:
                                 self.patreons.append(payload.member)
                             if payload.member not in self.userswloc:

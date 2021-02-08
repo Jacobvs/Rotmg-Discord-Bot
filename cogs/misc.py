@@ -1,8 +1,14 @@
 import asyncio
+import functools
+import io
+import json
 import random
 from datetime import datetime
 
+import aiohttp
+import cv2
 import discord
+from PIL import Image
 from discord.ext import commands
 from discord.ext.commands import BucketType
 
@@ -22,6 +28,26 @@ def is_caped():
     def predicate(ctx):
         return ctx.message.author.id == 163394008603820032
     return commands.check(predicate)
+
+# HP, MP, ATT, DEF, SPD, DEX, VIT, WIS
+max_stats = {
+"Rogue" : (720, 252, 50, 25, 75, 75, 40, 50),
+"Archer" : (700, 252, 75, 25, 50, 50, 40, 50),
+"Wizard" : (670, 385, 75, 25, 50, 75, 40, 60),
+"Priest" : (670, 385, 50, 25, 55, 55, 40, 75),
+"Warrior" : (770, 252, 75, 25, 50, 50, 75, 50),
+"Knight" : (770, 252, 50, 40, 50, 50, 75, 50),
+"Paladin" : (770, 252, 50, 30, 55, 45, 40, 75),
+"Assassin" : (720, 252, 60, 25, 75, 75, 40, 60),
+"Necromancer" : (670, 385, 75, 25, 50, 60, 30, 75),
+"Huntress" : (700, 252, 75, 25, 50, 50, 40, 50),
+"Mystic" : (670, 385, 60, 25, 60, 55, 40, 75),
+"Trickster" : (720, 252, 65, 25, 75, 75, 40, 60),
+"Sorcerer" : (670, 385, 70, 25, 60, 60, 75, 60),
+"Ninja" : (720, 252, 70, 25, 60, 70, 60, 70),
+"Samurai" : (720, 252, 75, 30, 55, 50, 60, 60),
+"Bard" : (670, 385, 55, 25, 55, 70, 45, 75)
+}
 
 class Misc(commands.Cog):
     """Miscellaneous Commands"""
@@ -131,6 +157,132 @@ class Misc(commands.Cog):
         if ctx.guild:
             return await ctx.send(embed=embed)
         await ctx.author.send(embed=embed)
+
+    @commands.command(usage='realmeye [member]', description="Get realmeye info of your account or someone else's!", aliases=['chars', 'characters'])
+    @commands.guild_only()
+    @commands.cooldown(1, 30, type=BucketType.member)
+    async def realmeye(self, ctx, member: utils.MemberLookupConverter = None):
+        if not member:
+            member = ctx.author
+        udata = await sql.get_user(self.client.pool, member.id)
+        if not udata:
+            return await ctx.send("The specified user was not found in the database!")
+        ign = udata[sql.usr_cols.ign]
+
+        embed = discord.Embed(title="Fetching...", description="Please wait while your player-data is being retrieved.\nThis can take up to a minute if realmeye's servers are "
+                                                               "being slow! (They usually are)", color=discord.Color.orange())
+        embed.set_thumbnail(url="https://i.imgur.com/nLRgnZf.gif")
+        msg = await ctx.send(embed=embed)
+
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
+                async with cs.get(f'https://darkmattr.uc.r.appspot.com/?player={ign}') as r:
+                    if r.status == 403:
+                        print("ERROR: API ACCESS FORBIDDEN")
+                        await ctx.send(f"<@{self.client.owner_id}> ERROR: API ACCESS REVOKED!.")
+                    data = await r.json()  # returns dict
+                if not data:
+                    try:
+                        await msg.delete()
+                    except discord.NotFound:
+                        pass
+                    return await ctx.send("There was an issue retrieving realmeye data. Please try the command later.")
+            if 'error' in data:
+                try:
+                    await msg.delete()
+                except discord.NotFound:
+                    pass
+                embed = discord.Embed(title='Error!', description=f"There were no players found on realmeye with the name `{ign}`.",
+                                      color=discord.Color.red())
+                return await ctx.send(embed=embed)
+        except asyncio.TimeoutError:
+            try:
+                await msg.delete()
+            except discord.NotFound:
+                pass
+            return await ctx.send("There was an issue retrieving realmeye data. Please try the command later.")
+
+        d = f"{member.mention}\n"
+        d += f"**{data['desc1']}**\n" if data['desc1'] else ""
+        d += f"{data['desc2']}\n" if data['desc2'] else ""
+        d += f"{data['desc3']}\n" if data['desc3'] else ""
+        d += f"\n\nGuild: [{data['guild']}](https://www.realmeye.com/guild/{data['guild'].replace(' ', '%20')}) ({data['guild_rank']})" if data['guild'] else ""
+        base_embed = discord.Embed(title=f"Realmeye Info for {ign}", description=d,
+                                   url=f'https://www.realmeye.com/player/{ign}', color=discord.Color.blue())
+        info = f"Characters: **{data['chars']}**\nExaltations: **{data['exaltations']}**\nSkins: **{data['skins']}**\nFame: **{data['fame']:,}**<:fame:682209281722024044>\nEXP: " \
+               f"**{data['exp']:,}**\nStars: **{data['rank']}**⭐\n\nAccount Fame: **{data['account_fame']:,}**<:fame:682209281722024044>\n"
+        info += f"Created: {data['created']}" if 'created' in data else f"First Seen: {data['player_first_seen']}" if 'player_first_seen' in data else ""
+        info += f"\nLast Seen: {data['player_last_seen']}\nCharacters Hidden: {'✅' if data['characters_hidden'] else '❌'}"
+
+        if not data['characters_hidden'] and data['characters']:
+            base_embed.add_field(name="Info", value=info + "\n\nCharacter Data continues on the next page...", inline=False)
+            base_embed.set_footer(text='© Darkmattr | Use the reactions to flip pages', icon_url=member.avatar_url)
+            with open('data/itemImages.json') as file:
+                item_images = json.load(file)
+            with open('data/skinImages.json') as file:
+                skin_images = json.load(file)
+            with open('data/createdItemImages.json') as file:
+                created_images: dict = json.load(file)
+
+            embeds = []
+            embeds.append(base_embed)
+            for c in data['characters']:
+                embed = discord.Embed(title=f"Characters of {ign}: {c['class']}", color=discord.Color.teal())
+                ids = [c['equips']['data_weapon_id'] if 'data_weapon_id' in c['equips'] else -99,
+                       c['equips']['data_ability_id'] if 'data_ability_id' in c['equips'] else -99,
+                       c['equips']['data_armor_id'] if 'data_armor_id' in c['equips'] else -99,
+                       c['equips']['data_ring_id'] if 'data_ring_id' in c['equips'] else -99]
+                i_str = "-".join([str(id) for id in ids])
+                if i_str in created_images:
+                    i_url = created_images[i_str]
+                else:
+                    i_url = await make_equips_img(ids, item_images)
+                    created_images[i_str] = i_url
+                    with open('data/createdItemImages.json', 'w') as file:
+                        json.dump(created_images, file)
+                embed.set_image(url=i_url)
+                if str(c['data_skin_id']) in skin_images[str(c['data_class_id'])]:
+                    embed.set_thumbnail(url=skin_images[str(c['data_class_id'])][str(c['data_skin_id'])])
+                desc = f"Class Quests: **{c['cqc']}/5** Quests\nEXP: **{c['exp']:,}**xp\nFame: **{c['fame']:,}** <:fame:682209281722024044>\nLevel: **{c['level']}**\nStats " \
+                       f"Maxed: " \
+                       f"**{c['stats_maxed']}/8**\nPlace: **{c['place']:,}**\nBackpack: "
+                desc += "✅" if c['backpack'] else "❌"
+                desc += "\nPet: "
+                desc += f"✅\nPet Name: {c['pet']}" if c['pet'] else "❌"
+                embed.description = desc
+                stat_d = c['stats']
+                hp_bar = utils.textProgressBar(stat_d['hp'], max_stats[c['class']][0], decimals=0, prefix='', percent_suffix="  Maxed", suffix="", length=12, fullisred=False)
+                mp_bar = utils.textProgressBar(stat_d['mp'], max_stats[c['class']][1], decimals=0, prefix='', percent_suffix=" Maxed", suffix="", length=12, fullisred=False)
+                att_bar = utils.textProgressBar(stat_d['attack'], max_stats[c['class']][2], decimals=0, prefix='', percent_suffix=" Maxed", suffix="", length=6, fullisred=False)
+                def_bar = utils.textProgressBar(stat_d['defense'], max_stats[c['class']][3], decimals=0, prefix='', percent_suffix=" Maxed", suffix="", length=6, fullisred=False)
+                spd_bar = utils.textProgressBar(stat_d['speed'], max_stats[c['class']][4], decimals=0, prefix='', percent_suffix=" Maxed", suffix="", length=6, fullisred=False)
+                dex_bar = utils.textProgressBar(stat_d['dexterity'], max_stats[c['class']][5], decimals=0, prefix='', percent_suffix=" Maxed", suffix="", length=6, fullisred=False)
+                vit_bar = utils.textProgressBar(stat_d['vitality'], max_stats[c['class']][6], decimals=0, prefix='', percent_suffix=" Maxed", suffix="", length=6, fullisred=False)
+                wis_bar = utils.textProgressBar(stat_d['wisdom'], max_stats[c['class']][7], decimals=0, prefix='', percent_suffix=" Maxed", suffix="", length=6, fullisred=False)
+
+                hp_s = f"HP: **{stat_d['hp']}/{max_stats[c['class']][0]}**\n{hp_bar}\n" \
+                       f"MP: **{stat_d['mp']}/{max_stats[c['class']][1]}**\n{mp_bar}\n"
+                stat_s_1 = f"ATT: **{stat_d['attack']}/{max_stats[c['class']][2]}** | {att_bar}\n" \
+                           f"DEF: **{stat_d['defense']}/{max_stats[c['class']][3]}** | {def_bar}\n" \
+                           f"SPD: **{stat_d['speed']}/{max_stats[c['class']][4]}** | {spd_bar}\n"
+                stat_s_2 = f"DEX: **{stat_d['dexterity']}/{max_stats[c['class']][5]}** | {dex_bar}\n" \
+                           f"VIT: **{stat_d['vitality']}/{max_stats[c['class']][6]}** | {vit_bar}\n" \
+                           f"WIS: **{stat_d['wisdom']}/{max_stats[c['class']][7]}** | {wis_bar}"
+                embed.add_field(name="Health & Mana", value=hp_s, inline=False)
+                embed.add_field(name="Stats:", value="Stats other than HP/MP are currently broken on realmeye!", inline=False)
+                # embed.add_field(name="More Stats:", value=stat_s_2)
+                embed.set_footer(text='© Darkmattr | Use the reactions to flip pages')
+                embeds.append(embed)
+
+            paginator = utils.EmbedPaginator(self.client, ctx, embeds)
+            try:
+                await msg.delete()
+            except discord.NotFound:
+                pass
+            return await paginator.paginate()
+
+        base_embed.add_field(name="Info", value=info, inline=False)
+        await msg.edit(embed=base_embed)
 
 
     @commands.command(usage='djoke', description="This command doesn't exist..... Shh...")
@@ -271,31 +423,10 @@ class Misc(commands.Cog):
             f"__{member.display_name}__: I'm pretty sure." if b else f"__{member.display_name}__: Hmm, I don't think so..."
         await ctx.send(f"Preed's Custom Patreon Command!\n{d}")
 
-    @commands.command(usage='bean <member>', description="Lorlie's Custom Patreon Command")
-    @commands.guild_only()
-    @commands.check_any(is_lorlie(), checks.is_security_or_higher_check())
-    @commands.cooldown(1, 1800, BucketType.member)
-    async def bean(self, ctx, member: utils.MemberLookupConverter):
-        if member.bot:
-            commands.Command.reset_cooldown(ctx.command, ctx)
-            return await ctx.send(f'Cannot bean `{member.display_name}` (is a bot).')
-        if ctx.author.id != self.client.owner_id:
-            if member.guild_permissions.manage_guild and ctx.author.id not in self.client.owner_ids:
-                commands.Command.reset_cooldown(ctx.command, ctx)
-                return await ctx.send(f'Cannot bean `{member.display_name}` due to roles.')
-        if member.id in self.client.beaned_ids:
-            commands.Command.reset_cooldown(ctx.command, ctx)
-            return await ctx.send(f"{member.display_name}__ is already Beaned!")
-        self.client.beaned_ids.add(member.id)
-        await ctx.send(f"Lorlie's Custom Patreon Command!\n__{member.display_name}__ was Beaned!")
-        await asyncio.sleep(240)
-        if member.id in self.client.beaned_ids:
-            self.client.beaned_ids.remove(member.id)
-            await ctx.send(f"Lorlie's Custom Patreon Command!\n__{member.display_name}__ was automatically Un-Beaned!")
 
     @commands.command(usage='unbean <member>', description="Lorlie's Custom Patreon Command")
     @commands.guild_only()
-    @commands.check_any(is_lorlie(), checks.is_security_or_higher_check())
+    @commands.check_any(is_lorlie(), checks.is_rl_or_higher_check())
     async def unbean(self, ctx, member: utils.MemberLookupConverter):
         if member.id not in self.client.beaned_ids:
             return await ctx.send(f"{member.display_name}__ is not currently Beaned!")
@@ -317,4 +448,65 @@ class Misc(commands.Cog):
 
 def setup(client):
     client.add_cog(Misc(client))
+
+def get_split_image(img, x, y):
+    img = img[y:y + 46, x:x + 46].copy()
+    return img
+
+
+top = 7
+left = (6, 103, 202, 299)
+## Scale x2,
+async def make_equips_img(equip_ids, definition):
+    images = []
+    async with aiohttp.ClientSession() as cs:
+        for id in equip_ids:
+            id = id if id and str(id) in definition else -99 if id else -1
+            url = definition[str(id)]
+            async with cs.request('GET', url=url) as resp:
+                if resp.status == 200:
+                    b = await resp.read()
+                    b = io.BytesIO(b)
+                    images.append(b)
+
+    io_buf = await asyncio.get_event_loop().run_in_executor(None, functools.partial(make_images, images))
+    payload = {'file': io_buf.read(), 'upload_preset': 'realmeye-pics'}
+    async with aiohttp.ClientSession() as cs:
+        async with cs.request('POST', "https://api.cloudinary.com/v1_1/darkmattr/image/upload", data=payload) as resp:
+            if resp.status == 200:
+                img_data = await resp.json()
+                return img_data["secure_url"]
+
+def make_images(bytes_arr):
+    images = []
+    for b in bytes_arr:
+        img = Image.open(b)
+        img = img.convert('RGBA')
+        img = img.resize((92, 92), Image.ANTIALIAS)
+        images.append(img)
+
+    background_img = Image.open('files/equips.jpg')
+    for i, img in enumerate(images):
+        background_img.paste(img, (left[i], top), img)
+
+    io_buf = io.BytesIO()
+    background_img.save(io_buf, format='JPEG')
+    io_buf.seek(0)
+
+    return io_buf
+
+def transparentOverlay(backgroundImage, overlayImage, pos=(0, 0), scale=1):
+    overlayImage = cv2.resize(overlayImage, (0, 0), fx=scale, fy=scale)
+    h, w, _ = overlayImage.shape  # Size of foreground
+    rows, cols, _ = backgroundImage.shape  # Size of background Image
+    y, x = pos[0], pos[1]  # Position of foreground/overlayImage image
+
+    # loop over all pixels and apply the blending equation
+    for i in range(h):
+        for j in range(w):
+            if x + i >= rows or y + j >= cols:
+                continue
+            alpha = float(overlayImage[i][j][3] / 255.0)  # read the alpha channel
+            backgroundImage[x + i][y + j] = alpha * overlayImage[i][j][:3] + (1 - alpha) * backgroundImage[x + i][y + j]
+    return backgroundImage
 

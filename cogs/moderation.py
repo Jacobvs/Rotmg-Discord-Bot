@@ -1,6 +1,6 @@
 import datetime
 import json
-import logging
+import logging as logger
 
 import aiohttp
 import discord
@@ -11,10 +11,10 @@ import embeds
 import sql
 import utils
 from checks import manual_verify_channel, has_manage_roles
-from cogs import verification
+from cogs import verification, logging
 from sql import get_guild, get_user, update_user, add_new_user, gld_cols, usr_cols
 
-logger = logging.getLogger('discord')
+logger = logger.getLogger('discord')
 
 
 class Moderation(commands.Cog):
@@ -147,21 +147,16 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @checks.is_security_or_higher_check()
     async def changename(self, ctx, member: utils.MemberLookupConverter, newname):
-        # async with aiohttp.ClientSession() as cs:
-        #     async with cs.get(f'https://rotmg-discord-bot.wm.r.appspot.com/?player={newname}', ssl=False) as r:
-        #         if r.status == 403:
-        #             print("ERROR: API ACCESS FORBIDDEN")
-        #             await ctx.send(f"<@{self.client.owner_id}> ERROR: API ACCESS REVOKED!.")
-        #         data = await r.json()  # returns dict
-        # if not data:
-        #     return await ctx.send("There was an issue retrieving realmeye data. Please try the command later.")
-        # if 'error' in data:
-        #     embed = discord.Embed(title='Error!', description=f"There were no players found on realmeye with the name `{altname}`.",
-        #                           color=discord.Color.red())
-        #     return await ctx.send(embed=embed)
-        #
-        # cleaned_name = str(data["player"])
-        cleaned_name = newname
+        async with aiohttp.ClientSession() as cs:
+            async with cs.get(f'https://darkmattr.uc.r.appspot.com/?player={newname}', ssl=False) as r:
+                if r.status == 403:
+                    print("ERROR: API ACCESS FORBIDDEN")
+                    await ctx.send(f"<@{self.client.owner_id}> ERROR: API ACCESS REVOKED!.")
+                data = await r.json()  # returns dict
+        if not data:
+            return await ctx.send("There was an issue retrieving realmeye data. Please try the command later.")
+
+        cleaned_name = newname if 'error' in data else str(data["player"])
 
         res = await sql.change_username(self.client.pool, member.id, cleaned_name)
         if not res:
@@ -191,6 +186,9 @@ class Moderation(commands.Cog):
                                                                       f"Please message someone from that guild this and change their nickname to this manually: ` {s_name} `\
                                                                       {m.mention}",
                                           color=discord.Color.red())
+
+        await logging.update_points(self.client, ctx.guild, ctx.author, 'changename')
+
         if embed is None:
             embed = discord.Embed(title="Success!", description=f"`{s_name}` is now the name of {member.mention}.",
                                   color=discord.Color.green())
@@ -220,6 +218,8 @@ class Moderation(commands.Cog):
             return await ctx.send(embed=embed)
 
         name = member.display_name
+
+        await logging.update_points(self.client, ctx.guild, ctx.author, 'addalt')
 
         if cleaned_name.lower() in name.lower():
             if res:
@@ -274,7 +274,7 @@ class Moderation(commands.Cog):
                       description="Removes [num] messages from the channel\nTo delete all messages do: `purge <num> all`\nTo delete messages containing words or a sentence do: "
                                   "`purge <num> contains 'word'` or `purge <num> contains 'sentence to search'`\nTo purge messages from a member do: `purge <num> from @member`")
     @commands.guild_only()
-    @commands.has_permissions(manage_messages=True)
+    @commands.check_any(commands.has_permissions(manage_messages=True), checks.is_bot_owner())
     async def purge(self, ctx, num=5, type=None, filter=None):
         num += 1
         if not isinstance(num, int):
@@ -330,6 +330,7 @@ class Moderation(commands.Cog):
     @commands.check_any(manual_verify_channel(), has_manage_roles())
     async def manual_verify(self, ctx, member: utils.MemberLookupConverter, ign):
         await ctx.message.delete()
+        await logging.update_points(self.client, ctx.guild, ctx.author, 'veri')
         return await manual_verify_ext(self.client.pool, ctx.guild, member.id, ctx.author, ign)
 
     @commands.command(usage="manual_verify_deny <member>", description="Deny someone from manual_verification.")
@@ -406,7 +407,6 @@ async def manual_verify_ext(pool, guild, uid, requester, ign=None):
 
 async def vet_manual_verify_ext(client, guild, uid, requester, msg_id):
     """Manually vet verifies user with specified uid"""
-    print('in manual verify')
     guild_data = client.guild_db[guild.id]
     channel = guild_data[gld_cols.manualverifychannel]
     member: discord.Member = guild.get_member(int(uid))
@@ -428,7 +428,8 @@ async def vet_manual_verify_ext(client, guild, uid, requester, msg_id):
     await channel.send(embed=embed)
 
     await member.send(member.mention, embed=embeds.vet_verification_success(guild.name, member.mention))
-    await guild_data[gld_cols.verifylogchannel].send(f"{member.mention} has been veteran verified by {requester.mention}")
+    await guild_data[gld_cols.verifylogchannel].send(f"{member.mention} has been veteran verified by {requester.mention}", allowed_mentions=discord.AllowedMentions(
+        everyone=False, users=False, roles=False))
 
 async def vet_manual_verify_deny_ext(client, guild, uid, requester, msg_id):
     """Denies user from vet verifying user with specified uid"""
@@ -449,7 +450,8 @@ async def vet_manual_verify_deny_ext(client, guild, uid, requester, msg_id):
         description=f"❌ {member.mention} ***has been denied __veteran__ verification by*** {requester.mention}***.***",
         color=discord.Color.red())
     await channel.send(embed=embed)
-    await guild_data[gld_cols.verifylogchannel].send(f"{member.mention} has been denied veteran verification by {requester.mention}")
+    await guild_data[gld_cols.verifylogchannel].send(f"{member.mention} has been denied veteran verification by {requester.mention}", allowed_mentions=discord.AllowedMentions(
+        everyone=False, users=False, roles=False))
 
 
 async def manual_verify_deny_ext(pool, guild, uid, requester):

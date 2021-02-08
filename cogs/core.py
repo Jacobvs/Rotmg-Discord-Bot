@@ -12,7 +12,7 @@ from discord.ext import commands
 import checks
 import sql
 import utils
-from cogs import verification, moderation
+from cogs import verification, moderation, logging
 from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification, subverify_react_handler
 from sql import get_guild, get_user, add_new_guild, usr_cols, gld_cols
 from utils import EmbedPaginator
@@ -26,6 +26,38 @@ class Core(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+
+    @commands.command(usage="listgdb", description='List Guild Settings stored in DB')
+    @commands.is_owner()
+    async def listgdb(self, ctx):
+        gd = self.client.guild_db[ctx.guild.id]
+        m = ""
+        names = [e.name for e in sql.gld_cols]
+        for r in gd:
+            d = gd[r]
+
+            if isinstance(d, discord.TextChannel) or isinstance(d, discord.Role):
+                rs = f'{names[r]} - {d.mention}\n'
+            else:
+                rs = f'{names[r]} - {d}\n'
+            if len(m) + len(rs) >= 2000:
+                await ctx.send(content=m, allowed_mentions=discord.AllowedMentions().none())
+                m = ""
+            m += rs
+        await ctx.send(content=m, allowed_mentions=discord.AllowedMentions().none())
+
+
+    @commands.command(usage='listroleinfo', description='Show role info for a server')
+    @commands.is_owner()
+    async def listroleinfo(self, ctx):
+        m = ""
+        for r in ctx.guild.roles:
+            rs = f'{r.mention} - {r.id} : **{len(r.members)}** members\n'
+            if len(m) + len(rs) >= 2000:
+                await ctx.send(content=m, allowed_mentions=discord.AllowedMentions().none())
+                m = ""
+            m += rs
+        await ctx.send(content=m, allowed_mentions=discord.AllowedMentions().none())
 
     @commands.command(usage='setcreds <member> <num>', description="Set someone's casino credits")
     @checks.is_bot_owner()
@@ -569,6 +601,7 @@ class Core(commands.Cog):
                     channel = guild.get_channel(payload.channel_id)
                     msg = await channel.fetch_message(payload.message_id)
                     uid = msg.content.split(": ")[1]
+                    await logging.update_points(self.client, guild, user, 'veri')
                     if str(payload.emoji) == '✅':
                         if 'Veteran' in msg.content:
                             return await moderation.vet_manual_verify_ext(self.client, guild, uid, user, payload.message_id)

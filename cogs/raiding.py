@@ -1,5 +1,6 @@
 import functools
 import io
+import json
 import re
 from difflib import get_close_matches
 
@@ -13,6 +14,7 @@ from pytesseract import pytesseract
 import checks
 import sql
 import utils
+from cogs import logging
 from cogs.Raiding.afk_check import AfkCheck
 from cogs.Raiding.fametrain import FameTrain
 from cogs.Raiding.headcount import Headcount
@@ -42,6 +44,39 @@ class Raiding(commands.Cog):
         else:
             return
         runecount = RuneCount(self.client, ctx, hcchannel, raiderrole, rlrole)
+
+    @commands.command(usage='togglerune <helm/shield/sword/allon/alloff>', description='Toggle a rune on/off')
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    @checks.only_dungeoneer()
+    async def togglerune(self, ctx, rune: str):
+        rune = rune.lower()
+        if rune not in ['helm', 'shield', 'sword', 'allon', 'alloff']:
+            return await ctx.send("Please specify what to toggle: `helm`, 'shield`, `sword`, `allon`, `alloff`")
+
+
+        with open('data/dungeons.json') as f:
+            q_dungeons = json.load(f)
+
+        if rune in ['helm', 'shield', 'sword']:
+            selector = 2 if rune == 'helm' else 1 if rune == 'sword' else 0
+            current = q_dungeons.get('0')[selector][1]
+            q_dungeons['0'][selector][1] = 0 if current == 1 else 1
+            await ctx.send(f"**__{rune.capitalize()}__** was turned {'ON' if current == 0 else 'OFF'}!")
+        else:
+            for i, r in enumerate(q_dungeons['0']):
+                q_dungeons['0'][i][1] = 1 if rune == 'allon' else 0
+            await ctx.send(f"Every Rune was turned {'ON' if rune == 'allon' else 'OFF'}!")
+
+        with open('data/dungeons.json', 'w') as f:
+            json.dump(q_dungeons, f, indent=4)
+
+        str = "Rune Status:\n"
+        for i, r in enumerate(q_dungeons['0']):
+            name = "Shield" if i == 0 else "Sword" if i == 1 else "Helm"
+            str += f"{name} Rune ({r[0]}): {'ON ✅' if r[1] == 1 else 'OFF ❌'}\n"
+        await ctx.send(str)
+
 
     @commands.command(usage='qafk', description="Start a Queue afk check for the location specified.")
     @commands.guild_only()
@@ -292,6 +327,8 @@ class Raiding(commands.Cog):
         await msg.delete()
         await ctx.send(embed=embed)
 
+        await logging.update_points(self.client, ctx.guild, ctx.author, 'parse')
+
     @commands.command(usage='yoink <channel_name>', description='Move all people from specified VC into channel you are in.')
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
@@ -426,6 +463,7 @@ class Raiding(commands.Cog):
             embed.add_field(name="Possible Alts (In VC but not in game)", value=altlist, inline=True)
 
         pages.insert(0, embed)
+        await logging.update_points(self.client, ctx.guild, ctx.author, 'parse')
 
         await msg.delete()
         paginator = utils.EmbedPaginator(self.client, ctx, pages)

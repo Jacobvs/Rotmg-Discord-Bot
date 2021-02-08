@@ -1,7 +1,7 @@
 import datetime
 import importlib
 import json
-import logging
+import logging as logger
 import os
 from sys import modules
 
@@ -15,11 +15,11 @@ import sql
 from cogs import punishments
 from cogs.logging import update_leaderboards
 
-logger = logging.getLogger('discord')
-logger.setLevel(logging.INFO)
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-logger.addHandler(handler)
+log = logger.getLogger('discord')
+log.setLevel(logger.INFO)
+handler = logger.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(logger.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+log.addHandler(handler)
 urllib3.disable_warnings()
 
 global PRELOADED_MODULES
@@ -53,9 +53,9 @@ bot.remove_command('help')
 bot.owner_id = 196282885601361920
 bot.gh_token = gh_token
 bot.nebula_token = nebula_token
+
 with open('data/variables.json', 'r') as file:
     bot.maintenance_mode = json.load(file).get("maintenance_mode")
-
 
 @bot.event
 async def on_ready():
