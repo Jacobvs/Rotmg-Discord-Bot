@@ -13,10 +13,12 @@ def is_rl_or_higher_check():
     """Check if user has rl or higher roles"""
     def predicate(ctx):
         db = ctx.bot.guild_db.get(ctx.guild.id)
+        print(f"RL Check in: {db[sql.gld_cols.name]} for {ctx.author.display_name}")
         eventc = db[sql.gld_cols.eventcommandschannel]
         vetc = db[sql.gld_cols.vetcommandschannel]
         role = db[sql.gld_cols.eventrlid] if eventc else \
                 db[sql.gld_cols.vetrlroleid] if (vetc and ctx.channel == vetc) else db[sql.gld_cols.rlroleid]
+        print(f"Top Role: {ctx.author.top_role}, required: {role}, channel: {ctx.channel.name}")
         return ctx.author.top_role >= role
     return commands.check(predicate)
 

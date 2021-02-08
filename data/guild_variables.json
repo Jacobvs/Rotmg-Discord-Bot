@@ -1,0 +1,24 @@
+{
+  "635413437647683596": {
+    "name": "Fungal",
+    "runs": 50,
+    "points": {
+      "parse": 5,
+      "veri": 3,
+      "reply": 1,
+      "addalt": 2,
+      "changename": 1
+    }
+  },
+  "-1": {
+    "name": "Default",
+    "runs": 20,
+    "points": {
+      "parse": 5,
+      "veri": 3,
+      "reply": 1,
+      "addalt": 2,
+      "changename": 1
+    }
+  }
+}

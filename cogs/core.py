@@ -12,7 +12,7 @@ from discord.ext import commands
 import checks
 import sql
 import utils
-from cogs import verification, moderation
+from cogs import verification, moderation, logging
 from cogs.verification import guild_verify_react_handler, dm_verify_react_handler, Verification, subverify_react_handler
 from sql import get_guild, get_user, add_new_guild, usr_cols, gld_cols
 from utils import EmbedPaginator
@@ -26,6 +26,38 @@ class Core(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+
+    @commands.command(usage="listgdb", description='List Guild Settings stored in DB')
+    @commands.is_owner()
+    async def listgdb(self, ctx):
+        gd = self.client.guild_db[ctx.guild.id]
+        m = ""
+        names = [e.name for e in sql.gld_cols]
+        for r in gd:
+            d = gd[r]
+
+            if isinstance(d, discord.TextChannel) or isinstance(d, discord.Role):
+                rs = f'{names[r]} - {d.mention}\n'
+            else:
+                rs = f'{names[r]} - {d}\n'
+            if len(m) + len(rs) >= 2000:
+                await ctx.send(content=m, allowed_mentions=discord.AllowedMentions().none())
+                m = ""
+            m += rs
+        await ctx.send(content=m, allowed_mentions=discord.AllowedMentions().none())
+
+
+    @commands.command(usage='listroleinfo', description='Show role info for a server')
+    @commands.is_owner()
+    async def listroleinfo(self, ctx):
+        m = ""
+        for r in ctx.guild.roles:
+            rs = f'{r.mention} - {r.id} : **{len(r.members)}** members\n'
+            if len(m) + len(rs) >= 2000:
+                await ctx.send(content=m, allowed_mentions=discord.AllowedMentions().none())
+                m = ""
+            m += rs
+        await ctx.send(content=m, allowed_mentions=discord.AllowedMentions().none())
 
     @commands.command(usage='setcreds <member> <num>', description="Set someone's casino credits")
     @checks.is_bot_owner()
@@ -306,7 +338,12 @@ class Core(commands.Cog):
                 await message.author.send("You are not verified in any guilds this bot is in yet. If you want to verify, use the verification message. To send modmail use "
                                           "`!modmail`.")
         elif message.author != self.client.user:
-            if message.author.id in self.client.beaned_ids:
+            if message.channel.id == 738632101523619901:
+                print(message.content)
+                if ';' in message.content:
+                    await message.delete()
+                    await message.channel.send("Please use `!position` to check your position in the queue.", delete_after=10)
+            elif message.author.id in self.client.beaned_ids:
                 try:
                     await message.delete()
                     await message.channel.send(f"__{message.author.display_name}__ Says: ||{message.content}||")
@@ -531,9 +568,10 @@ class Core(commands.Cog):
             user_data = await get_user(self.client.pool, payload.user_id)
             user = self.client.get_user(payload.user_id)
 
-            guild = self.client.get_guild(payload.guild_id)
+            guild: discord.Guild = self.client.get_guild(payload.guild_id)
             guild_data = await get_guild(self.client.pool, guild.id)
             verify_message_id = guild_data[gld_cols.verificationid]
+            vet_veri_message_id = guild_data[gld_cols.vetveriid]
             subverify_1_msg_id = guild_data[gld_cols.subverify1id]
             subverify_2_msg_id = guild_data[gld_cols.subverify2id]
 
@@ -543,6 +581,15 @@ class Core(commands.Cog):
                     return await user.send("You have been blacklisted from verifying in this server! Contact a security+ if you believe this to be a mistake!")
                 return await guild_verify_react_handler(Verification(self.client), payload, user_data, guild_data, user, guild,
                                                         verify_message_id)
+            elif payload.message_id == vet_veri_message_id and str(payload.emoji) == '✅':  # handles verification reacts
+                blacklisted = await sql.get_blacklist(self.client.pool, user.id, payload.guild_id, 'vet_verification')
+                if blacklisted:
+                    return await user.send("You have been blacklisted from veteran verifying in this server! Contact a security+ if you believe this to be a mistake!")
+
+                member = await guild.fetch_member(payload.user_id)
+                vfy_msg = await self.client.get_channel(payload.channel_id).fetch_message(vet_veri_message_id)
+
+                return await verification.vet_veri_helper(self.client, member, guild, user_data[sql.usr_cols.ign], vfy_msg)
             elif payload.message_id == subverify_1_msg_id and (
                     str(payload.emoji) == '✅' or str(payload.emoji) == '❌'):  # handles subverification 1
                 return await subverify_react_handler(Verification(self.client), payload, 1, guild_data, user, guild, subverify_1_msg_id)
@@ -554,10 +601,17 @@ class Core(commands.Cog):
                     channel = guild.get_channel(payload.channel_id)
                     msg = await channel.fetch_message(payload.message_id)
                     uid = msg.content.split(": ")[1]
+                    await logging.update_points(self.client, guild, user, 'veri')
                     if str(payload.emoji) == '✅':
-                        return await moderation.manual_verify_ext(self.client.pool, guild, uid, user)
+                        if 'Veteran' in msg.content:
+                            return await moderation.vet_manual_verify_ext(self.client, guild, uid, user, payload.message_id)
+                        else:
+                            return await moderation.manual_verify_ext(self.client.pool, guild, uid, user)
                     else:
-                        return await moderation.manual_verify_deny_ext(self.client.pool, guild, uid, user)
+                        if 'Veteran' in msg.content:
+                            return await moderation.vet_manual_verify_deny_ext(self.client, guild, uid, user, payload.message_id)
+                        else:
+                            return await moderation.manual_verify_deny_ext(self.client.pool, guild, uid, user)
 
         elif str(payload.emoji) in ['✅', '👍', '❌']:  # handles verification DM reactions
             user_data = await get_user(self.client.pool, payload.user_id)

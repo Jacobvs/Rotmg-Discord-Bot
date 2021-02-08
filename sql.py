@@ -414,15 +414,19 @@ async def log_runs(pool, guild_id, member_id, column=1, number=1):
             name = "pkey" if column == 2 else "vials" if column == 3 else "helmrunes" if column == 4 else "shieldrunes" if column == 5 else\
                 "swordrunes" if column == 6 else "eventkeys" if column == 7 else "runsdone" if column == 8 else "eventsdone" if column == 9\
                 else "srunled" if column == 10 else "frunled" if column == 11 else "eventled" if column == 12 else "runsassisted" if\
-                column == 13 else "eventsassisted" if column == 14 else "ocompletes" if column == 17 else 'oattempts'
+                column == 13 else "eventsassisted" if column == 14 else "ocompletes" if column == 17 else 'oattempts' if column == 18 else\
+                'weeklypoints'
             if column == 10 or column == 11 or column == 12:
                 await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number}, weeklyruns = weeklyruns + {number} "
                                      f"WHERE uid = {member_id} AND gid = {guild_id}")
             elif column == 13:
                 await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number}, weeklyassists = weeklyassists + {number} "
                                      f"WHERE uid = {member_id} AND gid = {guild_id}")
+            elif column == 19:
+                await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number}, totalpoints = totalpoints + {number} "
+                                     f"WHERE uid = {member_id} AND gid = {guild_id}")
             else:
-                await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + %s WHERE uid = %s AND gid = %s", (number, member_id, guild_id))
+                await cursor.execute(f"UPDATE rotmg.logging SET {name} = {name} + {number} WHERE uid = {member_id} AND gid = {guild_id}")
             await conn.commit()
 
             return data + number
@@ -447,7 +451,7 @@ async def get_top_10_logs(pool, guild_id, column, only_10=True, limit=None):
                 else "swordrunes" if column == 6 else "eventkeys" if column == 7 else "runsdone" if column == 8 else "eventsdone" if \
                 column == 9 else "srunled" if column == 10 else "frunled" if column == 11 else "eventled" if column == 12 else \
                 "runsassisted" if column == 13 else "eventsassisted" if column == 14 else "weeklyruns" if column == 15 else "weeklyassists" if column == 16 \
-                else 'ocompletes' if column == 17 else 'oattempts'
+                else 'ocompletes' if column == 17 else 'oattempts' if column == 18 else 'weeklypoints' if column == 19 else 'totalpoints'
             if only_10:
                 await cursor.execute(f"SELECT * from rotmg.logging WHERE gid = {guild_id} ORDER BY {name} DESC LIMIT 10")
             elif limit:
@@ -585,6 +589,8 @@ class log_cols(enum.IntEnum):
     weeklyassists = 16
     ocompletes = 17
     oattempts = 18
+    weeklypoints = 19
+    totalpoints = 20
 
 class casino_cols(enum.IntEnum):
     id = 0
@@ -610,9 +616,9 @@ class usr_cols(enum.IntEnum):
 
 # Define which DB records are of what type
 # Channels (Text, Voice, Category)
-gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 46, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 80, 81, 82, 83]
+gdb_channels = [9, 11, 13, 14, 15, 16, 17, 18, 20, 21, 28, 33, 34, 35, 36, 38, 39, 40, 41, 42, 44, 45, 46, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 80, 81, 82, 83, 87]
 # Roles
-gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43, 47, 48, 50, 52, 54, 58, 73, 75, 79]
+gdb_roles = [10, 19, 22, 23, 27, 31, 32, 37, 43, 47, 48, 50, 52, 54, 58, 73, 75, 79, 88]
 
 class gld_cols(enum.IntEnum):
     """Contains References to rotmg.guilds table for easy access"""
@@ -700,3 +706,8 @@ class gld_cols(enum.IntEnum):
     raidhc6 = 81
     raidvc5 = 82
     raidvc6 = 83
+    vetveriid = 84
+    vetverimsg = 85
+    pointlbmsg = 86
+    pointlbchannel = 87
+    pointrole = 88

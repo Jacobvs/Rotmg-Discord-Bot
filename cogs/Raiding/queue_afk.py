@@ -671,7 +671,7 @@ class QAfk:
                 if member.id in self.awaiting_confirmations:
                     self.awaiting_confirmations.remove(member.id)
                 return await member.send(f"We already have enough confirmed {emoji}'s for this run.")
-            link = 'https://discordapp.com/channels/660344559074541579/706563122944802856/749698837232222328' if self.in_normal else \
+            link = 'https://discord.com/channels/660344559074541579/706563122944802856/800520194702835713' if self.in_normal else \
                 'https://discordapp.com/channels/660344559074541579/736240706955378788/762415033371328533'
             if 'rune' in emoji:
                 await member.send(f"Confirmed {emoji}. Thanks for bringing a rune! You do not have to meet requirements.")
@@ -753,7 +753,7 @@ class QAfk:
         if not self.in_normal:
             nqueue = nvc
         capacity_bar = utils.textProgressBar(nqueue, self.max_members, prefix="", percent_suffix=" Full", suffix="", decimals=0, length=18)
-        link = 'https://discordapp.com/channels/660344559074541579/706563122944802856/749698837232222328' if self.in_normal else \
+        link = 'https://discord.com/channels/660344559074541579/706563122944802856/800520194702835713' if self.in_normal else \
                'https://discordapp.com/channels/660344559074541579/736240706955378788/762415033371328533'
         mentions = '<#738615552594935910> and <#706563122944802856>' if self.in_normal else 'vet section of <#738615552594935910> and <#736240706955378788>'
         desc = f"Read {mentions}.\n" \
@@ -761,7 +761,7 @@ class QAfk:
                f"Make sure you meet the [requirements]({link}) when reacting to this message.\n**RUNES DO NOT HAVE TO MEET REQS!**\n\n" \
                f"If you have a required item or class for this run, **first join __{self.queuechannel.name}__, then** react to the emojis below & " \
                f"confirm with the bot to skip the queue!\n"
-        desc += "React to either <:wizard:711307534685962281> (2/4 DPS Gear) OR <:wizardPlus:757981015380852906> (4/4 DPS Gear). **Don't react with both.**"\
+        desc += "React to <:wizardPlus:757981015380852906> ONLY if you have 4/4 DPS Gear for Wizard!"\
             if self.in_normal else "\nIf you are bringing a <:wizard:711307534685962281>, <:sorcerer:711307536573399070>, or <:ninja:711307535071576145> " \
                                    "- React to <:dps:751494941980753991> if you meet the requirements for those classes."
         if self.in_normal:

@@ -1,3 +1,4 @@
+import json
 import logging
 import random
 import string
@@ -166,10 +167,10 @@ class Verification(commands.Cog):
             await channel.send(f"{member.mention} is missing their realmeye code (or api is down).")
 
 
-    @commands.command(usage="add_verify_msg", description="Add the verification message to channel.")
+    @commands.command(usage="addverimsg", description="Add the verification message to channel.")
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
-    async def add_verify_msg(self, ctx):
+    async def addverimsg(self, ctx):
         guild_db = await get_guild(self.client.pool, ctx.guild.id)
         embed = embeds.verification_check_msg(guild_db[gld_cols.reqsmsg], guild_db[gld_cols.supportchannelname])
         message = await ctx.send(embed=embed)
@@ -228,11 +229,61 @@ class Verification(commands.Cog):
         embed = discord.Embed(title="Success!", description=f"{member.display_name} has been manually __vet verified__!", color=discord.Color.green())
         await ctx.send(embed=embed)
 
+    @commands.command(usage='addvetverimsg', description='Adds the veteran verification message to the current channel.')
+    async def addvetverimsg(self, ctx):
+        guild_db = await get_guild(self.client.pool, ctx.guild.id)
+        embed = embeds.vet_verification_check_msg(guild_db[gld_cols.vetverimsg], guild_db[gld_cols.supportchannelname])
+        message = await ctx.send(embed=embed)
+        await message.add_reaction("✅")
+        try:
+            await ctx.message.delete()
+        except discord.NotFound:
+            pass
 
+        # Save verification message id for later to check reacts with
+        await update_guild(self.client.pool, ctx.guild.id, "vetveriid", message.id)
 
 
 def setup(client):
     client.add_cog(Verification(client))
+
+
+async def vet_veri_helper(client, member, guild, ign, veri_msg):
+    await veri_msg.remove_reaction('✅', member)
+    guild_db = client.guild_db[guild.id]
+    vetrole = guild_db[sql.gld_cols.vetroleid]
+    if vetrole in member.roles:
+        embed = discord.Embed(title="Error!", description="You appear to already be vet verified in this server! "
+                                                          "If this is a mistake, please contact a security+!", color=discord.Color.red())
+        try:
+            return await member.send(embed=embed)
+        except discord.Forbidden:
+            return
+
+    with open('data/guild_variables.json') as file:
+        reqs = json.load(file)
+
+    if str(guild.id) in reqs:
+        n_runs = reqs[str(guild.id)]['runs']
+    else:
+        n_runs = reqs['-1']['runs']
+
+    stats_logged = await sql.get_log(client.pool, guild.id, member.id)
+
+    if stats_logged[sql.log_cols.runsdone] >= n_runs:
+        try:
+            await member.add_roles(vetrole)
+            await guild_db[sql.gld_cols.verifylogchannel].send(f"{member.mention} has been veteran verified ({stats_logged[sql.log_cols.runsdone]}/{n_runs} runs completed)!")
+            await member.send(member.mention, embed=embeds.vet_verification_success(guild.name, member.mention))
+        except discord.Forbidden or discord.HTTPException:
+            return await member.send("An unexpected error occured while adding the vet role! Please contact a security+ to help you resolve this issue!")
+    else:
+        msg = await guild_db[sql.gld_cols.manualverifychannel].send(f"Veteran Manual Verification UID: {member.id}",
+                                                                 embed=embeds.vet_manual_verify(member, ign, stats_logged[sql.log_cols.runsdone], n_runs,
+                                                                                                stats_logged[sql.log_cols.pkey]))
+        await member.send("Your veteran raider application is being reviewed by staff. Please wait for their decision.")
+        await msg.add_reaction('✅')
+        await msg.add_reaction('❌')
 
 
 async def subverify_helper(self, ctx, n):

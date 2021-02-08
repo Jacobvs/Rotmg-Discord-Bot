@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import json
 
 import discord
 from discord.ext import commands
@@ -47,7 +48,7 @@ class Logging(commands.Cog):
     @commands.command(usage="logrun [member (leader)] [num_runs]", description="Log a full run (or multiple runs) manually.")
     @commands.guild_only()
     @checks.is_rl_or_higher_check()
-    async def logrun(self, ctx, member: utils.MemberLookupConverter=None, number=1):
+    async def logrun(self, ctx, member: utils.MemberLookupConverter = None, number: int = 1):
         if not member:
             member = ctx.author
 
@@ -147,15 +148,70 @@ class Logging(commands.Cog):
         embed = discord.Embed(title=f"Top {name} in {ctx.guild.name}", color=discord.Color.gold()).add_field(name='Top 10', value="".join(top[:10]), inline=False)
         if len(top) > 10:
             embed.add_field(name="Top 20", value="".join(top[10:]), inline=False)
-        embed.set_thumbnail(url=ctx.guild.icon_url)
+        embed.set_thumbnail(url=str(ctx.guild.icon_url))
         embed.timestamp = datetime.datetime.utcnow()
         await ctx.send(embed=embed)
 
+    @commands.command(usage='setpointlb', description="Set the Point Leaderboard to run in this channel.")
+    @commands.guild_only()
+    @commands.check_any(commands.has_permissions(manage_guild=True), commands.is_owner())
+    async def setpointlb(self, ctx):
+        msg = await ctx.send("Point Leaderboard has been set to this channel! Please wait for an update for the LB to show!")
+        await sql.update_guild(self.client.pool, ctx.guild.id, 'pointlbmsg', msg.id)
+        await sql.update_guild(self.client.pool, ctx.guild.id, 'pointlbchannel', ctx.channel.id)
+        self.client.guild_db[ctx.guild.id][sql.gld_cols.pointlbmsg] = msg.id
+        self.client.guild_db[ctx.guild.id][sql.gld_cols.pointlbchannel] = ctx.channel
         
 
 def setup(client):
     client.add_cog(Logging(client))
 
+
+async def update_points(client, guild, member, type):
+    with open("data/guild_variables.json") as f:
+        data = json.load(f)
+
+    p_val = data[str(guild.id)]['points'][type] if str(guild.id) in data else data['-1']['points'][type]
+
+    await sql.log_runs(client.pool, guild.id, member.id, sql.log_cols.weeklypoints, p_val)
+
+    await update_point_lb(client, guild, last_action=f"{member.mention} ({type}) - **+{p_val}** points")
+
+
+async def update_point_lb(client, guild, create_new=False, last_action=""):
+    top_weekly_points = await sql.get_top_10_logs(client.pool, guild.id, sql.log_cols.weeklypoints, only_10=False)
+    top_total_points = await sql.get_top_10_logs(client.pool, guild.id, sql.log_cols.totalpoints, only_10=True)
+
+    pointrole = client.guild_db.get(guild.id)[sql.gld_cols.pointrole] if client.guild_db.get(guild.id)[sql.gld_cols.pointrole] else \
+        client.guild_db.get(guild.id)[sql.gld_cols.securityrole] if client.guild_db.get(guild.id)[sql.gld_cols.securityrole] else \
+            client.guild_db.get(guild.id)[sql.gld_cols.rlroleid]
+    top_weekly_points = clean_rl_data(top_weekly_points, guild, pointrole, False, True, sql.log_cols.weeklypoints, has_role=True)
+    top_total_points = clean_rl_data(top_total_points, guild, pointrole, False, True, sql.log_cols.totalpoints, has_role=True)
+
+    weekly = top = ""
+    for i in range(len(top_weekly_points)):
+        weekly += top_weekly_points[i] + "\n"
+        if i < len(top_total_points) - 1:
+            top += top_total_points[i] + "\n"
+
+
+    embed = discord.Embed(title="Current Weekly Point Leaderboard", description=f"**Top Weekly:**\n{weekly}", color=discord.Color.teal())
+    embed.add_field(name="Top All Time", value=top, inline=True)
+    embed.set_author(name=guild.name, icon_url=str(guild.icon_url))
+    embed.set_footer(text="Last updated ")
+    embed.timestamp = datetime.datetime.utcnow()
+
+    data = client.guild_db.get(guild.id)
+    # client_member = guild.get_member(client.user.id)
+    if data[sql.gld_cols.pointlbmsg] and data[sql.gld_cols.pointlbchannel]:
+        lb_msg = await data[sql.gld_cols.pointlbchannel].fetch_message(data[sql.gld_cols.pointlbmsg])
+
+        if not create_new:
+            await lb_msg.edit(content=f"Last Change: {last_action}", embed=embed)
+        else:
+            await lb_msg.channel.send(embed=embed)
+    else:
+        print(f"ERROR: NO DEFINED POINT MSG in {guild.name}")
 
 async def update_leaderboards(client):
     while(True):
@@ -229,14 +285,19 @@ async def update_leaderboard(client, guild_id):
         await zerorunschannel.send(embed=embed)
             
 
-def clean_rl_data(data, guild, rlrole, truncate=True):
+def clean_rl_data(data, guild, rlrole, truncate=True, points=False, col=0, has_role=False):
     temp = []
+    num = 0
     for i, r in enumerate(data):
-        member = guild.get_member(r[0])
+        member: discord.Member = guild.get_member(r[0])
         if member:
-            if member.top_role >= rlrole:
-                temp.append(r)
-    if truncate:
+            if (member.top_role >= rlrole and has_role is False) or (rlrole in member.roles and has_role is True):
+                num += 1
+                if points:
+                    temp.append(f"#{num}: {member.mention} - __{r[col]}__ points")
+                else:
+                    temp.append(r)
+    if truncate is True:
         temp = temp[:10]
     return temp
 

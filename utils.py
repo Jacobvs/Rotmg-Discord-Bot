@@ -166,7 +166,8 @@ class EmbedPaginator:
         try:
             if self.pages:
                 await msg.edit(embed=self.pages[0])
-            await msg.clear_reactions()
+            if not isinstance(msg.channel, discord.DMChannel):
+                await msg.clear_reactions()
         except discord.NotFound:
             pass
 
@@ -785,6 +786,11 @@ def q_dungeon_info(num):
         q_dungeons = json.load(f, object_hook=keystoint)
     info = q_dungeons.get(num)
     if num == -1 or num == -2:
+        max = 2 if num == -1 else 1
+        for r in q_dungeons.get(0):
+            if r[1] == 1:
+                info[3].insert(1, [r[0], max])
+
         l = list(info[:6])
         l.append(get_random_oryx())
         color = discord.Color.from_rgb(info[5][0], info[5][1], info[5][2])
@@ -1058,10 +1064,14 @@ def dungeon_info(num: int = None):
     if not num:
         del dungeons[-1]
         del dungeons[-2]
-        del dungeons[-999]
+        del dungeons[0]
         return dungeons
     else:
         res = dungeons.get(num)
+        if num == 1:
+            for r in dungeons.get(0):
+                if r[1] == 1:
+                    res[1].insert(2, r[0])
         if not res:
             return dungeons
         color = discord.Color.from_rgb(res[4][0], res[4][1], res[4][2])

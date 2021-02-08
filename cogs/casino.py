@@ -24,7 +24,7 @@ class Casino(commands.Cog):
 
     async def cog_check(self, ctx):
         print(ctx.command)
-        if str(ctx.command) not in ['balance', 'top', 'daily', 'work', 'search', 'steal', 'cooldowns']:
+        if str(ctx.command) not in ['balance', 'top', 'cooldowns']:
             bucket = self._cd.get_bucket(ctx.message)
             retry_after = bucket.update_rate_limit()
             if retry_after:
@@ -33,7 +33,6 @@ class Casino(commands.Cog):
                 return True
         else:
             return True
-
 
     @commands.command(usage="blackjack [bet]", aliases=["bj"],
                       description="A single hand of Blackjack.\nThe player plays against the dealer (bot) for one hand.")
@@ -293,7 +292,7 @@ class Casino(commands.Cog):
                 top += f"#{int((i/2))+1}. <@{r}> - "
             else:
                 top += f"**{r:,}** credits.\n"
-        embed = discord.Embed(color=discord.Color.orange()).set_author(name=ctx.guild.name, icon_url=ctx.guild.icon_url)\
+        embed = discord.Embed(color=discord.Color.orange()).set_author(name=ctx.guild.name, icon_url=str(ctx.guild.icon_url))\
                             .add_field(name="Top 10 Balances", value=top)
         await ctx.send(embed=embed)
 
