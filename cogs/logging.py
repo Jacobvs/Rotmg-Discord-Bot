@@ -194,6 +194,8 @@ async def update_point_lb(client, guild, create_new=False, last_action=""):
         if i < len(top_total_points) - 1:
             top += top_total_points[i] + "\n"
 
+    weekly = "N/A" if not weekly else weekly
+    top = "N/A" if not top else top
 
     embed = discord.Embed(title="Current Weekly Point Leaderboard", description=f"**Top Weekly:**\n{weekly}", color=discord.Color.teal())
     embed.add_field(name="Top All Time", value=top, inline=True)
@@ -209,11 +211,12 @@ async def update_point_lb(client, guild, create_new=False, last_action=""):
         if not create_new:
             await lb_msg.edit(content=f"Last Change: {last_action}", embed=embed)
         else:
-            await lb_msg.channel.send(embed=embed)
+            msg = await lb_msg.channel.send(embed=embed)
+            await sql.update_guild(client.pool, guild.id, sql.gld_cols.pointlbmsg, msg.id)
     else:
         print(f"ERROR: NO DEFINED POINT MSG in {guild.name}")
 
-async def update_leaderboards(client):
+async def update_leaderboards(client: discord.Client):
     while(True):
         startofweek = (datetime.datetime.today() + datetime.timedelta(days=7 - datetime.datetime.today().weekday())).replace(hour=0,
                                                                       minute=0, second=0, microsecond=1)
@@ -221,6 +224,10 @@ async def update_leaderboards(client):
 
         for id in client.serverwleaderboard:
             await update_leaderboard(client, id)
+
+        for g in client.guilds:
+            await update_point_lb(client, g, True, "Reset LB for new week")
+
         await asyncio.sleep(10) # Sleep for 10s so don't get repeated messages
   
 async def update_leaderboard(client, guild_id):

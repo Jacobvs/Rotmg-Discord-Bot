@@ -163,29 +163,50 @@ class Moderation(commands.Cog):
             embed = discord.Embed(title="Error!", description="Something went wrong, username couldn't be changed in SQL", color=discord.Color.red())
             return await ctx.send(embed=embed)
 
-        embed = None
-        for g in self.client.guilds:
-            m = g.get_member(member.id)
-            if m:
-                name = m.display_name
+        name = member.display_name
 
-                if cleaned_name.lower() in name.lower():
-                    embed = discord.Embed(title="Error!", description="Name specified is the same name as the user's name currently!",
-                                          color=discord.Color.red())
+        if cleaned_name.lower() in name.lower():
+            embed = discord.Embed(title="Error!", description="Name specified is the same name as the user's name currently!",
+                                  color=discord.Color.red())
 
-                separator = " | "
-                s_name = name.split(separator)
-                symbols = "".join([c for c in s_name[0] if not c.isalpha()])
-                s_name[0] = symbols + newname
-                s_name = separator.join(s_name)
+        separator = " | "
+        s_name = name.split(separator)
+        symbols = "".join([c for c in s_name[0] if not c.isalpha()])
+        s_name[0] = symbols + newname
+        s_name = separator.join(s_name)
 
-                try:
-                    await m.edit(nick=s_name)
-                except discord.Forbidden:
-                    embed = discord.Embed(title="Error!", description=f"There was an error changing this person's name in {g.name} (Perms).\n"
-                                                                      f"Please message someone from that guild this and change their nickname to this manually: ` {s_name} `\
-                                                                      {m.mention}",
-                                          color=discord.Color.red())
+        try:
+            await member.edit(nick=s_name)
+        except discord.Forbidden:
+            embed = discord.Embed(title="Error!", description=f"There was an error changing this person's name! (No Perms).\n"
+                                                              f"Please message someone with permission and change their nickname to this manually: ` {s_name} `\
+                                                              {member.mention}",
+                                  color=discord.Color.red())
+
+
+        # embed = None
+        # for g in self.client.guilds:
+        #     m = g.get_member(member.id)
+        #     if m:
+        #         name = m.display_name
+        #
+        #         if cleaned_name.lower() in name.lower():
+        #             embed = discord.Embed(title="Error!", description="Name specified is the same name as the user's name currently!",
+        #                                   color=discord.Color.red())
+        #
+        #         separator = " | "
+        #         s_name = name.split(separator)
+        #         symbols = "".join([c for c in s_name[0] if not c.isalpha()])
+        #         s_name[0] = symbols + newname
+        #         s_name = separator.join(s_name)
+        #
+        #         try:
+        #             await m.edit(nick=s_name)
+        #         except discord.Forbidden:
+        #             embed = discord.Embed(title="Error!", description=f"There was an error changing this person's name in {g.name} (Perms).\n"
+        #                                                               f"Please message someone from that guild this and change their nickname to this manually: ` {s_name} `\
+        #                                                               {m.mention}",
+        #                                   color=discord.Color.red())
 
         await logging.update_points(self.client, ctx.guild, ctx.author, 'changename')
 
