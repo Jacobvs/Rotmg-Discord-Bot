@@ -174,6 +174,7 @@ class Moderation(commands.Cog):
         symbols = "".join([c for c in s_name[0] if not c.isalpha()])
         s_name[0] = symbols + newname
         s_name = separator.join(s_name)
+        embed = None
 
         try:
             await member.edit(nick=s_name)

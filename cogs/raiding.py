@@ -149,7 +149,7 @@ class Raiding(commands.Cog):
 
     @commands.command(usage="findloc", description="Find a good location to start an O3 run in.")
     @commands.guild_only()
-    @checks.is_rl_or_higher_check()
+    @commands.check_any(commands.has_permissions(administrator=True), commands.is_owner())
     async def findloc(self, ctx):
         print('Findloc')
         if not await checks.is_bot_commands_channel(ctx):
@@ -192,7 +192,7 @@ class Raiding(commands.Cog):
 
     @commands.command(usage="findrc [max_in_realm]", description="Find a good location to start a Realm Clearing run in.")
     @commands.guild_only()
-    @checks.is_rl_or_higher_check()
+    @commands.check_any(commands.has_permissions(administrator=True), commands.is_owner())
     async def findrc(self, ctx, max=20):
         if not await checks.is_bot_commands_channel(ctx):
             try:
@@ -235,7 +235,7 @@ class Raiding(commands.Cog):
 
     @commands.command(usage='event <type>', description="Find all realms with a specified event.")
     @commands.guild_only()
-    @commands.is_owner()
+    @commands.check_any(commands.has_permissions(administrator=True), commands.is_owner())
     async def event(self, ctx, *, event_alias):
         if not await checks.is_bot_commands_channel(ctx):
             try:

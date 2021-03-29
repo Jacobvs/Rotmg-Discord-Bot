@@ -45,6 +45,7 @@ class LogRun:
 
 
     async def start(self):
+        print("LOGGING RUN! IN EVENTS? " + str(self.events))
         self.msg = await self.channel.send(content=self.author.mention, embed=self.startembed)
         await self.msg.add_reaction("📝")
         await self.msg.add_reaction("🗑️")
@@ -145,127 +146,127 @@ class LogRun:
                                       color=discord.Color.gold())
                 await self.memberlog(embed, self.helmreacts, sql.log_cols.helmrunes, self.emojis[4])
 
-            if self.events or self.runtitle == 'Tomb' or self.runtitle == 'Fungal Cavern':
+            #if self.events or self.runtitle == 'Tomb' or self.runtitle == 'Fungal Cavern':
+            await self.msg.clear_reactions()
+            embed = discord.Embed(title="Chain #", description="If you chained, please specify the number of runs chained. "
+                                    "If the chain was longer than 5, react to the 🔄 emoji to specify how many you chained.\nIf you didn't chain, press the ❌",
+                                  color=discord.Color.gold())
+            await self.msg.edit(embed=embed)
+            emojis = self.numbers[1:5]
+            emojis.append("🔄")
+            emojis.append("❌")
+            asyncio.get_event_loop().create_task(self.add_emojis(self.msg, emojis))
+            def check(react, usr):
+                return usr == self.author and react.message.id == self.msg.id and (str(react.emoji) in self.numbers or
+                                                                                       str(react.emoji) == '🔄' or str(react.emoji) == "❌")
+
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', timeout=7200, check=check)  # Wait 1 hr max
+            except asyncio.TimeoutError:
+                if self.author.id in self.client.raid_db[self.guild.id]['leaders']:
+                    self.client.raid_db[self.guild.id]['leaders'].remove(self.author.id)
+                embed = discord.Embed(title="Timed out!", description="You didn't log this run in time!", color=discord.Color.red())
                 await self.msg.clear_reactions()
-                embed = discord.Embed(title="Chain #", description="If you chained, please specify the number of runs chained. "
-                                        "If the chain was longer than 5, react to the 🔄 emoji to specify how many you chained.\nIf you didn't chain, press the ❌",
+                return await self.msg.edit(embed=embed)
+
+            if str(reaction.emoji) == '❌':
+                num = 0
+            elif str(reaction.emoji) in self.numbers:
+                num = self.numbers.index(str(reaction.emoji))
+            else:
+                embed = discord.Embed(title='Specify # of Chains', description='Please send the number of chains completed.',
                                       color=discord.Color.gold())
                 await self.msg.edit(embed=embed)
-                emojis = self.numbers[1:5]
-                emojis.append("🔄")
-                emojis.append("❌")
-                asyncio.get_event_loop().create_task(self.add_emojis(self.msg, emojis))
-                def check(react, usr):
-                    return usr == self.author and react.message.id == self.msg.id and (str(react.emoji) in self.numbers or
-                                                                                           str(react.emoji) == '🔄' or str(react.emoji) == "❌")
 
-                try:
-                    reaction, user = await self.client.wait_for('reaction_add', timeout=7200, check=check)  # Wait 1 hr max
-                except asyncio.TimeoutError:
-                    if self.author.id in self.client.raid_db[self.guild.id]['leaders']:
-                        self.client.raid_db[self.guild.id]['leaders'].remove(self.author.id)
-                    embed = discord.Embed(title="Timed out!", description="You didn't log this run in time!", color=discord.Color.red())
-                    await self.msg.clear_reactions()
-                    return await self.msg.edit(embed=embed)
-
-                if str(reaction.emoji) == '❌':
-                    num = 0
-                elif str(reaction.emoji) in self.numbers:
-                    num = self.numbers.index(str(reaction.emoji))
-                else:
-                    embed = discord.Embed(title='Specify # of Chains', description='Please send the number of chains completed.',
-                                          color=discord.Color.gold())
-                    await self.msg.edit(embed=embed)
-
-                    def number_check(m):
-                        return m.author == self.author and m.channel == self.channel
-                    while True:
-                        try:
-                            msg = await self.client.wait_for('message', timeout=7200, check=number_check)
-                        except asyncio.TimeoutError:
-                            if self.author.id in self.client.raid_db[self.guild.id]['leaders']:
-                                self.client.raid_db[self.guild.id]['leaders'].remove(self.author.id)
-                            embed = discord.Embed(title="Timed out!", description="You didn't choose a member in time!",
-                                                  color=discord.Color.red())
-                            await self.msg.clear_reactions()
-                            return await self.msg.edit(embed=embed)
-
-                        try:
-                            num = int(msg.content)-1
-                            try:
-                                await msg.delete()
-                            except discord.NotFound:
-                                pass
-                            if not 1 < num < 11:
-                                await self.channel.send("Please specify a number between 2-10.")
-                            else:
-                                break
-                        except ValueError:
-                            await self.channel.send("Please only send a number (how many chains you completed)", delete_after=7)
-
-                if num != 0 and num != 1:
-                    if self.pkeymember:
-                        embed = discord.Embed(title="Key", description=f"Were all the extra keys ({num}) popped by the same person? If so, "
-                                                                       "react to the ✅, otherwise press the ❌.", color=discord.Color.gold())
+                def number_check(m):
+                    return m.author == self.author and m.channel == self.channel
+                while True:
+                    try:
+                        msg = await self.client.wait_for('message', timeout=7200, check=number_check)
+                    except asyncio.TimeoutError:
+                        if self.author.id in self.client.raid_db[self.guild.id]['leaders']:
+                            self.client.raid_db[self.guild.id]['leaders'].remove(self.author.id)
+                        embed = discord.Embed(title="Timed out!", description="You didn't choose a member in time!",
+                                              color=discord.Color.red())
                         await self.msg.clear_reactions()
-                        await self.msg.edit(embed=embed)
-                        await self.msg.add_reaction("✅")
-                        await self.msg.add_reaction("❌")
+                        return await self.msg.edit(embed=embed)
 
-                        def check(react, usr):
-                            return usr == self.author and react.message.id == self.msg.id and (
-                                        str(react.emoji) == "✅" or str(react.emoji) == "❌")
-
+                    try:
+                        num = int(msg.content)-1
                         try:
-                            reaction, user = await self.client.wait_for('reaction_add', timeout=7200, check=check)  # Wait 1 hr max
-                        except asyncio.TimeoutError:
-                            if self.author.id in self.client.raid_db[self.guild.id]['leaders']:
-                                self.client.raid_db[self.guild.id]['leaders'].remove(self.author.id)
-                            embed = discord.Embed(title="Timed out!", description="You didn't log this run in time!", color=discord.Color.red())
-                            await self.msg.clear_reactions()
-                            return await self.msg.edit(embed=embed)
-
-                        if str(reaction.emoji) == '✅':
-                            await sql.log_runs(self.client.pool, self.guild.id, self.pkeymember.id, sql.log_cols.eventkeys, num+1)
-                            index = self.confirmedLogs.index((self.emojis[1], f"{self.pkeymember.mention}"))
-                            del self.confirmedLogs[index]
-                            self.confirmedLogs.insert(index, (self.emojis[1], f"{self.pkeymember.mention} x{num+1}"))
+                            await msg.delete()
+                        except discord.NotFound:
+                            pass
+                        if not 1 < num < 11:
+                            await self.channel.send("Please specify a number between 2-10.")
                         else:
-                            for i in range(num):
-                                embed = self.keyembed.copy()
-                                embed.title = f"Chain - Key #{i+2}"
-                                embed.description += f"\nPlease enter the member that popped key {i+2}/{num+1}."
-                                await self.memberlog(embed, self.keyreacts, sql.log_cols.eventkeys, self.emojis[1])
-                    else:
-                        for i in range(num+1):
-                            embed = self.keyembed.copy()
-                            embed.title = f"Chain - Key #{i+1}"
-                            embed.description += f"\nPlease enter the member that popped key {i+1}/{num+1}."
-                            await self.memberlog(embed, self.keyreacts, sql.log_cols.eventkeys, self.emojis[1])
+                            break
+                    except ValueError:
+                        await self.channel.send("Please only send a number (how many chains you completed)", delete_after=7)
 
-                await sql.log_runs(self.client.pool, self.guild.id, self.author.id, sql.log_cols.eventled, number=num+1)
-                self.numruns = num + 1
-            else:
-                await self.msg.clear_reactions()
-                await self.msg.edit(embed=self.runstatusembed)
-                await self.msg.add_reaction("✅")
-                await self.msg.add_reaction("❌")
-
-                def check(payload):
-                    return payload.user_id == self.author.id and payload.message_id == self.msg.id and (str(payload.emoji) == "✅" or str(payload.emoji) == "❌")
-
-                try:
-                    payload = await self.client.wait_for('raw_reaction_add', timeout=7200, check=check)  # Wait 1 hr max
-                except asyncio.TimeoutError:
-                    if self.author.id in self.client.raid_db[self.guild.id]['leaders']:
-                        self.client.raid_db[self.guild.id]['leaders'].remove(self.author.id)
-                    embed = discord.Embed(title="Timed out!", description="You didn't log this run in time!", color=discord.Color.red())
+            if num != 0 and num != 1:
+                if self.pkeymember is not None:
+                    embed = discord.Embed(title="Key", description=f"Were all the extra keys ({num}) popped by the same person? If so, "
+                                                                   "react to the ✅, otherwise press the ❌.", color=discord.Color.gold())
                     await self.msg.clear_reactions()
-                    return await self.msg.edit(embed=embed)
+                    await self.msg.edit(embed=embed)
+                    await self.msg.add_reaction("✅")
+                    await self.msg.add_reaction("❌")
 
-                col = sql.log_cols.srunled if str(payload.emoji) == "✅" else sql.log_cols.frunled
-                await sql.log_runs(self.client.pool, self.guild.id, self.leader.id, col, self.numruns)
-                self.confirmedLogs.append(("Run Successful", str(payload.emoji)))
+                    def check(react, usr):
+                        return usr == self.author and react.message.id == self.msg.id and (
+                                    str(react.emoji) == "✅" or str(react.emoji) == "❌")
+
+                    try:
+                        reaction, user = await self.client.wait_for('reaction_add', timeout=7200, check=check)  # Wait 1 hr max
+                    except asyncio.TimeoutError:
+                        if self.author.id in self.client.raid_db[self.guild.id]['leaders']:
+                            self.client.raid_db[self.guild.id]['leaders'].remove(self.author.id)
+                        embed = discord.Embed(title="Timed out!", description="You didn't log this run in time!", color=discord.Color.red())
+                        await self.msg.clear_reactions()
+                        return await self.msg.edit(embed=embed)
+
+                    if str(reaction.emoji) == '✅':
+                        await sql.log_runs(self.client.pool, self.guild.id, self.pkeymember.id, sql.log_cols.eventkeys, num+1)
+                        index = self.confirmedLogs.index((self.emojis[1], f"{self.pkeymember.mention}"))
+                        del self.confirmedLogs[index]
+                        self.confirmedLogs.insert(index, (self.emojis[1], f"{self.pkeymember.mention} x{num+1}"))
+                    else:
+                        for i in range(num):
+                            embed = self.keyembed.copy()
+                            embed.title = f"Chain - Key #{i+2}"
+                            embed.description += f"\nPlease enter the member that popped key {i+2}/{num+1}."
+                            await self.memberlog(embed, self.keyreacts, sql.log_cols.eventkeys, self.emojis[1])
+                else:
+                    for i in range(num+1):
+                        embed = self.keyembed.copy()
+                        embed.title = f"Chain - Key #{i+1}"
+                        embed.description += f"\nPlease enter the member that popped key {i+1}/{num+1}."
+                        await self.memberlog(embed, self.keyreacts, sql.log_cols.eventkeys, self.emojis[1])
+
+            await sql.log_runs(self.client.pool, self.guild.id, self.author.id, sql.log_cols.eventled, number=num+1)
+            self.numruns = num + 1
+            #else:
+            await self.msg.clear_reactions()
+            await self.msg.edit(embed=self.runstatusembed)
+            await self.msg.add_reaction("✅")
+            await self.msg.add_reaction("❌")
+
+            def check(payload):
+                return payload.user_id == self.author.id and payload.message_id == self.msg.id and (str(payload.emoji) == "✅" or str(payload.emoji) == "❌")
+
+            try:
+                payload = await self.client.wait_for('raw_reaction_add', timeout=7200, check=check)  # Wait 1 hr max
+            except asyncio.TimeoutError:
+                if self.author.id in self.client.raid_db[self.guild.id]['leaders']:
+                    self.client.raid_db[self.guild.id]['leaders'].remove(self.author.id)
+                embed = discord.Embed(title="Timed out!", description="You didn't log this run in time!", color=discord.Color.red())
+                await self.msg.clear_reactions()
+                return await self.msg.edit(embed=embed)
+
+            col = sql.log_cols.srunled if str(payload.emoji) == "✅" else sql.log_cols.frunled
+            await sql.log_runs(self.client.pool, self.guild.id, self.leader.id, col, self.numruns)
+            self.confirmedLogs.append(("Run Successful", str(payload.emoji)))
 
             embed = discord.Embed(title="Logging...", description="Please wait while the run is logged in the database. "
                                   "This can take up to a minute at full run capacity.", color=discord.Color.orange())
@@ -280,7 +281,7 @@ class LogRun:
             for m in self.members:
                 m = self.guild.get_member(m)
                 if m:
-                    if m.top_role >= self.rlrole:
+                    if m.top_role >= self.rlrole and self.guild.id != 713844220728967228: # disable for Malice
                         await sql.log_runs(self.client.pool, self.guild.id, m.id, col1, self.numruns)
                     await sql.log_runs(self.client.pool, self.guild.id, m.id, col2, self.numruns)
 

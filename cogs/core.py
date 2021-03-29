@@ -343,7 +343,7 @@ class Core(commands.Cog):
                 if ';' in message.content:
                     await message.delete()
                     await message.channel.send("Please use `!position` to check your position in the queue.", delete_after=10)
-            elif message.author.id in self.client.beaned_ids:
+            elif (message.author.id, message.guild.id) in self.client.beaned_ids:
                 try:
                     await message.delete()
                     await message.channel.send(f"__{message.author.display_name}__ Says: ||{message.content}||")

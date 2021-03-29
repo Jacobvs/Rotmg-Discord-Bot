@@ -29,6 +29,11 @@ def is_caped():
         return ctx.message.author.id == 163394008603820032
     return commands.check(predicate)
 
+def is_rl_and_not_beaned():
+    def predicate(ctx):
+        return (ctx.author.id, ctx.guild.id) not in ctx.bot.beaned_ids and checks.is_rl_or_higher_check()
+    return commands.check(predicate)
+
 # HP, MP, ATT, DEF, SPD, DEX, VIT, WIS
 max_stats = {
 "Rogue" : (720, 252, 50, 25, 75, 75, 40, 50),
@@ -287,7 +292,7 @@ class Misc(commands.Cog):
 
     @commands.command(usage='djoke', description="This command doesn't exist..... Shh...")
     @commands.guild_only()
-    @commands.is_owner()
+    @commands.check_any(commands.is_owner(), commands.has_permissions(administrator=True))
     async def djoke(self, ctx):
         joke = utils.darkjoke()
         embed = discord.Embed(title=joke[0], description=joke[1])
@@ -301,8 +306,11 @@ class Misc(commands.Cog):
             await ctx.message.delete()
         except discord.NotFound:
             pass
-        roast = utils.get_roast()
-        embed = discord.Embed(title=roast)
+        if member.id == 368449521224515585:
+            embed = discord.Embed(title='patreon.com/preed', description="Support preed's quest to max his scale out!", url='https://www.patreon.com/preed')
+        else:
+            roast = utils.get_roast()
+            embed = discord.Embed(title=roast)
         await ctx.send(content=member.mention, embed=embed)
 
     @commands.command(usage='bubblewrap', description="Relieve some stress if that's your thing...")
@@ -312,9 +320,10 @@ class Misc(commands.Cog):
 
 
     @commands.command(usage='ghostping <member>', description='shhh')
-    @commands.is_owner()
+    @commands.check_any(commands.is_owner(), commands.has_permissions(administrator=True))
     @commands.guild_only()
     @commands.max_concurrency(1, per=BucketType.guild)
+    @commands.cooldown(1, 3600, type=BucketType.member)
     async def ghostping(self, ctx, member: utils.MemberLookupConverter):
         for channel in ctx.guild.text_channels:
             permissions: discord.Permissions = channel.permissions_for(member)
@@ -426,24 +435,13 @@ class Misc(commands.Cog):
 
     @commands.command(usage='unbean <member>', description="Lorlie's Custom Patreon Command")
     @commands.guild_only()
-    @commands.check_any(is_lorlie(), checks.is_rl_or_higher_check())
+    @commands.check_any(is_lorlie(), is_rl_and_not_beaned())
     async def unbean(self, ctx, member: utils.MemberLookupConverter):
-        if member.id not in self.client.beaned_ids:
+        if (member.id, ctx.guild.id) not in self.client.beaned_ids:
             return await ctx.send(f"{member.display_name}__ is not currently Beaned!")
 
-        self.client.beaned_ids.remove(member.id)
+        self.client.beaned_ids.remove((member.id, ctx.guild.id))
         await ctx.send(f"Lorlie's Custom Patreon Command!\n__{member.display_name}__ was Un-Beaned!")
-
-
-    @commands.command(usage='exalted <member>', description="Make a member exalted!")
-    @commands.guild_only()
-    @commands.check_any(is_caped(), is_bot_owner())
-    async def exalted(self, ctx, member: utils.MemberLookupConverter):
-        b = bool(random.getrandbits(1))
-        title = f"{member.display_name} was killed by O3!" if b else f"{member.display_name} slaughtered O3"
-        embed = discord.Embed(title=title, color=discord.Color.gold())
-        embed.set_image(url=utils.get_random_oryx())
-        await ctx.send(f"{member.mention} was exalted by {ctx.author.display_name}", embed=embed)
 
 
 def setup(client):

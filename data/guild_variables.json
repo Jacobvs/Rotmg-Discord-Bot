@@ -20,5 +20,16 @@
       "addalt": 2,
       "changename": 1
     }
+  },
+  "713844220728967228": {
+    "name": "Malice",
+    "runs": 75,
+    "points": {
+      "parse": 10,
+      "veri": 0,
+      "reply": 0,
+      "addalt": 0,
+      "changename": 0
+    }
   }
 }

@@ -5,6 +5,7 @@ import logging as logger
 import os
 from sys import modules
 
+import aiohttp
 import aiomysql
 import discord
 import urllib3
@@ -108,7 +109,7 @@ async def on_ready():
     lst = [r[0] for r in pdata]
     bot.patreon_ids = set(lst)
     bot.events = {}
-    # event_update.start()
+    event_update.start()
     patreon_role.start()
     bot.beaned_ids = set([])
     print(f'{bot.user.name} is now online!')
@@ -430,36 +431,36 @@ eventTable = {
     0x6fcb: ("Temple Statues", "https://i.imgur.com/URY2vc0.png"),
 }
 
-# @tasks.loop(seconds=20)
-# async def event_update():
-#     print('Updating Events')
-#     try:
-#         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
-#             async with cs.request("GET", 'https://realmstock.network/Public/EventHistory') as r:
-#                 if r.status == 200:
-#                     d = await r.read()
-#                     lines = d.split()
-#                     for t in lines:
-#                         l = t.decode('ASCII')
-#                         info = l.split("|")
-#                         d = eventTable[int(info[0])] if int(info[0]) in eventTable else ("N/A", "https://i.imgur.com/b59f6ff.png")
-#                         name = d[0]
-#                         img = d[1]
-#                         realm = info[1]
-#                         server = info[2]
-#                         population = int(info[3]) if info[3] != '?' else 404
-#                         events_left = int(info[4]) if info[4] != '?' else 404
-#                         t = info[5].split(':')
-#                         now = datetime.datetime.utcnow()
-#                         time = datetime.datetime(year=now.year, month=now.month, day=now.day, hour=int(t[0]), minute=int(t[1])).timestamp()
-#                         if server in bot.events:
-#                             bot.events[server][str(realm)] = {'Events': events_left, 'Population': population, 'Event': name, 'Image': img, 'Timestamp': time}
-#                         else:
-#                             bot.events[server] = {str(realm): {'Events': events_left, 'Population': population, 'Event': name, 'Image': img, 'Timestamp': time}}
-#                 else:
-#                     print("ERROR: Event GET status != 200")
-#     except aiohttp.ClientTimeout:
-#         pass
+@tasks.loop(seconds=10)
+async def event_update():
+    print('Updating Events')
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(10)) as cs:
+            async with cs.request("GET", 'https://realmstock.network/Public/EventHistory') as r:
+                if r.status == 200:
+                    d = await r.read()
+                    lines = d.split()
+                    for t in lines:
+                        l = t.decode('ASCII')
+                        info = l.split("|")
+                        d = eventTable[int(info[0])] if int(info[0]) in eventTable else ("N/A", "https://i.imgur.com/b59f6ff.png")
+                        name = d[0]
+                        img = d[1]
+                        realm = info[1]
+                        server = info[2]
+                        population = int(info[3]) if info[3] != '?' else 404
+                        events_left = int(info[4]) if info[4] != '?' else 404
+                        t = info[5].split(':')
+                        now = datetime.datetime.utcnow()
+                        time = datetime.datetime(year=now.year, month=now.month, day=now.day, hour=int(t[0]), minute=int(t[1])).timestamp()
+                        if server in bot.events:
+                            bot.events[server][str(realm)] = {'Events': events_left, 'Population': population, 'Event': name, 'Image': img, 'Timestamp': time}
+                        else:
+                            bot.events[server] = {str(realm): {'Events': events_left, 'Population': population, 'Event': name, 'Image': img, 'Timestamp': time}}
+                else:
+                    print("ERROR: Event GET status != 200")
+    except aiohttp.ClientTimeout:
+        pass
 
 
 @tasks.loop(minutes=40)

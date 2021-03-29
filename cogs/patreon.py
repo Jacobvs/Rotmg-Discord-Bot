@@ -193,14 +193,14 @@ class Patreon(commands.Cog):
             if member.guild_permissions.manage_guild and ctx.author.id not in self.client.owner_ids:
                 commands.Command.reset_cooldown(ctx.command, ctx)
                 return await ctx.send(f'Cannot bean `{member.display_name}` due to roles.')
-        if member.id in self.client.beaned_ids:
+        if (member.id, ctx.guild.id) in self.client.beaned_ids:
             commands.Command.reset_cooldown(ctx.command, ctx)
             return await ctx.send(f"{member.display_name}__ is already Beaned!")
-        self.client.beaned_ids.add(member.id)
+        self.client.beaned_ids.add((member.id, ctx.guild.id))
         await ctx.send(f"Lorlie's Custom Patreon Command!\n__{member.display_name}__ was Beaned!")
         await asyncio.sleep(240)
-        if member.id in self.client.beaned_ids:
-            self.client.beaned_ids.remove(member.id)
+        if (member.id, ctx.guild.id) in self.client.beaned_ids:
+            self.client.beaned_ids.remove((member.id, ctx.guild.id))
             await ctx.send(f"Lorlie's Custom Patreon Command!\n__{member.display_name}__ was automatically Un-Beaned!")
 
     @commands.command(usage='soundboard <soundname>', description='Play a sound effect! (Must be in VC)', aliases=['sb'])
@@ -301,6 +301,16 @@ class Patreon(commands.Cog):
             await ctx.send(embed=embed)
         else:
             await ctx.send("XKCD's servers couldn't be reached. Try again later.")
+
+
+    @commands.command(usage='exalted <member>', description="Make a member exalted!")
+    @commands.guild_only()
+    async def exalted(self, ctx, member: utils.MemberLookupConverter):
+        b = bool(random.getrandbits(1))
+        title = f"{member.display_name} was killed by O3!" if b else f"{member.display_name} slaughtered O3"
+        embed = discord.Embed(title=title, color=discord.Color.gold())
+        embed.set_image(url=utils.get_random_oryx())
+        await ctx.send(f"{member.mention} was exalted by {ctx.author.display_name}", embed=embed)
 
 def setup(client):
     client.add_cog(Patreon(client))
