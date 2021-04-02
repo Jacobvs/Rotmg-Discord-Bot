@@ -1,5 +1,6 @@
 import asyncio
 import json
+import textwrap
 from datetime import datetime, timedelta
 from os import listdir
 from os.path import join, isfile
@@ -620,6 +621,17 @@ class Core(commands.Cog):
             if user_data is not None:
                 if payload.message_id == user_data[usr_cols.verifyid]:
                     return await dm_verify_react_handler(Verification(self.client), payload, user_data, user)
+
+    @commands.command(usage='listroles', description="List roles and associated id's in the server")
+    @checks.is_rl_or_higher_check()
+    async def listroles(self, ctx):
+        roles = ""
+        for r in reversed(ctx.guild.roles):
+            roles += f"{r.mention} - {r.id}\n"
+
+        messages = textwrap.wrap(roles, width=1024, replace_whitespace=False)
+        for m in messages:
+            await ctx.send(m, allowed_mentions=discord.AllowedMentions().none())
 
 
 def setup(client):

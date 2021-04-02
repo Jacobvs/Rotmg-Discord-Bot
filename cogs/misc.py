@@ -2,7 +2,6 @@ import asyncio
 import functools
 import io
 import json
-import random
 from datetime import datetime
 
 import aiohttp
@@ -425,11 +424,15 @@ class Misc(commands.Cog):
     async def isgay(self, ctx, member: utils.MemberLookupConverter):
         if member.id == self.client.user.id:
             await ctx.send(f"Preed's Custom Patreon Command!\n__{member.display_name}__: Hmm, I don't think so...")
-        b = bool(random.getrandbits(1))
-        b2 = bool(random.getrandbits(1))
-        b3 = bool(random.getrandbits(1))
-        d = f"🌈__{member.display_name}__🌈: I've never been so sure of anything." if b and b2 and b3 else f"🌈__{member.display_name}__🌈: Yes." if b and b2 else \
-            f"__{member.display_name}__: I'm pretty sure." if b else f"__{member.display_name}__: Hmm, I don't think so..."
+
+        isG = member.id % 10 > 3
+        if isG:
+            b = member.id % 10 % 2 == 1
+            b2 = member.id % 10 % 4 == 1
+            d = f"🌈__{member.display_name}__🌈: I've never been so sure of anything." if b and b2 else f"🌈__{member.display_name}__🌈: Yes." if b else \
+                f"__{member.display_name}__: I'm pretty sure."
+        else:
+            d = f"__{member.display_name}__: Hmm, I don't think so..."
         await ctx.send(f"Preed's Custom Patreon Command!\n{d}")
 
 
