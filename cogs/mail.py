@@ -221,7 +221,7 @@ class Mail(commands.Cog):
         await ctx.send(embed=mailembed)
 
         if anonymous:
-            mailembed.title = f"Anonmous Response from Staff in {ctx.guild.name}"
+            mailembed.title = f"Anonymous Response from Staff in {ctx.guild.name}"
 
         mailembed.set_thumbnail(url="https://www.bootgum.com/wp-content/uploads/2018/07/Email_Open_550px-1.gif")
         mailembed.color = discord.Color.teal()
@@ -289,9 +289,10 @@ class ModmailMessage:
         if not self.ctx.guild:
             servers = []
             for g in self.client.guilds:
-                if self.client.guild_db[g.id][sql.gld_cols.modmailcategory]:
-                    if g.get_member(self.ctx.author.id):
-                        servers.append(g)
+                if g.id in self.client.guild_db:
+                    if self.client.guild_db[g.id][sql.gld_cols.modmailcategory]:
+                        if g.get_member(self.ctx.author.id):
+                            servers.append(g)
             if len(servers) > 1:
                 serverstr = ""
                 for i, s in enumerate(servers[:10]):

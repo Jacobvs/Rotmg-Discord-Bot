@@ -70,14 +70,25 @@ class AfkCheck:
                 msg = await self.client.wait_for('message', timeout=60, check=dungeon_check)
             except asyncio.TimeoutError:
                 embed = discord.Embed(title="Timed out!", description="You didn't choose a dungeon in time!", color=discord.Color.red())
+                if self.raidnum < 0:
+                    try:
+                        await self.vcchannel.delete(reason="Temporary channel deletion by clean command")
+                    except discord.Forbidden or discord.NotFound or discord.HTTPException:
+                        await self.ctx.send("Deletion of temporary VC channel failed! If the channel still exists, please run the command again or remove it manually!")
                 await self.setup_msg.clear_reactions()
                 return await self.setup_msg.edit(embed=embed)
 
             if msg.content.isdigit():
                 if int(msg.content) == -1:
                     embed = discord.Embed(title="Cancelled!", description="You chose to cancel this afk creation.", color=discord.Color.red())
+                    if self.raidnum < 0:
+                        try:
+                            await self.vcchannel.delete(reason="Temporary channel deletion by clean command")
+                        except discord.Forbidden or discord.NotFound or discord.HTTPException:
+                            await self.ctx.send("Deletion of temporary VC channel failed! If the channel still exists, please run the command again or remove it manually!")
                     await self.setup_msg.clear_reactions()
                     return await self.setup_msg.edit(embed=embed)
+
                 if 0 < int(msg.content) < 57:
                     break
             await self.ctx.send("Please choose a number between 1-56!", delete_after=7)
@@ -500,6 +511,12 @@ class AfkCheck:
 
         if self.ctx.author.id in self.client.raid_db[self.ctx.guild.id]['leaders']:
             self.client.raid_db[self.ctx.guild.id]['leaders'].remove(self.ctx.author.id)
+
+        if self.raidnum < 0:
+            try:
+                await self.vcchannel.delete(reason="Temporary channel deletion by clean command")
+            except discord.Forbidden or discord.NotFound or discord.HTTPException:
+                await self.ctx.send("Deletion of temporary VC channel failed! If the channel still exists, please run the command again or remove it manually!")
 
         await self.afkmsg.clear_reactions()
         await self.afkmsg.unpin()

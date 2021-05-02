@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import json
+import textwrap
 
 import discord
 from discord.ext import commands
@@ -47,8 +48,13 @@ class Logging(commands.Cog):
 
     @commands.command(usage="logrun [member (leader)] [num_runs]", description="Log a full run (or multiple runs) manually.")
     @commands.guild_only()
-    @checks.is_security_or_higher_check()
+    @checks.is_rl_or_higher_check()
     async def logrun(self, ctx, member: utils.MemberLookupConverter = None, number: int = 1):
+        if ctx.guild.id == 713844220728967228:
+            hrl = ctx.guild.get_role(740761925713133673)
+            if ctx.author.top_role < hrl:
+                raise commands.CheckFailure(message="You must be HRL+ to use this command!")
+
         if not member:
             member = ctx.author
 
@@ -105,6 +111,49 @@ class Logging(commands.Cog):
             return await update_leaderboard(self.client, ctx.guild.id)
         return await ctx.send("This server does not have leaderboards enabled! Contact Darkmattr#7321 to enable them.", delete_after=7)
 
+    @commands.command(usage="zeroruns", description="Fetch the Zero Runs log for this week.")
+    @commands.guild_only()
+    @checks.is_rl_or_higher_check()
+    async def zeroruns(self, ctx, role: discord.Role=None):
+        rlrole = self.client.guild_db.get(ctx.guild.id)[sql.gld_cols.rlroleid]
+        zerorunschannel: discord.TextChannel = self.client.guild_db.get(ctx.guild.id)[sql.gld_cols.zerorunchannel]
+
+        if not zerorunschannel:
+            return await ctx.send("This server does not have a zero-runs channel currently configured!\n"
+                                  "Please contact the developer to set this feature up.")
+
+        if ctx.channel != zerorunschannel:
+            return await ctx.send(f"Please use this command in the appropriate zero-runs channel ({zerorunschannel.mention})!")
+
+        zero_runs = await sql.get_0_runs(self.client.pool, ctx.guild.id)
+
+        if role:
+            temp = []
+            for i, r in enumerate(zero_runs):
+                member: discord.Member = ctx.guild.get_member(r[0])
+                if member:
+                    if role == member.top_role:
+                        temp.append(r)
+            zero_runs = temp
+        else:
+            zero_runs = clean_rl_data(zero_runs, ctx.guild, rlrole, False)
+
+        if zero_runs:
+            desc = "".join("<@" + str(r[0]) + "> - (Assists: " + str(r[sql.log_cols.weeklyassists]) + ")\n" for r in zero_runs)
+        else:
+            desc = "All rl's completed at least 1 run this week."
+
+        embed = discord.Embed(title="RL's With 0 Runs", color=discord.Color.orange())
+
+        lines = textwrap.wrap(desc, width=1024, replace_whitespace=False, break_on_hyphens=False)  # Wrap message before max len of field of 1024
+        for i, l in enumerate(lines):
+            embed.add_field(name=f"Zero runs: (pt. {i + 1})", value=l, inline=False)
+
+        try:
+            await zerorunschannel.send(embed=embed)
+        except discord.HTTPException:
+            await zerorunschannel.send("Error: specified role has too many members to display!")
+
     @commands.command(usage='leaderboard <type>', description='Display the top 20 members in a selected logging category.\nValid categories: `keys`, `runes`, `runs`, `led`, '
                                                               '`weeklyled`, `o3completes`, `o3fails`', aliases=['lb'])
     @commands.guild_only()
@@ -136,21 +185,35 @@ class Logging(commands.Cog):
                 return elem[1]
 
             runes.sort(key=get_num, reverse=True)
-            top = format_top_data(runes[:20], 1, aslist=True)
+            top = format_top_data(runes[:500], 1, aslist=True)
         else:
             col = sql.log_cols.pkey if type == 'keys' else sql.log_cols.runsdone if type == 'runs' else sql.log_cols.srunled if type == 'led' else sql.log_cols.weeklyruns if \
                 type == 'weeklyled' else sql.log_cols.ocompletes if type == 'o3completes' else sql.log_cols.oattempts
-            top = await sql.get_top_10_logs(self.client.pool, ctx.guild.id, column=col, only_10=False, limit=20)
+            top = await sql.get_top_10_logs(self.client.pool, ctx.guild.id, column=col, only_10=False, limit=500)
             top = format_top_data(top, col, aslist=True)
 
         name = 'Keys' if type == 'keys' else "Runes" if type == 'runes' else "Runs Completed" if type == 'runs' else "Runs Led" if type == 'led' else "Weekly Runs Led" if type \
                == 'weeklyled' else "Oryx 3 Completes" if type == 'o3completes' else "Oryx 3 Fails"
-        embed = discord.Embed(title=f"Top {name} in {ctx.guild.name}", color=discord.Color.gold()).add_field(name='Top 10', value="".join(top[:10]), inline=False)
-        if len(top) > 10:
-            embed.add_field(name="Top 20", value="".join(top[10:]), inline=False)
-        embed.set_thumbnail(url=str(ctx.guild.icon_url))
-        embed.timestamp = datetime.datetime.utcnow()
-        await ctx.send(embed=embed)
+
+        for i, r in enumerate(top):
+            if int(r.split(" - ")[1]) == 0:
+                top = top[:i]
+                break
+
+        pages = []
+        chunk_size = 20
+        for i in range(0, len(top), chunk_size):
+            chunk = top[i:i + chunk_size]
+            embed = discord.Embed(title=f"Top {name} in {ctx.guild.name}", color=discord.Color.gold()).add_field(name=f'Top {i + chunk_size-10}', value="".join(chunk[:10]),
+                                                                                                                 inline=False)
+            if len(chunk) > 10:
+                embed.add_field(name=f"Top {i + chunk_size}", value="".join(chunk[10:]), inline=False)
+            embed.set_thumbnail(url=str(ctx.guild.icon_url))
+            embed.timestamp = datetime.datetime.utcnow()
+            pages.append(embed)
+
+        paginator = utils.EmbedPaginator(self.client, ctx, pages)
+        await paginator.paginate()
 
     @commands.command(usage='setpointlb', description="Set the Point Leaderboard to run in this channel.")
     @commands.guild_only()

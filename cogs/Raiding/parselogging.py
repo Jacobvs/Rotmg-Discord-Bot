@@ -372,6 +372,7 @@ def parse_image(image, member_list):
     str = str.replace("}", ")")
     str = str.replace("{", "(")
     str = str.replace(";", ":")
+    str = str.replace('.', ',')
     split_str = re.split(r'(.*)(Players online \([0-9]+\): )', str)
     if len(split_str) < 4:
         print("ERROR - Parsed String: " + str)
@@ -384,6 +385,7 @@ def parse_image(image, member_list):
 
     names = split_str[3].split(", ")
     cleaned_members = {}
+
     def clean_member(m):
         if " | " in m:
             names = m.split(" | ")
@@ -393,7 +395,7 @@ def parse_image(image, member_list):
             cleaned_members[clean_name(m)] = m
 
     def clean_name(n):
-        return "".join(c for c in n if c.isalpha()).lower()
+        return "".join(c for c in n.lower() if c.isalpha())
 
     for m in member_list:
         if not m.bot:
@@ -407,7 +409,7 @@ def parse_image(image, member_list):
             names = name.split(" ")
             name = names[0]
         if name.strip().lower() not in cleaned_members:
-            matches = get_close_matches(name.strip().lower(), cleaned_members.keys(), n=1, cutoff=0.65)
+            matches = get_close_matches(name.strip().lower(), cleaned_members.keys(), n=1, cutoff=0.6)
             if len(matches) != 0:
                 if matches[0] in cleaned_members:
                     completed.append(cleaned_members[matches[0]])

@@ -436,23 +436,32 @@ class QAfk:
         embed: discord.Embed = self.raid_msg.embeds[0]
         embed.set_author(name=f"{self.dungeontitle} Raid is finished!", icon_url=self.dungeon_image)
         embed.set_footer(text="Raid Finished at")
+
+        embed.description = "Thank you for joining the run!\nThis raid ran with" + embed.description.split("This raid is running with")[1] +\
+                            embed.description.split(" moved in.")[1]
         embed.timestamp = datetime.utcnow()
         await self.raid_msg.edit(embed=embed)
 
-        voice = discord.utils.get(self.client.voice_clients, guild=self.ctx.guild)
+        try:
+            voice = discord.utils.get(self.client.voice_clients, guild=self.ctx.guild)
 
-        if voice and voice.is_connected():
-            await voice.move_to(self.raid_vc)
-        else:
-            voice = await self.raid_vc.connect()
+            if voice and voice.is_connected():
+                print("Voice already connected, moving")
+                await voice.move_to(self.raid_vc)
+            else:
+                print("Connecting to VC")
+                voice = await self.raid_vc.connect()
 
-        client = self.ctx.guild.voice_client
-        if not client.source:
-            # TODO: make mp3 file thanking raiders for joining & telling them to send modmail for +/- remarks
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/movebacktoqueue.mp3", options=ffmpeg_options['options']), volume=0.5)
-            self.ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice))
+            client = self.ctx.guild.voice_client
+            print(f"Found voice client: {client.source}")
+            if not client.source:
+                # TODO: make mp3 file thanking raiders for joining & telling them to send modmail for +/- remarks
+                source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio("files/movebacktoqueue.mp3", options=ffmpeg_options['options']), volume=0.5)
+                self.ctx.voice_client.play(source, after=lambda e: print('Player error: %s' % e) if e else disconnect_helper(self, voice))
 
-        await asyncio.sleep(5)
+            await asyncio.sleep(5)
+        except BaseException as e:
+            print(f"Error in playing QAFK end file: {e}")
 
         await self.raid_vc.delete()
 

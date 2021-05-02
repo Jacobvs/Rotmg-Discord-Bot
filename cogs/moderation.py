@@ -146,7 +146,12 @@ class Moderation(commands.Cog):
     @commands.command(usage='changename <member> <newname>', description="Change the users name.")
     @commands.guild_only()
     @checks.is_security_or_higher_check()
-    async def changename(self, ctx, member: utils.MemberLookupConverter, newname):
+    async def changename(self, ctx, member: utils.MemberLookupConverter, newname: str):
+        if not newname.isalpha():
+            embed = discord.Embed(title="Error!", description="New name contains non-alphabetical characters!\nPlease specify a name that only contains letters!",
+                                  color=discord.Color.red())
+            return await ctx.send(embed=embed)
+
         async with aiohttp.ClientSession() as cs:
             async with cs.get(f'https://darkmattr.uc.r.appspot.com/?player={newname}', ssl=False) as r:
                 if r.status == 403:
@@ -168,6 +173,8 @@ class Moderation(commands.Cog):
         if cleaned_name.lower() in name.lower():
             embed = discord.Embed(title="Error!", description="Name specified is the same name as the user's name currently!",
                                   color=discord.Color.red())
+            return await ctx.send(embed=embed)
+
 
         separator = " | "
         s_name = name.split(separator)

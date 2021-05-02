@@ -235,12 +235,12 @@ class Core(commands.Cog):
         for g in self.client.guilds:
             mcount += g.member_count
         embed.add_field(name="Connected Servers:",
-                        value=f"**`{len(self.client.guilds)}`** servers with **`{mcount}`** total members.")
+                        value=f"**`{len(self.client.guilds)}`** servers with **`{mcount:,}`** total members.")
         embed.add_field(name="\u200b", value="\u200b")
-        embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]}`** verified raiders.")
+        embed.add_field(name="Verified Raiders:", value=f"**`{nverified[0]:,}`** verified raiders.")
         lines = line_count('/home/ubuntu/Rotmg-Bot/') + line_count('/home/ubuntu/Rotmg-Bot/cogs') + line_count(
             '/home/ubuntu/Rotmg-Bot/cogs/Raiding') + line_count('/home/ubuntu/Rotmg-Bot/cogs/Minigames')
-        embed.add_field(name="Lines of Code:", value=(f"**`{lines}`** lines of code."))
+        embed.add_field(name="Lines of Code:", value=(f"**`{lines:,}`** lines of code."))
         embed.add_field(name="\u200b", value="\u200b")
         embed.add_field(name="Server Status:",
                         value=(f"```yaml\nServer: AWS Compute (Ubuntu 18.04)\nCPU: {psutil.cpu_percent()}% utilization."

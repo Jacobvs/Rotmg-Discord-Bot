@@ -564,12 +564,18 @@ class Raiding(commands.Cog):
                 return
             await setup_msg.delete()
 
-            await vcchannel.set_permissions(raiderrole, connect=False, view_channel=True, speak=False)
+            if raidnum < 0:
+                try:
+                    await vcchannel.delete(reason="Temporary channel deletion by clean command")
+                except discord.Forbidden or discord.NotFound or discord.HTTPException:
+                    return await ctx.send("Deletion of temporary VC channel failed! If the channel still exists, please run the command again or remove it manually!")
+            else:
+                await vcchannel.set_permissions(raiderrole, connect=False, view_channel=True, speak=False)
 
-            for member in vcchannel.members:
-                if member.top_role < rlrole:
-                    if member.voice:
-                        await member.move_to(channel=None)
+                for member in vcchannel.members:
+                    if member.top_role < rlrole:
+                        if member.voice:
+                            await member.move_to(channel=None)
 
         for member in vcchannel.members:
             if member.voice:

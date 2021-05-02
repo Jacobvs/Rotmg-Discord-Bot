@@ -70,11 +70,13 @@ async def on_ready():
     bot.mapmarkers = {}
     bot.players_in_game = []
     bot.active_raiders = {}
-    bot.serverwleaderboard = [660344559074541579, 635413437647683596, 703987028567523468, 739573333242150975, 691607211046076471, 719406991117647893, 713655609760940044,
-                              770194181355733002]
+    bot.serverwleaderboard = []
     await build_guild_db()
     for g in bot.guild_db:
+        if bot.guild_db[g][sql.gld_cols.leaderboardchannel] and bot.guild_db[g][sql.gld_cols.zerorunchannel]:
+            bot.serverwleaderboard.append(g)
         bot.raid_db[g] = {"afk": {}, "cp": {}, "leaders": []}
+
 
     if bot.maintenance_mode:
         await bot.change_presence(status=discord.Status.idle, activity=discord.Game("IN MAINTENANCE MODE!"))
@@ -102,6 +104,7 @@ async def on_ready():
                     bot.active_punishments[str(guild.id) + str(member.id) + ptype] = t
 
     init_queues()
+
     bot.in_queue = {0: [], 1: []}
     guild = bot.get_guild(660344559074541579)
     bot.patreon_role = guild.get_role(736954974545641493)
@@ -112,6 +115,16 @@ async def on_ready():
     event_update.start()
     patreon_role.start()
     bot.beaned_ids = set([])
+
+    for g in bot.guilds:
+        for vc in g.voice_channels:
+            if 'Raiding -' in vc.name:
+                try:
+                    print(f"Removing temporary VC in {g.name} | name: {vc.name}")
+                    await vc.delete(reason='Removing temporary channel on restart.')
+                except Exception:
+                    print("Removing temp channel failed!")
+
     print(f'{bot.user.name} is now online!')
 
 
