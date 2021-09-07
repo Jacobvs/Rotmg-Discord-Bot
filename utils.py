@@ -699,8 +699,8 @@ async def get_event_servers(client, type):
         return None
 
 
-servers = {"US" : ("USWest2", "USWest", "USSouthWest", "USSouth3", "USSouth2", "USSouth", "USNorthWest", "USMidWest2", "USMidWest", "USEast3", "USEast2", "USEast"),
-           "EU" : ("EUSouthWest", "EUSouth", "EUNorth2", "EUNorth")}
+servers = {"US" : ("USWest", "USSouthWest", "USSouth3", "USSouth", "USNorthWest", "USMidWest2", "USMidWest", "USEast2", "USEast"),
+           "EU" : ("EUSouthWest", "EUNorth")}
 
 def get_server(is_us=True):
     res = random.choice(servers["EU"]) if is_us else random.choice(servers["US"])
