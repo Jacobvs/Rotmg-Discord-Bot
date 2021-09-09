@@ -61,7 +61,10 @@ class Misc(commands.Cog):
         self.client = client
         self.laughs = ["files/ahhaha.mp3", "files/jokerlaugh.mp3"]
         self.numbers = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
-
+        
+    @commands.command(usage="blez", description="Blez Bad.")
+    async def blez(self, ctx):
+        await ctx.send("Blez bad. \n https://cdn.discordapp.com/attachments/782434294815129601/864993900870762496/Production_2021.07.14_-_15.05.08.72.DVR_Trim.mp4")
 
     @commands.command(usage="stats [member]", description="Check your or someone else's run stats.")
     async def stats(self, ctx, what=None):
